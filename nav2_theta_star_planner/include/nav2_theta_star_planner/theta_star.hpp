@@ -182,32 +182,34 @@ protected:
   /**
    * @brief it is an overloaded function to ease the cost calculations while performing the LOS check
    * @param cost denotes the total straight line traversal cost; it adds the traversal cost for the node (cx, cy) at every instance; it is also being returned
-   * @return false if the traversal cost is greater than the MAX_NON_OBSTACLE_COST and true otherwise
+   * @param step_length the length of the step taken across this cell, in cell widths; the cell's
+   *          traversal cost is charged in proportion to it
+   * @return true if the cell may be traversed, false otherwise
    */
-  bool isSafe(const int & cx, const int & cy, double & cost) const
+  bool isSafe(const int & cx, const int & cy, double & cost, const double & step_length) const
   {
-    double curr_cost = getCost(cx, cy);
+    const double curr_cost = getCost(cx, cy);
     if ((costmap_->getCost(cx, cy) == UNKNOWN_COST && params_->allow_unknown) ||
       curr_cost <= MAX_NON_OBSTACLE_COST)
     {
-      if (costmap_->getCost(cx, cy) == UNKNOWN_COST) {
-        curr_cost = OCCUPIED_COST - 1;
-      }
       cost += params_->w_traversal_cost * curr_cost * curr_cost / MAX_NON_OBSTACLE_COST /
-        MAX_NON_OBSTACLE_COST;
+        MAX_NON_OBSTACLE_COST * step_length;
       return true;
     } else {
       return false;
     }
   }
 
-  /*
-   * @brief this function scales the costmap cost by shifting the origin to 25 and then multiply
-   *           the actual costmap cost by 0.9 to keep the output in the range of [25, 255)
+  /**
+   * @brief the traversal cost density of a cell, in raw costmap units
+   *           unknown cells are charged as near-obstacle, so that traversing them is discouraged
+   *           wherever allow_unknown permits it at all
+   * @return the cost density thus obtained
    */
   inline double getCost(const int & cx, const int & cy) const
   {
-    return 26 + 0.9 * costmap_->getCost(cx, cy);
+    const unsigned char cost = costmap_->getCost(cx, cy);
+    return cost == UNKNOWN_COST ? OCCUPIED_COST - 1 : cost;
   }
 
   /**
