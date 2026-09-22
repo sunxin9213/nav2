@@ -27,10 +27,14 @@ IsBatteryLowCondition::IsBatteryLowCondition(
   battery_topic_("/battery_status"),
   min_battery_(0.0),
   is_voltage_(false),
+// 实现该逻辑，并处理相关状态转换。
   is_battery_low_(false)
 {
+// 实现该逻辑，并处理相关状态转换。
   getInput("min_battery", min_battery_);
+// 实现该逻辑，并处理相关状态转换。
   getInput("battery_topic", battery_topic_);
+// 实现该逻辑，并处理相关状态转换。
   getInput("is_voltage", is_voltage_);
   node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
   callback_group_ = node_->create_callback_group(
@@ -47,6 +51,7 @@ IsBatteryLowCondition::IsBatteryLowCondition(
     sub_option);
 }
 
+// 初始化 NodeStatus IsBatteryLowCondition::tick 对象，读取参数并准备运行时依赖。
 BT::NodeStatus IsBatteryLowCondition::tick()
 {
   callback_group_executor_.spin_some();
@@ -56,6 +61,7 @@ BT::NodeStatus IsBatteryLowCondition::tick()
   return BT::NodeStatus::FAILURE;
 }
 
+// 实现该逻辑，并处理相关状态转换。
 void IsBatteryLowCondition::batteryCallback(sensor_msgs::msg::BatteryState::SharedPtr msg)
 {
   if (is_voltage_) {
@@ -68,6 +74,7 @@ void IsBatteryLowCondition::batteryCallback(sensor_msgs::msg::BatteryState::Shar
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::IsBatteryLowCondition>("IsBatteryLow");

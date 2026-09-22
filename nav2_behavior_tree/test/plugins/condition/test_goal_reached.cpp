@@ -30,6 +30,7 @@ using namespace std::chrono_literals;  // NOLINT
 class GoalReachedConditionTestFixture : public nav2_behavior_tree::BehaviorTreeTestFixture
 {
 public:
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void SetUp()
   {
     node_->declare_parameter("transform_tolerance", rclcpp::ParameterValue{0.1});
@@ -53,6 +54,7 @@ public:
     tree_ = std::make_shared<BT::Tree>(factory_->createTreeFromText(xml_txt, config_->blackboard));
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown()
   {
     tree_.reset();
@@ -64,6 +66,7 @@ protected:
 
 std::shared_ptr<BT::Tree> GoalReachedConditionTestFixture::tree_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(GoalReachedConditionTestFixture, test_behavior)
 {
   EXPECT_EQ(tree_->tickRoot(), BT::NodeStatus::FAILURE);
@@ -72,38 +75,44 @@ TEST_F(GoalReachedConditionTestFixture, test_behavior)
   pose.position.x = 0.0;
   pose.position.y = 0.0;
   transform_handler_->updateRobotPose(pose);
+// 实现该逻辑，并处理相关状态转换。
   std::this_thread::sleep_for(500ms);
   EXPECT_EQ(tree_->tickRoot(), BT::NodeStatus::FAILURE);
 
   pose.position.x = 0.5;
   pose.position.y = 0.5;
   transform_handler_->updateRobotPose(pose);
+// 实现该逻辑，并处理相关状态转换。
   std::this_thread::sleep_for(500ms);
   EXPECT_EQ(tree_->tickRoot(), BT::NodeStatus::FAILURE);
 
   pose.position.x = 0.9;
   pose.position.y = 0.9;
   transform_handler_->updateRobotPose(pose);
+// 实现该逻辑，并处理相关状态转换。
   std::this_thread::sleep_for(500ms);
   EXPECT_EQ(tree_->tickRoot(), BT::NodeStatus::SUCCESS);
 
   pose.position.x = 1.0;
   pose.position.y = 1.0;
   transform_handler_->updateRobotPose(pose);
+// 实现该逻辑，并处理相关状态转换。
   std::this_thread::sleep_for(500ms);
   EXPECT_EQ(tree_->tickRoot(), BT::NodeStatus::SUCCESS);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
   bool all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
 
   return all_successful;

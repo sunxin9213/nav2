@@ -27,15 +27,18 @@ public:
   explicit TestService(
     std::string service_name,
     const rclcpp::NodeOptions & options = rclcpp::NodeOptions())
+// 实现 Node 的控制或装饰逻辑，管理子节点执行顺序和状态转换。
   : Node("test_service", options)
   {
     using namespace std::placeholders;  // NOLINT
 
     server_ = create_service<ServiceT>(
       service_name,
+// 实现该逻辑，并处理相关状态转换。
       std::bind(&TestService::handle_service, this, _1, _2, _3));
   }
 
+// 实现该逻辑，并处理相关状态转换。
   std::shared_ptr<typename ServiceT::Request> getCurrentRequest() const
   {
     return current_request_;

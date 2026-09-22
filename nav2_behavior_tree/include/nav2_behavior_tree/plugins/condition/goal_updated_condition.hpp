@@ -46,12 +46,14 @@ public:
    * @brief The main override required by a BT action
    * @return BT::NodeStatus Status of tick execution
    */
+// 初始化 NodeStatus tick 对象，读取参数并准备运行时依赖。
   BT::NodeStatus tick() override;
 
   /**
    * @brief Creates list of BT ports
    * @return BT::PortsList Containing node-specific ports
    */
+// 初始化 PortsList providedPorts 对象，读取参数并准备运行时依赖。
   static BT::PortsList providedPorts()
   {
     return {};

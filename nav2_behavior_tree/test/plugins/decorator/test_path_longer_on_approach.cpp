@@ -32,6 +32,7 @@ using namespace std::chrono_literals;  // NOLINT
 class PathLongerOnApproachTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("path_longer_on_approach_test_fixture");
@@ -57,6 +58,7 @@ public:
       "PathLongerOnApproach", builder);
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     delete config_;
@@ -65,6 +67,7 @@ public:
     factory_.reset();
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     tree_.reset();
@@ -83,10 +86,10 @@ BT::NodeConfiguration * PathLongerOnApproachTestFixture::config_ = nullptr;
 std::shared_ptr<BT::BehaviorTreeFactory> PathLongerOnApproachTestFixture::factory_ = nullptr;
 std::shared_ptr<BT::Tree> PathLongerOnApproachTestFixture::tree_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(PathLongerOnApproachTestFixture, test_tick)
 {
   // Success test
-  // create tree
   std::string xml_txt =
     R"(
       <root main_tree_to_execute = "MainTree" >
@@ -99,7 +102,6 @@ TEST_F(PathLongerOnApproachTestFixture, test_tick)
 
   tree_ = std::make_shared<BT::Tree>(factory_->createTreeFromText(xml_txt, config_->blackboard));
 
-  // set new path on blackboard
   nav_msgs::msg::Path new_path;
   new_path.poses.resize(10);
   for (unsigned int i = 0; i < new_path.poses.size(); i++) {
@@ -125,7 +127,6 @@ TEST_F(PathLongerOnApproachTestFixture, test_tick)
 
   tree_ = std::make_shared<BT::Tree>(factory_->createTreeFromText(xml_txt, config_->blackboard));
 
-  // set old path on blackboard
   nav_msgs::msg::Path old_path;
   old_path.poses.resize(5);
   for (unsigned int i = 1; i <= old_path.poses.size(); i++) {
@@ -147,16 +148,18 @@ TEST_F(PathLongerOnApproachTestFixture, test_tick)
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::FAILURE);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
   int all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
 
   return all_successful;

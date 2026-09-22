@@ -47,6 +47,7 @@ public:
     const std::string & xml_tag_name,
     const std::string & action_name,
     const BT::NodeConfiguration & conf)
+// 初始化 ActionNodeBase 对象，读取参数并准备运行时依赖。
   : BT::ActionNodeBase(xml_tag_name, conf), action_name_(action_name), should_send_goal_(true)
   {
     node_ = config().blackboard->template get<rclcpp::Node::SharedPtr>("node");
@@ -60,6 +61,7 @@ public:
       config().blackboard->template get<std::chrono::milliseconds>("bt_loop_duration");
     server_timeout_ =
       config().blackboard->template get<std::chrono::milliseconds>("server_timeout");
+// 实现该逻辑，并处理相关状态转换。
     getInput<std::chrono::milliseconds>("server_timeout", server_timeout_);
     wait_for_service_timeout_ =
       config().blackboard->template get<std::chrono::milliseconds>("wait_for_service_timeout");
@@ -75,9 +77,9 @@ public:
     if (getInput("server_name", remapped_action_name)) {
       action_name_ = remapped_action_name;
     }
+// 实现该逻辑，并处理相关状态转换。
     createActionClient(action_name_);
 
-    // Give the derive class a chance to do any initialization
     RCLCPP_DEBUG(node_->get_logger(), "\"%s\" BtActionNode initialized", xml_tag_name.c_str());
   }
 
@@ -91,12 +93,12 @@ public:
    * @brief Create instance of an action client
    * @param action_name Action name to create client for
    */
+// 实现该逻辑，并处理相关状态转换。
   void createActionClient(const std::string & action_name)
   {
     // Now that we have the ROS node to use, create the action client for this BT action
     action_client_ = rclcpp_action::create_client<ActionT>(node_, action_name, callback_group_);
 
-    // Make sure the server is actually there before continuing
     RCLCPP_DEBUG(node_->get_logger(), "Waiting for \"%s\" action server", action_name.c_str());
     if (!action_client_->wait_for_action_server(wait_for_service_timeout_)) {
       RCLCPP_ERROR(
@@ -105,6 +107,7 @@ public:
         wait_for_service_timeout_.count() / 1000.0);
       throw std::runtime_error(
               std::string("Action server ") + action_name +
+// 实现该逻辑，并处理相关状态转换。
               std::string(" not available"));
     }
   }
@@ -115,10 +118,12 @@ public:
    * @param addition Additional ports to add to BT port list
    * @return BT::PortsList Containing basic ports along with node-specific ports
    */
+// 初始化 PortsList providedBasicPorts 对象，读取参数并准备运行时依赖。
   static BT::PortsList providedBasicPorts(BT::PortsList addition)
   {
     BT::PortsList basic = {
       BT::InputPort<std::string>("server_name", "Action server name"),
+// 初始化 InputPort<std::chrono::milliseconds> 对象，读取参数并准备运行时依赖。
       BT::InputPort<std::chrono::milliseconds>("server_timeout")
     };
     basic.insert(addition.begin(), addition.end());
@@ -130,6 +135,7 @@ public:
    * @brief Creates list of BT ports
    * @return BT::PortsList Containing basic ports along with node-specific ports
    */
+// 初始化 PortsList providedPorts 对象，读取参数并准备运行时依赖。
   static BT::PortsList providedPorts()
   {
     return providedBasicPorts({});
@@ -142,6 +148,7 @@ public:
    * @brief Function to perform some user-defined operation on tick
    * Could do dynamic checks, such as getting updates to values on the blackboard
    */
+// 在每次 tick 时读取输入并准备下一步执行状态。
   virtual void on_tick()
   {
   }
@@ -153,6 +160,7 @@ public:
    * in subsequent calls to this function if no new feedback is received while waiting for a result.
    * @param feedback shared_ptr to latest feedback message, nullptr if no new feedback was received
    */
+// 实现该逻辑，并处理相关状态转换。
   virtual void on_wait_for_result(std::shared_ptr<const typename ActionT::Feedback>/*feedback*/)
   {
   }
@@ -162,6 +170,7 @@ public:
    * completion of the action. Could put a value on the blackboard.
    * @return BT::NodeStatus Returns SUCCESS by default, user may override return another value
    */
+// 初始化 NodeStatus on_success 对象，读取参数并准备运行时依赖。
   virtual BT::NodeStatus on_success()
   {
     return BT::NodeStatus::SUCCESS;
@@ -171,6 +180,7 @@ public:
    * @brief Function to perform some user-defined operation when the action is aborted.
    * @return BT::NodeStatus Returns FAILURE by default, user may override return another value
    */
+// 初始化 NodeStatus on_aborted 对象，读取参数并准备运行时依赖。
   virtual BT::NodeStatus on_aborted()
   {
     return BT::NodeStatus::FAILURE;
@@ -180,6 +190,7 @@ public:
    * @brief Function to perform some user-defined operation when the action is cancelled.
    * @return BT::NodeStatus Returns SUCCESS by default, user may override return another value
    */
+// 初始化 NodeStatus on_cancelled 对象，读取参数并准备运行时依赖。
   virtual BT::NodeStatus on_cancelled()
   {
     return BT::NodeStatus::SUCCESS;
@@ -189,22 +200,24 @@ public:
    * @brief The main override required by a BT action
    * @return BT::NodeStatus Status of tick execution
    */
+// 初始化 NodeStatus tick 对象，读取参数并准备运行时依赖。
   BT::NodeStatus tick() override
   {
     // first step to be done only at the beginning of the Action
     if (status() == BT::NodeStatus::IDLE) {
-      // setting the status to RUNNING to notify the BT Loggers (if any)
+// 初始化 NodeStatus::RUNNING); 对象，读取参数并准备运行时依赖。
       setStatus(BT::NodeStatus::RUNNING);
 
       // reset the flag to send the goal or not, allowing the user the option to set it in on_tick
       should_send_goal_ = true;
 
-      // user defined callback, may modify "should_send_goal_".
+// 在每次 tick 时读取输入并准备下一步执行状态。
       on_tick();
 
       if (!should_send_goal_) {
         return BT::NodeStatus::FAILURE;
       }
+// 实现该逻辑，并处理相关状态转换。
       send_new_goal();
     }
 
@@ -219,7 +232,6 @@ public:
           if (elapsed < server_timeout_) {
             return BT::NodeStatus::RUNNING;
           }
-          // if server has taken more time than the specified timeout value return FAILURE
           RCLCPP_WARN(
             node_->get_logger(),
             "Timed out while waiting for action server to acknowledge goal request for %s",
@@ -231,7 +243,7 @@ public:
 
       // The following code corresponds to the "RUNNING" loop
       if (rclcpp::ok() && !goal_result_available_) {
-        // user defined callback. May modify the value of "goal_updated_"
+// 实现该逻辑，并处理相关状态转换。
         on_wait_for_result(feedback_);
 
         // reset feedback to avoid stale information
@@ -242,6 +254,7 @@ public:
           goal_status == action_msgs::msg::GoalStatus::STATUS_ACCEPTED))
         {
           goal_updated_ = false;
+// 实现该逻辑，并处理相关状态转换。
           send_new_goal();
           auto elapsed =
             (node_->now() - time_goal_sent_).template to_chrono<std::chrono::milliseconds>();
@@ -293,6 +306,7 @@ public:
         break;
 
       default:
+// 实现该逻辑，并处理相关状态转换。
         throw std::logic_error("BtActionNode::Tick: invalid status value");
     }
 
@@ -304,6 +318,7 @@ public:
    * @brief The other (optional) override required by a BT action. In this case, we
    * make sure to cancel the ROS2 action if it is still running.
    */
+// 立即中断当前节点执行，并让上游状态按树结构继续传播。
   void halt() override
   {
     if (should_cancel_goal()) {
@@ -325,9 +340,11 @@ public:
           "Failed to get result for %s in node halt!", action_name_.c_str());
       }
 
+// 节点被取消时释放执行资源并停止当前动作。
       on_cancelled();
     }
 
+// 初始化 NodeStatus::IDLE); 对象，读取参数并准备运行时依赖。
     setStatus(BT::NodeStatus::IDLE);
   }
 
@@ -336,6 +353,7 @@ protected:
    * @brief Function to check if current goal should be cancelled
    * @return bool True if current goal should be cancelled, false otherwise
    */
+// 实现该逻辑，并处理相关状态转换。
   bool should_cancel_goal()
   {
     // Shut the node down if it is currently running
@@ -359,6 +377,7 @@ protected:
   /**
    * @brief Function to send new goal to action server
    */
+// 实现该逻辑，并处理相关状态转换。
   void send_new_goal()
   {
     goal_result_available_ = false;
@@ -399,6 +418,7 @@ protected:
    * After waiting for the future to complete, this value is incremented with the timeout value.
    * @return boolean True if future_goal_handle_ returns SUCCESS, False otherwise
    */
+// 实现该逻辑，并处理相关状态转换。
   bool is_future_goal_handle_complete(std::chrono::milliseconds & elapsed)
   {
     auto remaining = server_timeout_ - elapsed;
@@ -416,6 +436,7 @@ protected:
 
     if (result == rclcpp::FutureReturnCode::INTERRUPTED) {
       future_goal_handle_.reset();
+// 实现该逻辑，并处理相关状态转换。
       throw std::runtime_error("send_goal failed");
     }
 
@@ -423,6 +444,7 @@ protected:
       goal_handle_ = future_goal_handle_->get();
       future_goal_handle_.reset();
       if (!goal_handle_) {
+// 实现该逻辑，并处理相关状态转换。
         throw std::runtime_error("Goal was rejected by the action server");
       }
       return true;
@@ -434,6 +456,7 @@ protected:
   /**
    * @brief Function to increment recovery count on blackboard if this node wraps a recovery
    */
+// 实现该逻辑，并处理相关状态转换。
   void increment_recovery_count()
   {
     int recovery_count = 0;
@@ -445,32 +468,25 @@ protected:
   std::string action_name_;
   typename std::shared_ptr<rclcpp_action::Client<ActionT>> action_client_;
 
-  // All ROS2 actions have a goal and a result
   typename ActionT::Goal goal_;
   bool goal_updated_{false};
   bool goal_result_available_{false};
   typename rclcpp_action::ClientGoalHandle<ActionT>::SharedPtr goal_handle_;
   typename rclcpp_action::ClientGoalHandle<ActionT>::WrappedResult result_;
 
-  // To handle feedback from action server
   std::shared_ptr<const typename ActionT::Feedback> feedback_;
 
-  // The node that will be used for any ROS operations
   rclcpp::Node::SharedPtr node_;
   rclcpp::CallbackGroup::SharedPtr callback_group_;
   rclcpp::executors::SingleThreadedExecutor callback_group_executor_;
 
   // The timeout value while waiting for response from a server when a
-  // new action goal is sent or canceled
   std::chrono::milliseconds server_timeout_;
 
-  // The timeout value for BT loop execution
   std::chrono::milliseconds max_timeout_;
 
-  // The timeout value for waiting for a service to response
   std::chrono::milliseconds wait_for_service_timeout_;
 
-  // To track the action server acknowledgement when a new goal is sent
   std::shared_ptr<std::shared_future<typename rclcpp_action::ClientGoalHandle<ActionT>::SharedPtr>>
   future_goal_handle_;
   rclcpp::Time time_goal_sent_;

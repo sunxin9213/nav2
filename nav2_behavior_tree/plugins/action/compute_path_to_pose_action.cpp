@@ -24,49 +24,62 @@ ComputePathToPoseAction::ComputePathToPoseAction(
   const std::string & xml_tag_name,
   const std::string & action_name,
   const BT::NodeConfiguration & conf)
+// 实现该逻辑，并处理相关状态转换。
 : BtActionNode<nav2_msgs::action::ComputePathToPose>(xml_tag_name, action_name, conf)
 {
 }
 
+// 在每次 tick 时读取输入并准备下一步执行状态。
 void ComputePathToPoseAction::on_tick()
 {
+// 实现该逻辑，并处理相关状态转换。
   getInput("goal", goal_.goal);
+// 实现该逻辑，并处理相关状态转换。
   getInput("planner_id", goal_.planner_id);
   if (getInput("start", goal_.start)) {
     goal_.use_start = true;
   }
 }
 
+// 初始化 NodeStatus ComputePathToPoseAction::on_success 对象，读取参数并准备运行时依赖。
 BT::NodeStatus ComputePathToPoseAction::on_success()
 {
   setOutput("path", result_.result->path);
   return BT::NodeStatus::SUCCESS;
 }
 
+// 初始化 NodeStatus ComputePathToPoseAction::on_aborted 对象，读取参数并准备运行时依赖。
 BT::NodeStatus ComputePathToPoseAction::on_aborted()
 {
   nav_msgs::msg::Path empty_path;
+// 实现该逻辑，并处理相关状态转换。
   setOutput("path", empty_path);
   return BT::NodeStatus::FAILURE;
 }
 
+// 初始化 NodeStatus ComputePathToPoseAction::on_cancelled 对象，读取参数并准备运行时依赖。
 BT::NodeStatus ComputePathToPoseAction::on_cancelled()
 {
   nav_msgs::msg::Path empty_path;
+// 实现该逻辑，并处理相关状态转换。
   setOutput("path", empty_path);
   return BT::NodeStatus::SUCCESS;
 }
 
+// 立即中断当前节点执行，并让上游状态按树结构继续传播。
 void ComputePathToPoseAction::halt()
 {
   nav_msgs::msg::Path empty_path;
+// 实现该逻辑，并处理相关状态转换。
   setOutput("path", empty_path);
+// 立即中断当前节点执行，并让上游状态按树结构继续传播。
   BtActionNode::halt();
 }
 
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   BT::NodeBuilder builder =

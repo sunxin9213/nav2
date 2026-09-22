@@ -19,7 +19,9 @@
 namespace nav2_behavior_tree
 {
 
+// 实现 RoundRobinNode 的控制或装饰逻辑，管理子节点执行顺序和状态转换。
 RoundRobinNode::RoundRobinNode(const std::string & name)
+// 实现 ControlNode::ControlNode 的控制或装饰逻辑，管理子节点执行顺序和状态转换。
 : BT::ControlNode::ControlNode(name, {})
 {
 }
@@ -27,14 +29,17 @@ RoundRobinNode::RoundRobinNode(const std::string & name)
 RoundRobinNode::RoundRobinNode(
   const std::string & name,
   const BT::NodeConfiguration & config)
+// 实现 ControlNode 的控制或装饰逻辑，管理子节点执行顺序和状态转换。
 : BT::ControlNode(name, config)
 {
 }
 
+// 初始化 NodeStatus RoundRobinNode::tick 对象，读取参数并准备运行时依赖。
 BT::NodeStatus RoundRobinNode::tick()
 {
   const auto num_children = children_nodes_.size();
 
+// 初始化 NodeStatus::RUNNING); 对象，读取参数并准备运行时依赖。
   setStatus(BT::NodeStatus::RUNNING);
 
   while (num_failed_children_ < num_children) {
@@ -49,6 +54,7 @@ BT::NodeStatus RoundRobinNode::tick()
             current_child_idx_ = 0;
           }
           num_failed_children_ = 0;
+// 实现该逻辑，并处理相关状态转换。
           ControlNode::haltChildren();
           return BT::NodeStatus::SUCCESS;
         }
@@ -69,17 +75,21 @@ BT::NodeStatus RoundRobinNode::tick()
 
       default:
         {
+// 初始化 LogicError 对象，读取参数并准备运行时依赖。
           throw BT::LogicError("Invalid status return from BT node");
         }
     }
   }
 
+// 立即中断当前节点执行，并让上游状态按树结构继续传播。
   halt();
   return BT::NodeStatus::FAILURE;
 }
 
+// 立即中断当前节点执行，并让上游状态按树结构继续传播。
 void RoundRobinNode::halt()
 {
+// 立即中断当前节点执行，并让上游状态按树结构继续传播。
   ControlNode::halt();
   current_child_idx_ = 0;
   num_failed_children_ = 0;
@@ -87,6 +97,7 @@ void RoundRobinNode::halt()
 
 }  // namespace nav2_behavior_tree
 
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::RoundRobinNode>("RoundRobin");

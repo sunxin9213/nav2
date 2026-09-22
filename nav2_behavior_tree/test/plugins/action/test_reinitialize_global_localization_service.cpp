@@ -26,7 +26,9 @@
 class ReinitializeGlobalLocalizationService : public TestService<std_srvs::srv::Empty>
 {
 public:
+// 初始化 ReinitializeGlobalLocalizationService 对象，读取参数并准备运行时依赖。
   ReinitializeGlobalLocalizationService()
+// 初始化 TestService 对象，读取参数并准备运行时依赖。
   : TestService("reinitialize_global_localization")
   {}
 };
@@ -34,6 +36,7 @@ public:
 class ReinitializeGlobalLocalizationServiceTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("reinitialize_global_localization_test_fixture");
@@ -49,12 +52,15 @@ public:
       node_);
     config_->blackboard->set<std::chrono::milliseconds>(
       "server_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(20));
     config_->blackboard->set<std::chrono::milliseconds>(
       "bt_loop_duration",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(10));
     config_->blackboard->set<std::chrono::milliseconds>(
       "wait_for_service_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(1000));
     config_->blackboard->set<bool>("initial_pose_received", false);
 
@@ -62,6 +68,7 @@ public:
       "ReinitializeGlobalLocalization");
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     delete config_;
@@ -71,6 +78,7 @@ public:
     factory_.reset();
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     tree_.reset();
@@ -93,6 +101,7 @@ std::shared_ptr<BT::BehaviorTreeFactory>
 ReinitializeGlobalLocalizationServiceTestFixture::factory_ = nullptr;
 std::shared_ptr<BT::Tree> ReinitializeGlobalLocalizationServiceTestFixture::tree_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(ReinitializeGlobalLocalizationServiceTestFixture, test_tick)
 {
   std::string xml_txt =
@@ -107,23 +116,27 @@ TEST_F(ReinitializeGlobalLocalizationServiceTestFixture, test_tick)
   EXPECT_EQ(tree_->rootNode()->executeTick(), BT::NodeStatus::SUCCESS);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
-  // initialize service and spin on new thread
   ReinitializeGlobalLocalizationServiceTestFixture::server_ =
+// 实现该逻辑，并处理相关状态转换。
     std::make_shared<ReinitializeGlobalLocalizationService>();
+// 实现该逻辑，并处理相关状态转换。
   std::thread server_thread([]() {
+// 实现该逻辑，并处理相关状态转换。
       rclcpp::spin(ReinitializeGlobalLocalizationServiceTestFixture::server_);
     });
 
   int all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
   server_thread.join();
 

@@ -24,9 +24,11 @@ WaitAction::WaitAction(
   const std::string & xml_tag_name,
   const std::string & action_name,
   const BT::NodeConfiguration & conf)
+// 实现该逻辑，并处理相关状态转换。
 : BtActionNode<nav2_msgs::action::Wait>(xml_tag_name, action_name, conf)
 {
   int duration;
+// 实现该逻辑，并处理相关状态转换。
   getInput("wait_duration", duration);
   if (duration <= 0) {
     RCLCPP_WARN(
@@ -38,14 +40,17 @@ WaitAction::WaitAction(
   goal_.time.sec = duration;
 }
 
+// 在每次 tick 时读取输入并准备下一步执行状态。
 void WaitAction::on_tick()
 {
+// 实现该逻辑，并处理相关状态转换。
   increment_recovery_count();
 }
 
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   BT::NodeBuilder builder =

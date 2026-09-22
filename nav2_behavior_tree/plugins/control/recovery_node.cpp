@@ -24,19 +24,24 @@ RecoveryNode::RecoveryNode(
 : BT::ControlNode::ControlNode(name, conf),
   current_child_idx_(0),
   number_of_retries_(1),
+// 实现该逻辑，并处理相关状态转换。
   retry_count_(0)
 {
+// 实现该逻辑，并处理相关状态转换。
   getInput("number_of_retries", number_of_retries_);
 }
 
+// 初始化 NodeStatus RecoveryNode::tick 对象，读取参数并准备运行时依赖。
 BT::NodeStatus RecoveryNode::tick()
 {
   const unsigned children_count = children_nodes_.size();
 
   if (children_count != 2) {
+// 初始化 BehaviorTreeException 对象，读取参数并准备运行时依赖。
     throw BT::BehaviorTreeException("Recovery Node '" + name() + "' must only have 2 children.");
   }
 
+// 初始化 NodeStatus::RUNNING); 对象，读取参数并准备运行时依赖。
   setStatus(BT::NodeStatus::RUNNING);
 
   while (current_child_idx_ < children_count && retry_count_ <= number_of_retries_) {
@@ -47,7 +52,7 @@ BT::NodeStatus RecoveryNode::tick()
       switch (child_status) {
         case BT::NodeStatus::SUCCESS:
           {
-            // reset node and return success when first child returns success
+// 立即中断当前节点执行，并让上游状态按树结构继续传播。
             halt();
             return BT::NodeStatus::SUCCESS;
           }
@@ -55,12 +60,12 @@ BT::NodeStatus RecoveryNode::tick()
         case BT::NodeStatus::FAILURE:
           {
             if (retry_count_ < number_of_retries_) {
-              // halt first child and tick second child in next iteration
+// 实现该逻辑，并处理相关状态转换。
               ControlNode::haltChild(0);
               current_child_idx_++;
               break;
             } else {
-              // reset node and return failure when max retries has been exceeded
+// 立即中断当前节点执行，并让上游状态按树结构继续传播。
               halt();
               return BT::NodeStatus::FAILURE;
             }
@@ -73,6 +78,7 @@ BT::NodeStatus RecoveryNode::tick()
 
         default:
           {
+// 初始化 LogicError 对象，读取参数并准备运行时依赖。
             throw BT::LogicError("A child node must never return IDLE");
           }
       }  // end switch
@@ -81,7 +87,7 @@ BT::NodeStatus RecoveryNode::tick()
       switch (child_status) {
         case BT::NodeStatus::SUCCESS:
           {
-            // halt second child, increment recovery count, and tick first child in next iteration
+// 实现该逻辑，并处理相关状态转换。
             ControlNode::haltChild(1);
             retry_count_++;
             current_child_idx_--;
@@ -90,7 +96,7 @@ BT::NodeStatus RecoveryNode::tick()
 
         case BT::NodeStatus::FAILURE:
           {
-            // reset node and return failure if second child fails
+// 立即中断当前节点执行，并让上游状态按树结构继续传播。
             halt();
             return BT::NodeStatus::FAILURE;
           }
@@ -102,19 +108,22 @@ BT::NodeStatus RecoveryNode::tick()
 
         default:
           {
+// 初始化 LogicError 对象，读取参数并准备运行时依赖。
             throw BT::LogicError("A child node must never return IDLE");
           }
       }  // end switch
     }
   }  // end while loop
 
-  // reset node and return failure
+// 立即中断当前节点执行，并让上游状态按树结构继续传播。
   halt();
   return BT::NodeStatus::FAILURE;
 }
 
+// 立即中断当前节点执行，并让上游状态按树结构继续传播。
 void RecoveryNode::halt()
 {
+// 立即中断当前节点执行，并让上游状态按树结构继续传播。
   ControlNode::halt();
   retry_count_ = 0;
   current_child_idx_ = 0;
@@ -123,6 +132,7 @@ void RecoveryNode::halt()
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::RecoveryNode>("RecoveryNode");

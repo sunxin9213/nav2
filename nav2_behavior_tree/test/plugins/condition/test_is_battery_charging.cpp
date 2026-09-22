@@ -26,6 +26,7 @@
 class IsBatteryChargingConditionTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("test_is_battery_charging");
@@ -44,9 +45,11 @@ public:
 
     battery_pub_ = node_->create_publisher<sensor_msgs::msg::BatteryState>(
       "/battery_status",
+// 初始化 SystemDefaultsQoS 对象，读取参数并准备运行时依赖。
       rclcpp::SystemDefaultsQoS());
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     delete config_;
@@ -69,6 +72,7 @@ std::shared_ptr<BT::BehaviorTreeFactory> IsBatteryChargingConditionTestFixture::
 rclcpp::Publisher<sensor_msgs::msg::BatteryState>::SharedPtr
 IsBatteryChargingConditionTestFixture::battery_pub_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(IsBatteryChargingConditionTestFixture, test_behavior_power_supply_status)
 {
   std::string xml_txt =
@@ -84,46 +88,63 @@ TEST_F(IsBatteryChargingConditionTestFixture, test_behavior_power_supply_status)
   sensor_msgs::msg::BatteryState battery_msg;
   battery_msg.power_supply_status = sensor_msgs::msg::BatteryState::POWER_SUPPLY_STATUS_UNKNOWN;
   battery_pub_->publish(battery_msg);
+// 实现该逻辑，并处理相关状态转换。
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::spin_some(node_);
+// 初始化 NodeStatus::FAILURE); 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(tree.tickRoot(), BT::NodeStatus::FAILURE);
 
   battery_msg.power_supply_status = sensor_msgs::msg::BatteryState::POWER_SUPPLY_STATUS_CHARGING;
   battery_pub_->publish(battery_msg);
+// 实现该逻辑，并处理相关状态转换。
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::spin_some(node_);
+// 初始化 NodeStatus::SUCCESS); 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(tree.tickRoot(), BT::NodeStatus::SUCCESS);
 
   battery_msg.power_supply_status = sensor_msgs::msg::BatteryState::POWER_SUPPLY_STATUS_DISCHARGING;
   battery_pub_->publish(battery_msg);
+// 实现该逻辑，并处理相关状态转换。
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::spin_some(node_);
+// 初始化 NodeStatus::FAILURE); 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(tree.tickRoot(), BT::NodeStatus::FAILURE);
 
   battery_msg.power_supply_status =
     sensor_msgs::msg::BatteryState::POWER_SUPPLY_STATUS_NOT_CHARGING;
   battery_pub_->publish(battery_msg);
+// 实现该逻辑，并处理相关状态转换。
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::spin_some(node_);
+// 初始化 NodeStatus::FAILURE); 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(tree.tickRoot(), BT::NodeStatus::FAILURE);
 
   battery_msg.power_supply_status = sensor_msgs::msg::BatteryState::POWER_SUPPLY_STATUS_FULL;
   battery_pub_->publish(battery_msg);
+// 实现该逻辑，并处理相关状态转换。
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::spin_some(node_);
+// 初始化 NodeStatus::FAILURE); 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(tree.tickRoot(), BT::NodeStatus::FAILURE);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
   bool all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
 
   return all_successful;

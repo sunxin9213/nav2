@@ -26,7 +26,9 @@
 class CancelDriveOnHeadingServer : public TestActionServer<nav2_msgs::action::DriveOnHeading>
 {
 public:
+// 初始化 CancelDriveOnHeadingServer 对象，读取参数并准备运行时依赖。
   CancelDriveOnHeadingServer()
+// 初始化 TestActionServer 对象，读取参数并准备运行时依赖。
   : TestActionServer("drive_on_heading_cancel")
   {}
 
@@ -37,7 +39,7 @@ protected:
     goal_handle)
   {
     while (!goal_handle->is_canceling()) {
-      // DriveOnHeadingCancel here until goal cancels
+// 实现该逻辑，并处理相关状态转换。
       std::this_thread::sleep_for(std::chrono::milliseconds(15));
     }
   }
@@ -46,6 +48,7 @@ protected:
 class CancelDriveOnHeadingTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("cancel_drive_on_heading_action_test_fixture");
@@ -61,12 +64,15 @@ public:
       node_);
     config_->blackboard->set<std::chrono::milliseconds>(
       "server_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(20));
     config_->blackboard->set<std::chrono::milliseconds>(
       "bt_loop_duration",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(10));
     config_->blackboard->set<std::chrono::milliseconds>(
       "wait_for_service_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(1000));
     client_ = rclcpp_action::create_client<nav2_msgs::action::DriveOnHeading>(
       node_, "drive_on_heading_cancel");
@@ -83,6 +89,7 @@ public:
       builder);
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     delete config_;
@@ -93,6 +100,7 @@ public:
     factory_.reset();
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     tree_.reset();
@@ -119,6 +127,7 @@ std::shared_ptr<BT::BehaviorTreeFactory>
 CancelDriveOnHeadingTestFixture::factory_ = nullptr;
 std::shared_ptr<BT::Tree> CancelDriveOnHeadingTestFixture::tree_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(CancelDriveOnHeadingTestFixture, test_ports)
 {
   std::string xml_txt =
@@ -143,35 +152,36 @@ TEST_F(CancelDriveOnHeadingTestFixture, test_ports)
   client_->wait_for_action_server();
   client_->async_send_goal(goal_msg, send_goal_options);
 
-  // Adding a sleep so that the goal is indeed older than 10ms as described in our abstract class
+// 实现该逻辑，并处理相关状态转换。
   std::this_thread::sleep_for(std::chrono::milliseconds(15));
 
   // Executing tick
   tree_->rootNode()->executeTick();
 
-  // BT node should return success, once when the goal is cancelled
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::SUCCESS);
 
-  // Adding another test case to check if the goal is infact cancelling
   EXPECT_EQ(action_server_->isGoalCancelled(), true);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
-  // initialize action server and drive on new thread
   CancelDriveOnHeadingTestFixture::action_server_ = std::make_shared<CancelDriveOnHeadingServer>();
+// 实现该逻辑，并处理相关状态转换。
   std::thread server_thread([]() {
+// 实现该逻辑，并处理相关状态转换。
       rclcpp::spin(CancelDriveOnHeadingTestFixture::action_server_);
     });
 
   int all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
   server_thread.join();
 

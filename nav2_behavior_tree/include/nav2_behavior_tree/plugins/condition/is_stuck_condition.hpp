@@ -53,28 +53,33 @@ public:
    * @brief Callback function for odom topic
    * @param msg Shared pointer to nav_msgs::msg::Odometry::SharedPtr message
    */
+// 实现该逻辑，并处理相关状态转换。
   void onOdomReceived(const typename nav_msgs::msg::Odometry::SharedPtr msg);
 
   /**
    * @brief The main override required by a BT action
    * @return BT::NodeStatus Status of tick execution
    */
+// 初始化 NodeStatus tick 对象，读取参数并准备运行时依赖。
   BT::NodeStatus tick() override;
 
   /**
    * @brief Function to log status when robot is stuck/free
    */
+// 实现该逻辑，并处理相关状态转换。
   void logStuck(const std::string & msg) const;
 
   /**
    * @brief Function to approximate acceleration from the odom history
    */
+// 实现该逻辑，并处理相关状态转换。
   void updateStates();
 
   /**
    * @brief Detect if robot bumped into something by checking for abnormal deceleration
    * @return bool true if robot is stuck, false otherwise
    */
+// 检测机器人是否长时间卡住并需要执行恢复策略。
   bool isStuck();
 
   /**
@@ -84,7 +89,6 @@ public:
   static BT::PortsList providedPorts() {return {};}
 
 private:
-  // The node that will be used for any ROS operations
   rclcpp::Node::SharedPtr node_;
   rclcpp::CallbackGroup::SharedPtr callback_group_;
   rclcpp::executors::SingleThreadedExecutor callback_group_executor_;
@@ -92,9 +96,7 @@ private:
 
   std::atomic<bool> is_stuck_;
 
-  // Listen to odometry
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
-  // Store history of odometry measurements
   std::deque<nav_msgs::msg::Odometry> odom_history_;
   std::deque<nav_msgs::msg::Odometry>::size_type odom_history_size_;
 

@@ -67,24 +67,28 @@ public:
    * and calls user-defined onConfigure.
    * @return bool true on SUCCESS and false on FAILURE
    */
+// 实现该逻辑，并处理相关状态转换。
   bool on_configure();
 
   /**
    * @brief Activates action server
    * @return bool true on SUCCESS and false on FAILURE
    */
+// 实现该逻辑，并处理相关状态转换。
   bool on_activate();
 
   /**
    * @brief Deactivates action server
    * @return bool true on SUCCESS and false on FAILURE
    */
+// 实现该逻辑，并处理相关状态转换。
   bool on_deactivate();
 
   /**
    * @brief Resets member variables
    * @return bool true on SUCCESS and false on FAILURE
    */
+// 实现该逻辑，并处理相关状态转换。
   bool on_cleanup();
 
   /**
@@ -99,6 +103,7 @@ public:
    * @brief Getter function for BT Blackboard
    * @return BT::Blackboard::Ptr Shared pointer to current BT blackboard
    */
+// 初始化 Blackboard::Ptr getBlackboard 对象，读取参数并准备运行时依赖。
   BT::Blackboard::Ptr getBlackboard() const
   {
     return blackboard_;
@@ -108,6 +113,7 @@ public:
    * @brief Getter function for current BT XML filename
    * @return string Containing current BT XML filename
    */
+// 实现该逻辑，并处理相关状态转换。
   std::string getCurrentBTFilename() const
   {
     return current_bt_xml_filename_;
@@ -117,6 +123,7 @@ public:
    * @brief Getter function for default BT XML filename
    * @return string Containing default BT XML filename
    */
+// 实现该逻辑，并处理相关状态转换。
   std::string getDefaultBTFilename() const
   {
     return default_bt_xml_filename_;
@@ -126,6 +133,7 @@ public:
    * @brief Wrapper function to accept pending goal if a preempt has been requested
    * @return Shared pointer to pending action goal
    */
+// 实现该逻辑，并处理相关状态转换。
   const std::shared_ptr<const typename ActionT::Goal> acceptPendingGoal()
   {
     return action_server_->accept_pending_goal();
@@ -134,6 +142,7 @@ public:
   /**
    * @brief Wrapper function to terminate pending goal if a preempt has been requested
    */
+// 实现该逻辑，并处理相关状态转换。
   void terminatePendingGoal()
   {
     action_server_->terminate_pending_goal();
@@ -143,6 +152,7 @@ public:
    * @brief Wrapper function to get current goal
    * @return Shared pointer to current action goal
    */
+// 实现该逻辑，并处理相关状态转换。
   const std::shared_ptr<const typename ActionT::Goal> getCurrentGoal() const
   {
     return action_server_->get_current_goal();
@@ -152,6 +162,7 @@ public:
    * @brief Wrapper function to get pending goal
    * @return Shared pointer to pending action goal
    */
+// 实现该逻辑，并处理相关状态转换。
   const std::shared_ptr<const typename ActionT::Goal> getPendingGoal() const
   {
     return action_server_->get_pending_goal();
@@ -160,6 +171,7 @@ public:
   /**
    * @brief Wrapper function to publish action feedback
    */
+// 实现该逻辑，并处理相关状态转换。
   void publishFeedback(typename std::shared_ptr<typename ActionT::Feedback> feedback)
   {
     action_server_->publish_feedback(feedback);
@@ -178,6 +190,7 @@ public:
    * @brief Function to halt the current tree. It will interrupt the execution of RUNNING nodes
    * by calling their halt() implementation (only for Async nodes that may return RUNNING)
    */
+// 实现该逻辑，并处理相关状态转换。
   void haltTree()
   {
     tree_.rootNode()->halt();
@@ -187,52 +200,38 @@ protected:
   /**
    * @brief Action server callback
    */
+// 实现该逻辑，并处理相关状态转换。
   void executeCallback();
 
-  // Action name
   std::string action_name_;
 
-  // Our action server implements the template action
   std::shared_ptr<ActionServer> action_server_;
 
-  // Behavior Tree to be executed when goal is received
   BT::Tree tree_;
 
-  // The blackboard shared by all of the nodes in the tree
   BT::Blackboard::Ptr blackboard_;
 
-  // The XML file that cointains the Behavior Tree to create
   std::string current_bt_xml_filename_;
   std::string default_bt_xml_filename_;
 
-  // The wrapper class for the BT functionality
   std::unique_ptr<nav2_behavior_tree::BehaviorTreeEngine> bt_;
 
-  // Libraries to pull plugins (BT Nodes) from
   std::vector<std::string> plugin_lib_names_;
 
-  // A regular, non-spinning ROS node that we can use for calls to the action client
   rclcpp::Node::SharedPtr client_node_;
 
-  // Parent node
   rclcpp_lifecycle::LifecycleNode::WeakPtr node_;
 
-  // Clock
   rclcpp::Clock::SharedPtr clock_;
 
-  // Logger
   rclcpp::Logger logger_{rclcpp::get_logger("BtActionServer")};
 
-  // To publish BT logs
   std::unique_ptr<RosTopicLogger> topic_logger_;
 
-  // Duration for each iteration of BT execution
   std::chrono::milliseconds bt_loop_duration_;
 
-  // Default timeout value while waiting for response from a server
   std::chrono::milliseconds default_server_timeout_;
 
-  // The timeout value for waiting for a service to response
   std::chrono::milliseconds wait_for_service_timeout_;
 
   // should the BT be reloaded even if the same xml filename is requested?

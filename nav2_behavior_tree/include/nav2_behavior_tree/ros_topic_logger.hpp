@@ -39,7 +39,9 @@ public:
    * @param ros_node Weak pointer to parent rclcpp::Node
    * @param tree BT to monitor
    */
+// 初始化 Node::WeakPtr & ros_node, const BT::Tree & tree) 对象，读取参数并准备运行时依赖。
   RosTopicLogger(const rclcpp::Node::WeakPtr & ros_node, const BT::Tree & tree)
+// 初始化 StatusChangeLogger 对象，读取参数并准备运行时依赖。
   : StatusChangeLogger(tree.rootNode())
   {
     auto node = ros_node.lock();
@@ -47,6 +49,7 @@ public:
     logger_ = node->get_logger();
     log_pub_ = node->create_publisher<nav2_msgs::msg::BehaviorTreeLog>(
       "behavior_tree_log",
+// 初始化 QoS 对象，读取参数并准备运行时依赖。
       rclcpp::QoS(10));
   }
 
@@ -78,12 +81,14 @@ public:
       std::chrono::duration<double>(timestamp).count(),
       node.name().c_str(),
       toStr(prev_status, true).c_str(),
+// 实现该逻辑，并处理相关状态转换。
       toStr(status, true).c_str() );
   }
 
   /**
    * @brief Clear log buffer if any
    */
+// 实现该逻辑，并处理相关状态转换。
   void flush() override
   {
     if (!event_log_.empty()) {

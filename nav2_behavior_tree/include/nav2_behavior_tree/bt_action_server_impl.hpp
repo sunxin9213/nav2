@@ -47,6 +47,7 @@ BtActionServer<ActionT>::BtActionServer(
   on_goal_received_callback_(on_goal_received_callback),
   on_loop_callback_(on_loop_callback),
   on_preempt_callback_(on_preempt_callback),
+// 实现该逻辑，并处理相关状态转换。
   on_completion_callback_(on_completion_callback)
 {
   auto node = node_.lock();
@@ -69,10 +70,12 @@ BtActionServer<ActionT>::BtActionServer(
 }
 
 template<class ActionT>
+// 释放对象持有的资源，并执行必要的清理动作。
 BtActionServer<ActionT>::~BtActionServer()
 {}
 
 template<class ActionT>
+// 实现该逻辑，并处理相关状态转换。
 bool BtActionServer<ActionT>::on_configure()
 {
   auto node = node_.lock();
@@ -82,6 +85,7 @@ bool BtActionServer<ActionT>::on_configure()
 
   // Name client node after action name
   std::string client_node_name = action_name_;
+// 实现该逻辑，并处理相关状态转换。
   std::replace(client_node_name.begin(), client_node_name.end(), '/', '_');
   // Use suffix '_rclcpp_node' to keep parameter file consistency #1773
   auto options = rclcpp::NodeOptions().arguments(
@@ -96,13 +100,13 @@ bool BtActionServer<ActionT>::on_configure()
 
   // Declare parameters for common client node applications to share with BT nodes
   // Declare if not declared in case being used an external application, then copying
-  // all of the main node's parameters to the client for BT nodes to obtain
   nav2_util::declare_parameter_if_not_declared(
     node, "global_frame", rclcpp::ParameterValue(std::string("map")));
   nav2_util::declare_parameter_if_not_declared(
     node, "robot_base_frame", rclcpp::ParameterValue(std::string("base_link")));
   nav2_util::declare_parameter_if_not_declared(
     node, "transform_tolerance", rclcpp::ParameterValue(0.1));
+// 实现该逻辑，并处理相关状态转换。
   nav2_util::copy_all_parameters(node, client_node_);
 
   action_server_ = std::make_shared<ActionServer>(
@@ -141,9 +145,11 @@ bool BtActionServer<ActionT>::on_configure()
 }
 
 template<class ActionT>
+// 实现该逻辑，并处理相关状态转换。
 bool BtActionServer<ActionT>::on_activate()
 {
   if (!loadBehaviorTree(default_bt_xml_filename_)) {
+// 初始化 RCLCPP_ERROR 对象，读取参数并准备运行时依赖。
     RCLCPP_ERROR(logger_, "Error loading XML file: %s", default_bt_xml_filename_.c_str());
     return false;
   }
@@ -152,6 +158,7 @@ bool BtActionServer<ActionT>::on_activate()
 }
 
 template<class ActionT>
+// 实现该逻辑，并处理相关状态转换。
 bool BtActionServer<ActionT>::on_deactivate()
 {
   action_server_->deactivate();
@@ -159,6 +166,7 @@ bool BtActionServer<ActionT>::on_deactivate()
 }
 
 template<class ActionT>
+// 实现该逻辑，并处理相关状态转换。
 bool BtActionServer<ActionT>::on_cleanup()
 {
   client_node_.reset();
@@ -173,6 +181,7 @@ bool BtActionServer<ActionT>::on_cleanup()
 }
 
 template<class ActionT>
+// 实现该逻辑，并处理相关状态转换。
 bool BtActionServer<ActionT>::loadBehaviorTree(const std::string & bt_xml_filename)
 {
   // Empty filename is default for backward compatibility
@@ -180,20 +189,23 @@ bool BtActionServer<ActionT>::loadBehaviorTree(const std::string & bt_xml_filena
 
   // Use previous BT if it is the existing one and always reload flag is not set to true
   if (!always_reload_bt_xml_ && current_bt_xml_filename_ == filename) {
+// 初始化 RCLCPP_DEBUG 对象，读取参数并准备运行时依赖。
     RCLCPP_DEBUG(logger_, "BT will not be reloaded as the given xml is already loaded");
     return true;
   }
 
-  // Read the input BT XML from the specified file into a string
+// 实现该逻辑，并处理相关状态转换。
   std::ifstream xml_file(filename);
 
   if (!xml_file.good()) {
+// 初始化 RCLCPP_ERROR 对象，读取参数并准备运行时依赖。
     RCLCPP_ERROR(logger_, "Couldn't open input XML file: %s", filename.c_str());
     return false;
   }
 
   auto xml_string = std::string(
     std::istreambuf_iterator<char>(xml_file),
+// 实现该逻辑，并处理相关状态转换。
     std::istreambuf_iterator<char>());
 
   // Create the Behavior Tree from the XML input
@@ -208,6 +220,7 @@ bool BtActionServer<ActionT>::loadBehaviorTree(const std::string & bt_xml_filena
         wait_for_service_timeout_);
     }
   } catch (const std::exception & e) {
+// 初始化 RCLCPP_ERROR 对象，读取参数并准备运行时依赖。
     RCLCPP_ERROR(logger_, "Exception when loading BT: %s", e.what());
     return false;
   }
@@ -219,6 +232,7 @@ bool BtActionServer<ActionT>::loadBehaviorTree(const std::string & bt_xml_filena
 }
 
 template<class ActionT>
+// 实现该逻辑，并处理相关状态转换。
 void BtActionServer<ActionT>::executeCallback()
 {
   if (!on_goal_received_callback_(action_server_->get_current_goal())) {
@@ -243,34 +257,37 @@ void BtActionServer<ActionT>::executeCallback()
         on_preempt_callback_(action_server_->get_pending_goal());
       }
       topic_logger_->flush();
+// 实现该逻辑，并处理相关状态转换。
       on_loop_callback_();
     };
 
-  // Execute the BT that was previously created in the configure step
   nav2_behavior_tree::BtStatus rc = bt_->run(&tree_, on_loop, is_canceling, bt_loop_duration_);
 
   // Make sure that the Bt is not in a running state from a previous execution
-  // note: if all the ControlNodes are implemented correctly, this is not needed.
   bt_->haltAllActions(tree_.rootNode());
 
   // Give server an opportunity to populate the result message or simple give
   // an indication that the action is complete.
   auto result = std::make_shared<typename ActionT::Result>();
+// 实现该逻辑，并处理相关状态转换。
   on_completion_callback_(result, rc);
 
   switch (rc) {
     case nav2_behavior_tree::BtStatus::SUCCEEDED:
       action_server_->succeeded_current(result);
+// 初始化 RCLCPP_INFO 对象，读取参数并准备运行时依赖。
       RCLCPP_INFO(logger_, "Goal succeeded");
       break;
 
     case nav2_behavior_tree::BtStatus::FAILED:
       action_server_->terminate_current(result);
+// 初始化 RCLCPP_ERROR 对象，读取参数并准备运行时依赖。
       RCLCPP_ERROR(logger_, "Goal failed");
       break;
 
     case nav2_behavior_tree::BtStatus::CANCELED:
       action_server_->terminate_all(result);
+// 初始化 RCLCPP_INFO 对象，读取参数并准备运行时依赖。
       RCLCPP_INFO(logger_, "Goal canceled");
       break;
   }

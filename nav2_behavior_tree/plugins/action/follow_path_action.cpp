@@ -24,22 +24,27 @@ FollowPathAction::FollowPathAction(
   const std::string & xml_tag_name,
   const std::string & action_name,
   const BT::NodeConfiguration & conf)
+// 实现该逻辑，并处理相关状态转换。
 : BtActionNode<nav2_msgs::action::FollowPath>(xml_tag_name, action_name, conf)
 {
 }
 
+// 在每次 tick 时读取输入并准备下一步执行状态。
 void FollowPathAction::on_tick()
 {
+// 实现该逻辑，并处理相关状态转换。
   getInput("path", goal_.path);
+// 实现该逻辑，并处理相关状态转换。
   getInput("controller_id", goal_.controller_id);
+// 实现该逻辑，并处理相关状态转换。
   getInput("goal_checker_id", goal_.goal_checker_id);
 }
 
 void FollowPathAction::on_wait_for_result(
   std::shared_ptr<const nav2_msgs::action::FollowPath::Feedback>/*feedback*/)
 {
-  // Grab the new path
   nav_msgs::msg::Path new_path;
+// 实现该逻辑，并处理相关状态转换。
   getInput("path", new_path);
 
   // Check if it is not same with the current one
@@ -50,6 +55,7 @@ void FollowPathAction::on_wait_for_result(
   }
 
   std::string new_controller_id;
+// 实现该逻辑，并处理相关状态转换。
   getInput("controller_id", new_controller_id);
 
   if (goal_.controller_id != new_controller_id) {
@@ -58,6 +64,7 @@ void FollowPathAction::on_wait_for_result(
   }
 
   std::string new_goal_checker_id;
+// 实现该逻辑，并处理相关状态转换。
   getInput("goal_checker_id", new_goal_checker_id);
 
   if (goal_.goal_checker_id != new_goal_checker_id) {
@@ -69,6 +76,7 @@ void FollowPathAction::on_wait_for_result(
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   BT::NodeBuilder builder =

@@ -23,6 +23,7 @@
 class PipelineSequenceTestFixture : public nav2_behavior_tree::BehaviorTreeTestFixture
 {
 public:
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void SetUp() override
   {
     bt_node_ = std::make_shared<nav2_behavior_tree::PipelineSequence>(
@@ -35,6 +36,7 @@ public:
     bt_node_->addChild(third_child_.get());
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     first_child_.reset();
@@ -59,12 +61,14 @@ PipelineSequenceTestFixture::second_child_ = nullptr;
 std::shared_ptr<nav2_behavior_tree::DummyNode>
 PipelineSequenceTestFixture::third_child_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(PipelineSequenceTestFixture, test_failure_on_idle_child)
 {
   first_child_->changeStatus(BT::NodeStatus::IDLE);
   EXPECT_THROW(bt_node_->executeTick(), std::runtime_error);
 }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(PipelineSequenceTestFixture, test_failure)
 {
   first_child_->changeStatus(BT::NodeStatus::FAILURE);
@@ -99,6 +103,7 @@ TEST_F(PipelineSequenceTestFixture, test_failure)
   EXPECT_EQ(third_child_->status(), BT::NodeStatus::IDLE);
 }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(PipelineSequenceTestFixture, test_behavior)
 {
   first_child_->changeStatus(BT::NodeStatus::RUNNING);
@@ -125,16 +130,18 @@ TEST_F(PipelineSequenceTestFixture, test_behavior)
   EXPECT_EQ(third_child_->status(), BT::NodeStatus::IDLE);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
   int all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
 
   return all_successful;

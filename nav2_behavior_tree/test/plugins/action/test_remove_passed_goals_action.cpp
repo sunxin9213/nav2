@@ -32,6 +32,7 @@
 class RemovePassedGoalsTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("passed_goals_test_fixture");
@@ -61,6 +62,7 @@ public:
       "RemovePassedGoals", builder);
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     transform_handler_->deactivate();
@@ -71,6 +73,7 @@ public:
     factory_.reset();
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     tree_.reset();
@@ -92,6 +95,7 @@ std::shared_ptr<BT::Tree> RemovePassedGoalsTestFixture::tree_ = nullptr;
 std::shared_ptr<nav2_behavior_tree::TransformHandler>
 RemovePassedGoalsTestFixture::transform_handler_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(RemovePassedGoalsTestFixture, test_tick)
 {
   geometry_msgs::msg::Pose pose;
@@ -102,7 +106,6 @@ TEST_F(RemovePassedGoalsTestFixture, test_tick)
   transform_handler_->waitForTransform();
   transform_handler_->updateRobotPose(pose);
 
-  // create tree
   std::string xml_txt =
     R"(
       <root main_tree_to_execute = "MainTree" >
@@ -113,7 +116,6 @@ TEST_F(RemovePassedGoalsTestFixture, test_tick)
 
   tree_ = std::make_shared<BT::Tree>(factory_->createTreeFromText(xml_txt, config_->blackboard));
 
-  // create new goal and set it on blackboard
   std::vector<geometry_msgs::msg::PoseStamped> poses;
   poses.resize(4);
   poses[0].pose.position.x = 0.0;
@@ -135,25 +137,29 @@ TEST_F(RemovePassedGoalsTestFixture, test_tick)
     tree_->rootNode()->executeTick();
   }
 
-  // check that it removed the point in range
   std::vector<geometry_msgs::msg::PoseStamped> output_poses;
   config_->blackboard->get("goals", output_poses);
 
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(output_poses.size(), 2u);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(output_poses[0], poses[2]);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(output_poses[1], poses[3]);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
   int all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
 
   return all_successful;

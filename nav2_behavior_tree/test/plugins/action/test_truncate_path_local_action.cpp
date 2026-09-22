@@ -30,6 +30,7 @@
 class TruncatePathLocalTestFixture : public nav2_behavior_tree::BehaviorTreeTestFixture
 {
 public:
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void SetUp() override
   {
     bt_node_ = std::make_shared<nav2_behavior_tree::TruncatePathLocal>(
@@ -49,12 +50,14 @@ public:
     }
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     bt_node_.reset();
     tree_.reset();
   }
 
+// 实现该逻辑，并处理相关状态转换。
   static geometry_msgs::msg::PoseStamped poseMsg(double x, double y, double orientation)
   {
     geometry_msgs::msg::PoseStamped pose;
@@ -64,6 +67,7 @@ public:
     return pose;
   }
 
+// 实现该逻辑，并处理相关状态转换。
   nav_msgs::msg::Path createLoopCrossingTestPath()
   {
     nav_msgs::msg::Path path;
@@ -102,9 +106,9 @@ std::shared_ptr<nav2_behavior_tree::TruncatePathLocal> TruncatePathLocalTestFixt
   nullptr;
 std::shared_ptr<BT::Tree> TruncatePathLocalTestFixture::tree_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(TruncatePathLocalTestFixture, test_tick)
 {
-  // create tree
   std::string xml_txt =
     R"(
       <root main_tree_to_execute = "MainTree" >
@@ -126,6 +130,7 @@ TEST_F(TruncatePathLocalTestFixture, test_tick)
 
   // create path and set it on blackboard
   nav_msgs::msg::Path path = createLoopCrossingTestPath();
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(path.poses.size(), 12u);
 
   config_->blackboard->set("path", path);
@@ -141,12 +146,19 @@ TEST_F(TruncatePathLocalTestFixture, test_tick)
   config_->blackboard->get("truncated_path", truncated_path);
 
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::SUCCESS);
+// 初始化 EXPECT_NE 对象，读取参数并准备运行时依赖。
   EXPECT_NE(path, truncated_path);
+// 初始化 ASSERT_GE 对象，读取参数并准备运行时依赖。
   ASSERT_GE(truncated_path.poses.size(), 1u);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.size(), 3u);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.front().pose.position.x, -0.5);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.front().pose.position.y, 0.0);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.back().pose.position.x, 1.5);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.back().pose.position.y, 0.0);
 
   /////////////////////////////////////////
@@ -163,12 +175,19 @@ TEST_F(TruncatePathLocalTestFixture, test_tick)
   config_->blackboard->get("truncated_path", truncated_path);
 
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::SUCCESS);
+// 初始化 EXPECT_NE 对象，读取参数并准备运行时依赖。
   EXPECT_NE(path, truncated_path);
+// 初始化 ASSERT_GE 对象，读取参数并准备运行时依赖。
   ASSERT_GE(truncated_path.poses.size(), 1u);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.size(), 2u);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.front().pose.position.x, -0.3);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.front().pose.position.y, 0.0);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.back().pose.position.x, -0.5);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.back().pose.position.y, 1.0);
 
   /////////////////////////////////////////
@@ -185,20 +204,28 @@ TEST_F(TruncatePathLocalTestFixture, test_tick)
   config_->blackboard->get("truncated_path", truncated_path);
 
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::SUCCESS);
+// 初始化 EXPECT_NE 对象，读取参数并准备运行时依赖。
   EXPECT_NE(path, truncated_path);
+// 初始化 ASSERT_GE 对象，读取参数并准备运行时依赖。
   ASSERT_GE(truncated_path.poses.size(), 1u);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.size(), 2u);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.front().pose.position.x, 0.3);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.front().pose.position.y, 0.0);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.back().pose.position.x, 0.3);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.back().pose.position.y, -1.0);
 
+// 初始化 SUCCEED 对象，读取参数并准备运行时依赖。
   SUCCEED();
 }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(TruncatePathLocalTestFixture, test_success_on_empty_path)
 {
-  // create tree
   std::string xml_txt =
     R"(
       <root main_tree_to_execute = "MainTree" >
@@ -219,7 +246,6 @@ TEST_F(TruncatePathLocalTestFixture, test_success_on_empty_path)
 
   tree_ = std::make_shared<BT::Tree>(factory_->createTreeFromText(xml_txt, config_->blackboard));
 
-  // create path and set it on blackboard
   nav_msgs::msg::Path path;
   path.header.stamp = node_->now();
   path.header.frame_id = "map";
@@ -236,13 +262,15 @@ TEST_F(TruncatePathLocalTestFixture, test_success_on_empty_path)
   config_->blackboard->get("truncated_path", truncated_path);
 
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::SUCCESS);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(path, truncated_path);
+// 初始化 SUCCEED 对象，读取参数并准备运行时依赖。
   SUCCEED();
 }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(TruncatePathLocalTestFixture, test_failure_on_no_pose)
 {
-  // create tree
   std::string xml_txt =
     R"(
       <root main_tree_to_execute = "MainTree" >
@@ -262,7 +290,6 @@ TEST_F(TruncatePathLocalTestFixture, test_failure_on_no_pose)
 
   tree_ = std::make_shared<BT::Tree>(factory_->createTreeFromText(xml_txt, config_->blackboard));
 
-  // create path and set it on blackboard
   nav_msgs::msg::Path path;
   path.header.stamp = node_->now();
   path.header.frame_id = "map";
@@ -279,12 +306,13 @@ TEST_F(TruncatePathLocalTestFixture, test_failure_on_no_pose)
   config_->blackboard->get("truncated_path", truncated_path);
 
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::FAILURE);
+// 初始化 SUCCEED 对象，读取参数并准备运行时依赖。
   SUCCEED();
 }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(TruncatePathLocalTestFixture, test_failure_on_invalid_robot_frame)
 {
-  // create tree
   std::string xml_txt =
     R"(
       <root main_tree_to_execute = "MainTree" >
@@ -306,6 +334,7 @@ TEST_F(TruncatePathLocalTestFixture, test_failure_on_invalid_robot_frame)
 
   // create new goal and set it on blackboard
   nav_msgs::msg::Path path = createLoopCrossingTestPath();
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(path.poses.size(), 12u);
 
   config_->blackboard->set("path", path);
@@ -320,12 +349,13 @@ TEST_F(TruncatePathLocalTestFixture, test_failure_on_invalid_robot_frame)
   config_->blackboard->get("truncated_path", truncated_path);
 
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::FAILURE);
+// 初始化 SUCCEED 对象，读取参数并准备运行时依赖。
   SUCCEED();
 }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(TruncatePathLocalTestFixture, test_path_pruning)
 {
-  // create tree
   std::string xml_txt =
     R"(
       <root main_tree_to_execute = "MainTree" >
@@ -365,12 +395,19 @@ TEST_F(TruncatePathLocalTestFixture, test_path_pruning)
   config_->blackboard->get("truncated_path", truncated_path);
 
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::SUCCESS);
+// 初始化 EXPECT_NE 对象，读取参数并准备运行时依赖。
   EXPECT_NE(path, truncated_path);
+// 初始化 ASSERT_GE 对象，读取参数并准备运行时依赖。
   ASSERT_GE(truncated_path.poses.size(), 1u);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.size(), 2u);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.front().pose.position.x, -0.3);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.front().pose.position.y, 0.0);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.back().pose.position.x, -0.5);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.back().pose.position.y, 1.0);
 
   /////////////////////////////////////////
@@ -398,12 +435,19 @@ TEST_F(TruncatePathLocalTestFixture, test_path_pruning)
   config_->blackboard->get("truncated_path", truncated_path);
 
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::SUCCESS);
+// 初始化 EXPECT_NE 对象，读取参数并准备运行时依赖。
   EXPECT_NE(path, truncated_path);
+// 初始化 ASSERT_GE 对象，读取参数并准备运行时依赖。
   ASSERT_GE(truncated_path.poses.size(), 1u);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.size(), 3u);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.front().pose.position.x, -0.5);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.front().pose.position.y, 0.0);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.back().pose.position.x, 1.5);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.back().pose.position.y, 0.0);
 
   /////////////////////////////////////////
@@ -431,27 +475,37 @@ TEST_F(TruncatePathLocalTestFixture, test_path_pruning)
   config_->blackboard->get("truncated_path", truncated_path);
 
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::SUCCESS);
+// 初始化 EXPECT_NE 对象，读取参数并准备运行时依赖。
   EXPECT_NE(path, truncated_path);
+// 初始化 ASSERT_GE 对象，读取参数并准备运行时依赖。
   ASSERT_GE(truncated_path.poses.size(), 1u);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.size(), 2u);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.front().pose.position.x, 0.3);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.front().pose.position.y, 0.0);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.back().pose.position.x, 0.3);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.back().pose.position.y, -1.0);
 
+// 初始化 SUCCEED 对象，读取参数并准备运行时依赖。
   SUCCEED();
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
   int all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
 
   return all_successful;

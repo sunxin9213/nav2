@@ -27,9 +27,9 @@ using namespace std::chrono_literals;  // NOLINT
 class GoalUpdatedControllerTestFixture : public nav2_behavior_tree::BehaviorTreeTestFixture
 {
 public:
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void SetUp()
   {
-    // Setting fake goals on blackboard
     geometry_msgs::msg::PoseStamped goal1;
     goal1.header.stamp = node_->now();
     std::vector<geometry_msgs::msg::PoseStamped> poses1;
@@ -43,6 +43,7 @@ public:
     bt_node_->setChild(dummy_node_.get());
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown()
   {
     dummy_node_.reset();
@@ -59,15 +60,14 @@ GoalUpdatedControllerTestFixture::bt_node_ = nullptr;
 std::shared_ptr<nav2_behavior_tree::DummyNode>
 GoalUpdatedControllerTestFixture::dummy_node_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(GoalUpdatedControllerTestFixture, test_behavior)
 {
-  // Creating updated fake-goals
   geometry_msgs::msg::PoseStamped goal2;
   goal2.header.stamp = node_->now();
   std::vector<geometry_msgs::msg::PoseStamped> poses2;
   poses2.push_back(goal2);
 
-  // starting in idle
   EXPECT_EQ(bt_node_->status(), BT::NodeStatus::IDLE);
 
   // tick for the first time, dummy node should be ticked
@@ -81,7 +81,6 @@ TEST_F(GoalUpdatedControllerTestFixture, test_behavior)
   EXPECT_EQ(bt_node_->executeTick(), BT::NodeStatus::SUCCESS);
   EXPECT_EQ(dummy_node_->status(), BT::NodeStatus::IDLE);
 
-  // tick again without update, dummy node should not be ticked
   EXPECT_EQ(bt_node_->executeTick(), BT::NodeStatus::RUNNING);
   EXPECT_EQ(dummy_node_->status(), BT::NodeStatus::IDLE);
 
@@ -92,16 +91,18 @@ TEST_F(GoalUpdatedControllerTestFixture, test_behavior)
   EXPECT_EQ(dummy_node_->status(), BT::NodeStatus::IDLE);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
   bool all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
 
   return all_successful;

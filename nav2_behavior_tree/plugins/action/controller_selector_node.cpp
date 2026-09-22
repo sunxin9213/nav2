@@ -30,6 +30,7 @@ using std::placeholders::_1;
 ControllerSelector::ControllerSelector(
   const std::string & name,
   const BT::NodeConfiguration & conf)
+// 实现 SyncActionNode 的控制或装饰逻辑，管理子节点执行顺序和状态转换。
 : BT::SyncActionNode(name, conf)
 {
   node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
@@ -38,8 +39,10 @@ ControllerSelector::ControllerSelector(
     false);
   callback_group_executor_.add_callback_group(callback_group_, node_->get_node_base_interface());
 
+// 实现该逻辑，并处理相关状态转换。
   getInput("topic_name", topic_name_);
 
+// 初始化 QoS qos 对象，读取参数并准备运行时依赖。
   rclcpp::QoS qos(rclcpp::KeepLast(1));
   qos.transient_local().reliable();
 
@@ -52,6 +55,7 @@ ControllerSelector::ControllerSelector(
     sub_option);
 }
 
+// 初始化 NodeStatus ControllerSelector::tick 对象，读取参数并准备运行时依赖。
 BT::NodeStatus ControllerSelector::tick()
 {
   callback_group_executor_.spin_some();
@@ -63,6 +67,7 @@ BT::NodeStatus ControllerSelector::tick()
   // the topic input.
   if (last_selected_controller_.empty()) {
     std::string default_controller;
+// 实现该逻辑，并处理相关状态转换。
     getInput("default_controller", default_controller);
     if (default_controller.empty()) {
       return BT::NodeStatus::FAILURE;
@@ -71,12 +76,14 @@ BT::NodeStatus ControllerSelector::tick()
     }
   }
 
+// 实现该逻辑，并处理相关状态转换。
   setOutput("selected_controller", last_selected_controller_);
 
   return BT::NodeStatus::SUCCESS;
 }
 
 void
+// 实现该逻辑，并处理相关状态转换。
 ControllerSelector::callbackControllerSelect(const std_msgs::msg::String::SharedPtr msg)
 {
   last_selected_controller_ = msg->data;
@@ -85,6 +92,7 @@ ControllerSelector::callbackControllerSelect(const std_msgs::msg::String::Shared
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::ControllerSelector>("ControllerSelector");

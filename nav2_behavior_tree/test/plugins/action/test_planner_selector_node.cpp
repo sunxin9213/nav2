@@ -28,6 +28,7 @@
 class PlannerSelectorTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("planner_selector_test_fixture");
@@ -47,6 +48,7 @@ public:
     factory_->registerBuilder<nav2_behavior_tree::PlannerSelector>("PlannerSelector", builder);
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     delete config_;
@@ -55,6 +57,7 @@ public:
     factory_.reset();
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     tree_.reset();
@@ -73,9 +76,9 @@ BT::NodeConfiguration * PlannerSelectorTestFixture::config_ = nullptr;
 std::shared_ptr<BT::BehaviorTreeFactory> PlannerSelectorTestFixture::factory_ = nullptr;
 std::shared_ptr<BT::Tree> PlannerSelectorTestFixture::tree_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(PlannerSelectorTestFixture, test_custom_topic)
 {
-  // create tree
   std::string xml_txt =
     R"(
       <root main_tree_to_execute = "MainTree" >
@@ -91,16 +94,17 @@ TEST_F(PlannerSelectorTestFixture, test_custom_topic)
     tree_->rootNode()->executeTick();
   }
 
-  // check default value
   std::string selected_planner_result;
   config_->blackboard->get("selected_planner", selected_planner_result);
 
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(selected_planner_result, "GridBased");
 
   std_msgs::msg::String selected_planner_cmd;
 
   selected_planner_cmd.data = "RRT";
 
+// 初始化 QoS qos 对象，读取参数并准备运行时依赖。
   rclcpp::QoS qos(rclcpp::KeepLast(1));
   qos.transient_local().reliable();
 
@@ -113,17 +117,19 @@ TEST_F(PlannerSelectorTestFixture, test_custom_topic)
     tree_->rootNode()->executeTick();
     planner_selector_pub->publish(selected_planner_cmd);
 
+// 实现该逻辑，并处理相关状态转换。
     rclcpp::spin_some(node_);
   }
 
   // check planner updated
   config_->blackboard->get("selected_planner", selected_planner_result);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ("RRT", selected_planner_result);
 }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(PlannerSelectorTestFixture, test_default_topic)
 {
-  // create tree
   std::string xml_txt =
     R"(
       <root main_tree_to_execute = "MainTree" >
@@ -139,16 +145,17 @@ TEST_F(PlannerSelectorTestFixture, test_default_topic)
     tree_->rootNode()->executeTick();
   }
 
-  // check default value
   std::string selected_planner_result;
   config_->blackboard->get("selected_planner", selected_planner_result);
 
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(selected_planner_result, "GridBased");
 
   std_msgs::msg::String selected_planner_cmd;
 
   selected_planner_cmd.data = "RRT";
 
+// 初始化 QoS qos 对象，读取参数并准备运行时依赖。
   rclcpp::QoS qos(rclcpp::KeepLast(1));
   qos.transient_local().reliable();
 
@@ -161,24 +168,28 @@ TEST_F(PlannerSelectorTestFixture, test_default_topic)
     tree_->rootNode()->executeTick();
     planner_selector_pub->publish(selected_planner_cmd);
 
+// 实现该逻辑，并处理相关状态转换。
     rclcpp::spin_some(node_);
   }
 
   // check planner updated
   config_->blackboard->get("selected_planner", selected_planner_result);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ("RRT", selected_planner_result);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
   int all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
 
   return all_successful;

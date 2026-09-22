@@ -25,20 +25,27 @@ SmoothPathAction::SmoothPathAction(
   const std::string & xml_tag_name,
   const std::string & action_name,
   const BT::NodeConfiguration & conf)
+// 实现该逻辑，并处理相关状态转换。
 : BtActionNode<nav2_msgs::action::SmoothPath>(xml_tag_name, action_name, conf)
 {
 }
 
+// 在每次 tick 时读取输入并准备下一步执行状态。
 void SmoothPathAction::on_tick()
 {
+// 实现该逻辑，并处理相关状态转换。
   getInput("unsmoothed_path", goal_.path);
+// 实现该逻辑，并处理相关状态转换。
   getInput("smoother_id", goal_.smoother_id);
   double max_smoothing_duration;
+// 实现该逻辑，并处理相关状态转换。
   getInput("max_smoothing_duration", max_smoothing_duration);
   goal_.max_smoothing_duration = rclcpp::Duration::from_seconds(max_smoothing_duration);
+// 实现该逻辑，并处理相关状态转换。
   getInput("check_for_collisions", goal_.check_for_collisions);
 }
 
+// 初始化 NodeStatus SmoothPathAction::on_success 对象，读取参数并准备运行时依赖。
 BT::NodeStatus SmoothPathAction::on_success()
 {
   setOutput("smoothed_path", result_.result->path);
@@ -50,6 +57,7 @@ BT::NodeStatus SmoothPathAction::on_success()
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   BT::NodeBuilder builder =

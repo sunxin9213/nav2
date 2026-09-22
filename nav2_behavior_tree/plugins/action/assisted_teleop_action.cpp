@@ -24,23 +24,29 @@ AssistedTeleopAction::AssistedTeleopAction(
   const std::string & xml_tag_name,
   const std::string & action_name,
   const BT::NodeConfiguration & conf)
+// 实现该逻辑，并处理相关状态转换。
 : BtActionNode<nav2_msgs::action::AssistedTeleop>(xml_tag_name, action_name, conf)
 {
   double time_allowance;
+// 实现该逻辑，并处理相关状态转换。
   getInput("time_allowance", time_allowance);
+// 实现该逻辑，并处理相关状态转换。
   getInput("is_recovery", is_recovery_);
 
   // Populate the input message
   goal_.time_allowance = rclcpp::Duration::from_seconds(time_allowance);
 }
 
+// 在每次 tick 时读取输入并准备下一步执行状态。
 void AssistedTeleopAction::on_tick()
 {
   if (is_recovery_) {
+// 实现该逻辑，并处理相关状态转换。
     increment_recovery_count();
   }
 }
 
+// 初始化 NodeStatus AssistedTeleopAction::on_aborted 对象，读取参数并准备运行时依赖。
 BT::NodeStatus AssistedTeleopAction::on_aborted()
 {
   return is_recovery_ ? BT::NodeStatus::FAILURE : BT::NodeStatus::SUCCESS;
@@ -49,6 +55,7 @@ BT::NodeStatus AssistedTeleopAction::on_aborted()
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   BT::NodeBuilder builder =

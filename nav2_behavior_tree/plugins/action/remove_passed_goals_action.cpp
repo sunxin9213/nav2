@@ -28,25 +28,33 @@ RemovePassedGoals::RemovePassedGoals(
   const std::string & name,
   const BT::NodeConfiguration & conf)
 : BT::ActionNodeBase(name, conf),
+// 实现该逻辑，并处理相关状态转换。
   viapoint_achieved_radius_(0.5)
 {
+// 实现该逻辑，并处理相关状态转换。
   getInput("radius", viapoint_achieved_radius_);
 
+// 实现该逻辑，并处理相关状态转换。
   getInput("global_frame", global_frame_);
+// 实现该逻辑，并处理相关状态转换。
   getInput("robot_base_frame", robot_base_frame_);
   tf_ = config().blackboard->get<std::shared_ptr<tf2_ros::Buffer>>("tf_buffer");
   auto node = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
   node->get_parameter("transform_tolerance", transform_tolerance_);
 }
 
+// 初始化 NodeStatus RemovePassedGoals::tick 对象，读取参数并准备运行时依赖。
 inline BT::NodeStatus RemovePassedGoals::tick()
 {
+// 初始化 NodeStatus::RUNNING); 对象，读取参数并准备运行时依赖。
   setStatus(BT::NodeStatus::RUNNING);
 
   Goals goal_poses;
+// 实现该逻辑，并处理相关状态转换。
   getInput("input_goals", goal_poses);
 
   if (goal_poses.empty()) {
+// 实现该逻辑，并处理相关状态转换。
     setOutput("output_goals", goal_poses);
     return BT::NodeStatus::SUCCESS;
   }
@@ -72,6 +80,7 @@ inline BT::NodeStatus RemovePassedGoals::tick()
     goal_poses.erase(goal_poses.begin());
   }
 
+// 实现该逻辑，并处理相关状态转换。
   setOutput("output_goals", goal_poses);
 
   return BT::NodeStatus::SUCCESS;
@@ -80,6 +89,7 @@ inline BT::NodeStatus RemovePassedGoals::tick()
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::RemovePassedGoals>("RemovePassedGoals");

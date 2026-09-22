@@ -31,6 +31,7 @@ public:
   ShimNode(
     const std::string & name,
     const BT::NodeConfiguration & confi)
+// 初始化 SingleTrigger 对象，读取参数并准备运行时依赖。
   : SingleTrigger(name, confi)
   {}
   ~ShimNode() {}
@@ -40,6 +41,7 @@ public:
 class SingleTriggerTestFixture : public nav2_behavior_tree::BehaviorTreeTestFixture
 {
 public:
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void SetUp()
   {
     bt_node_ = std::make_shared<ShimNode>("single_trigger", *config_);
@@ -47,6 +49,7 @@ public:
     bt_node_->setChild(dummy_node_.get());
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown()
   {
     dummy_node_.reset();
@@ -63,9 +66,9 @@ SingleTriggerTestFixture::bt_node_ = nullptr;
 std::shared_ptr<nav2_behavior_tree::DummyNode>
 SingleTriggerTestFixture::dummy_node_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(SingleTriggerTestFixture, test_behavior)
 {
-  // starting in idle
   EXPECT_EQ(bt_node_->status(), BT::NodeStatus::IDLE);
 
   // tick once, should work
@@ -73,7 +76,6 @@ TEST_F(SingleTriggerTestFixture, test_behavior)
   EXPECT_EQ(bt_node_->executeTick(), BT::NodeStatus::SUCCESS);
   EXPECT_EQ(dummy_node_->status(), BT::NodeStatus::IDLE);
 
-  // tick again with dummy node success, should fail
   EXPECT_EQ(bt_node_->executeTick(), BT::NodeStatus::FAILURE);
 
   // tick again with dummy node idle, should still fail
@@ -81,7 +83,6 @@ TEST_F(SingleTriggerTestFixture, test_behavior)
   EXPECT_EQ(bt_node_->executeTick(), BT::NodeStatus::FAILURE);
 
   // halt BT for a new execution run, should work when dummy node is running
-  // and once when dummy node returns success and then fail
   bt_node_->halt();
   bt_node_->changeStatus();  // BTv3.8+ doesn't reset root node automatically
   dummy_node_->changeStatus(BT::NodeStatus::RUNNING);
@@ -91,16 +92,18 @@ TEST_F(SingleTriggerTestFixture, test_behavior)
   EXPECT_EQ(bt_node_->executeTick(), BT::NodeStatus::FAILURE);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
   bool all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
 
   return all_successful;

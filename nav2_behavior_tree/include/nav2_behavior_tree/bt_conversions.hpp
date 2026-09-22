@@ -36,11 +36,13 @@ namespace BT
  * @return geometry_msgs::msg::Point
  */
 template<>
+// 实现该逻辑，并处理相关状态转换。
 inline geometry_msgs::msg::Point convertFromString(const StringView key)
 {
   // three real numbers separated by semicolons
   auto parts = BT::splitString(key, ';');
   if (parts.size() != 3) {
+// 实现该逻辑，并处理相关状态转换。
     throw std::runtime_error("invalid number of fields for point attribute)");
   } else {
     geometry_msgs::msg::Point position;
@@ -57,11 +59,13 @@ inline geometry_msgs::msg::Point convertFromString(const StringView key)
  * @return geometry_msgs::msg::Quaternion
  */
 template<>
+// 实现该逻辑，并处理相关状态转换。
 inline geometry_msgs::msg::Quaternion convertFromString(const StringView key)
 {
   // four real numbers separated by semicolons
   auto parts = BT::splitString(key, ';');
   if (parts.size() != 4) {
+// 实现该逻辑，并处理相关状态转换。
     throw std::runtime_error("invalid number of fields for orientation attribute)");
   } else {
     geometry_msgs::msg::Quaternion orientation;
@@ -79,11 +83,13 @@ inline geometry_msgs::msg::Quaternion convertFromString(const StringView key)
  * @return geometry_msgs::msg::PoseStamped
  */
 template<>
+// 实现该逻辑，并处理相关状态转换。
 inline geometry_msgs::msg::PoseStamped convertFromString(const StringView key)
 {
   // 7 real numbers separated by semicolons
   auto parts = BT::splitString(key, ';');
   if (parts.size() != 9) {
+// 实现该逻辑，并处理相关状态转换。
     throw std::runtime_error("invalid number of fields for PoseStamped attribute)");
   } else {
     geometry_msgs::msg::PoseStamped pose_stamped;
@@ -106,6 +112,7 @@ inline geometry_msgs::msg::PoseStamped convertFromString(const StringView key)
  * @return std::chrono::milliseconds
  */
 template<>
+// 实现该逻辑，并处理相关状态转换。
 inline std::chrono::milliseconds convertFromString<std::chrono::milliseconds>(const StringView key)
 {
   return std::chrono::milliseconds(std::stoul(key.data()));

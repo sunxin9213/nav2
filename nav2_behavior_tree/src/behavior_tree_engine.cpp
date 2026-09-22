@@ -41,6 +41,7 @@ BehaviorTreeEngine::run(
   std::function<bool()> cancelRequested,
   std::chrono::milliseconds loopTimeout)
 {
+// 初始化 WallRate loopRate 对象，读取参数并准备运行时依赖。
   rclcpp::WallRate loopRate(loopTimeout);
   BT::NodeStatus result = BT::NodeStatus::RUNNING;
 
@@ -54,6 +55,7 @@ BehaviorTreeEngine::run(
 
       result = tree->tickRoot();
 
+// 实现该逻辑，并处理相关状态转换。
       onLoop();
 
       if (!loopRate.sleep()) {
@@ -91,13 +93,13 @@ BehaviorTreeEngine::createTreeFromFile(
 
 // In order to re-run a Behavior Tree, we must be able to reset all nodes to the initial state
 void
+// 递归停止整棵行为树中所有正在运行的节点，并恢复到初始状态。
 BehaviorTreeEngine::haltAllActions(BT::TreeNode * root_node)
 {
   if (!root_node) {
     return;
   }
 
-  // this halt signal should propagate through the entire tree.
   root_node->halt();
 
   // but, just in case...
@@ -106,6 +108,7 @@ BehaviorTreeEngine::haltAllActions(BT::TreeNode * root_node)
         node->halt();
       }
     };
+// 实现该逻辑，并处理相关状态转换。
   BT::applyRecursiveVisitor(root_node, visitor);
 }
 

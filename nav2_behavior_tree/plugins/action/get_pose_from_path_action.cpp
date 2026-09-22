@@ -27,18 +27,23 @@ namespace nav2_behavior_tree
 GetPoseFromPath::GetPoseFromPath(
   const std::string & name,
   const BT::NodeConfiguration & conf)
+// 初始化 ActionNodeBase 对象，读取参数并准备运行时依赖。
 : BT::ActionNodeBase(name, conf)
 {
 }
 
+// 初始化 NodeStatus GetPoseFromPath::tick 对象，读取参数并准备运行时依赖。
 inline BT::NodeStatus GetPoseFromPath::tick()
 {
+// 初始化 NodeStatus::RUNNING); 对象，读取参数并准备运行时依赖。
   setStatus(BT::NodeStatus::RUNNING);
 
   nav_msgs::msg::Path input_path;
+// 实现该逻辑，并处理相关状态转换。
   getInput("path", input_path);
 
   int pose_index;
+// 实现该逻辑，并处理相关状态转换。
   getInput("index", pose_index);
 
   if (input_path.poses.empty()) {
@@ -55,7 +60,6 @@ inline BT::NodeStatus GetPoseFromPath::tick()
     return BT::NodeStatus::FAILURE;
   }
 
-  // extract pose
   geometry_msgs::msg::PoseStamped output_pose;
   output_pose = input_path.poses[pose_index];
 
@@ -65,6 +69,7 @@ inline BT::NodeStatus GetPoseFromPath::tick()
   }
 
 
+// 实现该逻辑，并处理相关状态转换。
   setOutput("pose", output_pose);
 
   return BT::NodeStatus::SUCCESS;
@@ -73,6 +78,7 @@ inline BT::NodeStatus GetPoseFromPath::tick()
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::GetPoseFromPath>("GetPoseFromPath");

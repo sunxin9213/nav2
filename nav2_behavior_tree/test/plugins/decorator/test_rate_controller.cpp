@@ -27,6 +27,7 @@ using namespace std::chrono_literals;  // NOLINT
 class RateControllerTestFixture : public nav2_behavior_tree::BehaviorTreeTestFixture
 {
 public:
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void SetUp()
   {
     bt_node_ = std::make_shared<nav2_behavior_tree::RateController>(
@@ -35,6 +36,7 @@ public:
     bt_node_->setChild(dummy_node_.get());
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown()
   {
     dummy_node_.reset();
@@ -51,6 +53,7 @@ RateControllerTestFixture::bt_node_ = nullptr;
 std::shared_ptr<nav2_behavior_tree::DummyNode>
 RateControllerTestFixture::dummy_node_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(RateControllerTestFixture, test_behavior)
 {
   EXPECT_EQ(bt_node_->status(), BT::NodeStatus::IDLE);
@@ -61,6 +64,7 @@ TEST_F(RateControllerTestFixture, test_behavior)
 
   for (int i = 0; i < 10; ++i) {
     dummy_node_->changeStatus(BT::NodeStatus::SUCCESS);
+// 实现该逻辑，并处理相关状态转换。
     std::this_thread::sleep_for(500ms);
     if (i % 2) {
       EXPECT_EQ(bt_node_->executeTick(), BT::NodeStatus::SUCCESS);
@@ -71,16 +75,18 @@ TEST_F(RateControllerTestFixture, test_behavior)
   }
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
   bool all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
 
   return all_successful;

@@ -32,6 +32,7 @@ namespace nav2_behavior_tree
 class BehaviorTreeTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("test_behavior_tree_fixture");
@@ -51,9 +52,11 @@ public:
       transform_handler_->getBuffer());
     config_->blackboard->set<std::chrono::milliseconds>(
       "server_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(20));
     config_->blackboard->set<std::chrono::milliseconds>(
       "bt_loop_duration",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(10));
     config_->blackboard->set<bool>("initial_pose_received", false);
 
@@ -61,6 +64,7 @@ public:
     transform_handler_->waitForTransform();
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     transform_handler_->deactivate();

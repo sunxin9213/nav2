@@ -23,6 +23,7 @@ namespace nav2_behavior_tree
  * @brief A BT::ConditionNode that returns SUCCESS if initial pose
  * has been received and FAILURE otherwise
  */
+// 初始化 NodeStatus initialPoseReceived 对象，读取参数并准备运行时依赖。
 BT::NodeStatus initialPoseReceived(BT::TreeNode & tree_node);
 }
 

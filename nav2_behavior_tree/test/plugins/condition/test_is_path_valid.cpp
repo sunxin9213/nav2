@@ -32,7 +32,9 @@ using namespace std::chrono_literals;  // NOLINT
 class IsPathValidService : public TestService<nav2_msgs::srv::IsPathValid>
 {
 public:
+// 初始化 IsPathValidService 对象，读取参数并准备运行时依赖。
   IsPathValidService()
+// 初始化 TestService 对象，读取参数并准备运行时依赖。
   : TestService("is_path_valid")
   {}
 
@@ -50,6 +52,7 @@ public:
 class IsPathValidTestFixture : public ::testing::Test
 {
 public:
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void SetUp()
   {
     node_ = std::make_shared<rclcpp::Node>("test_is_path_valid_condition");
@@ -59,10 +62,12 @@ public:
     config_->blackboard->set<rclcpp::Node::SharedPtr>("node", node_);
     config_->blackboard->set<std::chrono::milliseconds>(
       "server_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(10));
     factory_->registerNodeType<nav2_behavior_tree::IsPathValidCondition>("IsPathValid");
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown()
   {
     delete config_;
@@ -88,6 +93,7 @@ BT::NodeConfiguration * IsPathValidTestFixture::config_ = nullptr;
 std::shared_ptr<BT::BehaviorTreeFactory> IsPathValidTestFixture::factory_ = nullptr;
 std::shared_ptr<BT::Tree> IsPathValidTestFixture::tree_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(IsPathValidTestFixture, test_behavior)
 {
   std::string xml_txt =
@@ -99,27 +105,31 @@ TEST_F(IsPathValidTestFixture, test_behavior)
       </root>)";
 
   tree_ = std::make_shared<BT::Tree>(factory_->createTreeFromText(xml_txt, config_->blackboard));
+// 实现该逻辑，并处理相关状态转换。
   std::this_thread::sleep_for(500ms);
 
   EXPECT_EQ(tree_->rootNode()->executeTick(), BT::NodeStatus::SUCCESS);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
-  // initialize service and spin on new thread
   IsPathValidTestFixture::server_ = std::make_shared<IsPathValidService>();
+// 实现该逻辑，并处理相关状态转换。
   std::thread server_thread([]() {
+// 实现该逻辑，并处理相关状态转换。
       rclcpp::spin(IsPathValidTestFixture::server_);
     });
 
   bool all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
   server_thread.join();
 

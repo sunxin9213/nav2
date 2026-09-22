@@ -30,20 +30,27 @@ GoalReachedCondition::GoalReachedCondition(
 : BT::ConditionNode(condition_name, conf),
   initialized_(false),
   global_frame_("map"),
+// 实现该逻辑，并处理相关状态转换。
   robot_base_frame_("base_link")
 {
+// 实现该逻辑，并处理相关状态转换。
   getInput("global_frame", global_frame_);
+// 实现该逻辑，并处理相关状态转换。
   getInput("robot_base_frame", robot_base_frame_);
 }
 
+// 评估当前条件是否满足 ~GoalReachedCondition 所代表的判定逻辑。
 GoalReachedCondition::~GoalReachedCondition()
 {
+// 清理节点持有的资源，避免重复执行造成状态残留。
   cleanup();
 }
 
+// 初始化 NodeStatus GoalReachedCondition::tick 对象，读取参数并准备运行时依赖。
 BT::NodeStatus GoalReachedCondition::tick()
 {
   if (!initialized_) {
+// 初始化 ROS 节点、参数和 TF/状态依赖，准备后续判断逻辑。
     initialize();
   }
 
@@ -53,12 +60,14 @@ BT::NodeStatus GoalReachedCondition::tick()
   return BT::NodeStatus::FAILURE;
 }
 
+// 初始化 ROS 节点、参数和 TF/状态依赖，准备后续判断逻辑。
 void GoalReachedCondition::initialize()
 {
   node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
 
   nav2_util::declare_parameter_if_not_declared(
     node_, "goal_reached_tol",
+// 初始化 ParameterValue 对象，读取参数并准备运行时依赖。
     rclcpp::ParameterValue(0.25));
   node_->get_parameter_or<double>("goal_reached_tol", goal_reached_tol_, 0.25);
   tf_ = config().blackboard->get<std::shared_ptr<tf2_ros::Buffer>>("tf_buffer");
@@ -68,6 +77,7 @@ void GoalReachedCondition::initialize()
   initialized_ = true;
 }
 
+// 判断当前机器人位姿是否已进入目标阈值范围内。
 bool GoalReachedCondition::isGoalReached()
 {
   geometry_msgs::msg::PoseStamped current_pose;
@@ -80,6 +90,7 @@ bool GoalReachedCondition::isGoalReached()
   }
 
   geometry_msgs::msg::PoseStamped goal;
+// 实现该逻辑，并处理相关状态转换。
   getInput("goal", goal);
   double dx = goal.pose.position.x - current_pose.pose.position.x;
   double dy = goal.pose.position.y - current_pose.pose.position.y;
@@ -90,6 +101,7 @@ bool GoalReachedCondition::isGoalReached()
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::GoalReachedCondition>("GoalReached");

@@ -28,6 +28,7 @@ public:
   explicit TestActionServer(
     std::string action_name,
     const rclcpp::NodeOptions & options = rclcpp::NodeOptions())
+// 实现 Node 的控制或装饰逻辑，管理子节点执行顺序和状态转换。
   : Node("test_action_server", options)
   {
     using namespace std::placeholders;  // NOLINT
@@ -40,24 +41,29 @@ public:
       action_name,
       std::bind(&TestActionServer::handle_goal, this, _1, _2),
       std::bind(&TestActionServer::handle_cancel, this, _1),
+// 实现该逻辑，并处理相关状态转换。
       std::bind(&TestActionServer::handle_accepted, this, _1));
   }
 
+// 实现该逻辑，并处理相关状态转换。
   std::shared_ptr<const typename ActionT::Goal> getCurrentGoal() const
   {
     return current_goal_;
   }
 
+// 实现该逻辑，并处理相关状态转换。
   void setReturnSuccess(bool return_success)
   {
     return_success_ = return_success;
   }
 
+// 实现该逻辑，并处理相关状态转换。
   bool getReturnSuccess(void)
   {
     return return_success_;
   }
 
+// 实现该逻辑，并处理相关状态转换。
   bool isGoalCancelled()
   {
     return goal_cancelled_;
@@ -86,7 +92,6 @@ protected:
     const std::shared_ptr<rclcpp_action::ServerGoalHandle<ActionT>> goal_handle)
   {
     using namespace std::placeholders;  // NOLINT
-    // this needs to return quickly to avoid blocking the executor, so spin up a new thread
     std::thread{std::bind(&TestActionServer::execute, this, _1), goal_handle}.detach();
   }
 

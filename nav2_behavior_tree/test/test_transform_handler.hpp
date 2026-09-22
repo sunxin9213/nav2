@@ -40,10 +40,12 @@ namespace nav2_behavior_tree
 class TransformHandler
 {
 public:
+// 初始化 Node::SharedPtr & node) 对象，读取参数并准备运行时依赖。
   explicit TransformHandler(rclcpp::Node::SharedPtr & node)
   : node_(node),
     is_active_(false),
     base_transform_(nullptr),
+// 实现该逻辑，并处理相关状态转换。
     tf_broadcaster_(nullptr)
   {
     tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node_->get_clock());
@@ -53,14 +55,16 @@ public:
   ~TransformHandler()
   {
     if (is_active_) {
+// 实现该逻辑，并处理相关状态转换。
       deactivate();
     }
   }
 
-  // Activate the tester before running tests
+// 实现该逻辑，并处理相关状态转换。
   void activate()
   {
     if (is_active_) {
+// 实现该逻辑，并处理相关状态转换。
       throw std::runtime_error("Trying to activate while already active");
     }
     is_active_ = true;
@@ -68,12 +72,15 @@ public:
     // Launch a thread to process the messages for this node
     spin_thread_ = std::make_unique<nav2_util::NodeThread>(node_->get_node_base_interface());
 
+// 实现该逻辑，并处理相关状态转换。
     startRobotTransform();
   }
 
+// 实现该逻辑，并处理相关状态转换。
   void deactivate()
   {
     if (!is_active_) {
+// 实现该逻辑，并处理相关状态转换。
       throw std::runtime_error("Trying to deactivate while already inactive");
     }
     is_active_ = false;
@@ -88,18 +95,22 @@ public:
     return tf_buffer_;
   }
 
+// 实现该逻辑，并处理相关状态转换。
   void waitForTransform()
   {
     if (is_active_) {
       while (!tf_buffer_->canTransform("map", "base_link", rclcpp::Time(0))) {
+// 实现该逻辑，并处理相关状态转换。
         std::this_thread::sleep_for(100ms);
       }
       RCLCPP_INFO(node_->get_logger(), "Transforms are available now!");
       return;
     }
+// 实现该逻辑，并处理相关状态转换。
     throw std::runtime_error("Trying to deactivate while already inactive");
   }
 
+// 实现该逻辑，并处理相关状态转换。
   void updateRobotPose(const geometry_msgs::msg::Pose & pose)
   {
     // Update base transform to publish
@@ -110,16 +121,19 @@ public:
     base_transform_->transform.rotation.y = pose.orientation.y;
     base_transform_->transform.rotation.z = pose.orientation.z;
     base_transform_->transform.rotation.w = pose.orientation.w;
+// 实现该逻辑，并处理相关状态转换。
     publishRobotTransform();
   }
 
 private:
+// 实现该逻辑，并处理相关状态转换。
   void publishRobotTransform()
   {
     base_transform_->header.stamp = node_->now();
     tf_broadcaster_->sendTransform(*base_transform_);
   }
 
+// 实现该逻辑，并处理相关状态转换。
   void startRobotTransform()
   {
     // Provide the robot pose transform
@@ -131,11 +145,11 @@ private:
       base_transform_->child_frame_id = "base_link";
     }
 
-    // Set an initial pose
     geometry_msgs::msg::Pose robot_pose;
     robot_pose.position.x = 0;
     robot_pose.position.y = 0;
     robot_pose.orientation.w = 1;
+// 实现该逻辑，并处理相关状态转换。
     updateRobotPose(robot_pose);
 
     // Publish the transform periodically
@@ -147,12 +161,10 @@ private:
 
   bool is_active_;
 
-  // A thread for spinning the ROS node
   std::unique_ptr<nav2_util::NodeThread> spin_thread_;
 
   // Subscriber
 
-  // The tester must provide the robot pose through a transform
   std::unique_ptr<geometry_msgs::msg::TransformStamped> base_transform_;
   std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;

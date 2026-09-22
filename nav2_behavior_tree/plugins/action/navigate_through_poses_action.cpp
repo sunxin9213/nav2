@@ -24,10 +24,12 @@ NavigateThroughPosesAction::NavigateThroughPosesAction(
   const std::string & xml_tag_name,
   const std::string & action_name,
   const BT::NodeConfiguration & conf)
+// 实现该逻辑，并处理相关状态转换。
 : BtActionNode<nav2_msgs::action::NavigateThroughPoses>(xml_tag_name, action_name, conf)
 {
 }
 
+// 在每次 tick 时读取输入并准备下一步执行状态。
 void NavigateThroughPosesAction::on_tick()
 {
   if (!getInput("goals", goal_.poses)) {
@@ -36,12 +38,14 @@ void NavigateThroughPosesAction::on_tick()
       "NavigateThroughPosesAction: goal not provided");
     return;
   }
+// 实现该逻辑，并处理相关状态转换。
   getInput("behavior_tree", goal_.behavior_tree);
 }
 
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   BT::NodeBuilder builder =

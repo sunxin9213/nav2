@@ -26,7 +26,9 @@
 class CancelControllerServer : public TestActionServer<nav2_msgs::action::FollowPath>
 {
 public:
+// 初始化 CancelControllerServer 对象，读取参数并准备运行时依赖。
   CancelControllerServer()
+// 初始化 TestActionServer 对象，读取参数并准备运行时依赖。
   : TestActionServer("follow_path")
   {}
 
@@ -36,7 +38,7 @@ protected:
     goal_handle)
   {
     while (!goal_handle->is_canceling()) {
-      // waiting here until goal cancels
+// 实现该逻辑，并处理相关状态转换。
       std::this_thread::sleep_for(std::chrono::milliseconds(15));
     }
   }
@@ -45,6 +47,7 @@ protected:
 class CancelControllerActionTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("cancel_control_action_test_fixture");
@@ -60,12 +63,15 @@ public:
       node_);
     config_->blackboard->set<std::chrono::milliseconds>(
       "server_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(20));
     config_->blackboard->set<std::chrono::milliseconds>(
       "bt_loop_duration",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(10));
     config_->blackboard->set<std::chrono::milliseconds>(
       "wait_for_service_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(1000));
     client_ = rclcpp_action::create_client<nav2_msgs::action::FollowPath>(
       node_, "follow_path");
@@ -80,6 +86,7 @@ public:
     factory_->registerBuilder<nav2_behavior_tree::ControllerCancel>("CancelControl", builder);
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     delete config_;
@@ -90,6 +97,7 @@ public:
     factory_.reset();
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     tree_.reset();
@@ -116,6 +124,7 @@ std::shared_ptr<BT::BehaviorTreeFactory>
 CancelControllerActionTestFixture::factory_ = nullptr;
 std::shared_ptr<BT::Tree> CancelControllerActionTestFixture::tree_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(CancelControllerActionTestFixture, test_ports)
 {
   std::string xml_txt =
@@ -136,35 +145,36 @@ TEST_F(CancelControllerActionTestFixture, test_ports)
   client_->wait_for_action_server();
   client_->async_send_goal(goal_msg, send_goal_options);
 
-  // Adding a sleep so that the goal is indeed older than 10ms as described in our abstract class
+// 实现该逻辑，并处理相关状态转换。
   std::this_thread::sleep_for(std::chrono::milliseconds(15));
 
   // Executing tick
   tree_->rootNode()->executeTick();
 
-  // BT node should return success, once when the goal is cancelled
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::SUCCESS);
 
-  // Adding another test case to check if the goal is infact cancelling
   EXPECT_EQ(action_server_->isGoalCancelled(), true);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
-  // initialize action server and spin on new thread
   CancelControllerActionTestFixture::action_server_ = std::make_shared<CancelControllerServer>();
+// 实现该逻辑，并处理相关状态转换。
   std::thread server_thread([]() {
+// 实现该逻辑，并处理相关状态转换。
       rclcpp::spin(CancelControllerActionTestFixture::action_server_);
     });
 
   int all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
   server_thread.join();
 

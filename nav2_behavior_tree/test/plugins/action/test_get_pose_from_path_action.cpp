@@ -32,6 +32,7 @@
 class GetPoseFromPathTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("get_pose_from_path_action_test_fixture");
@@ -57,6 +58,7 @@ public:
       "GetPoseFromPath", builder);
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     delete config_;
@@ -65,6 +67,7 @@ public:
     factory_.reset();
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     tree_.reset();
@@ -82,9 +85,9 @@ BT::NodeConfiguration * GetPoseFromPathTestFixture::config_ = nullptr;
 std::shared_ptr<BT::BehaviorTreeFactory> GetPoseFromPathTestFixture::factory_ = nullptr;
 std::shared_ptr<BT::Tree> GetPoseFromPathTestFixture::tree_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(GetPoseFromPathTestFixture, test_tick)
 {
-  // create tree
   std::string xml_txt =
     R"(
       <root BTCPP_format="4">
@@ -95,7 +98,6 @@ TEST_F(GetPoseFromPathTestFixture, test_tick)
 
   tree_ = std::make_shared<BT::Tree>(factory_->createTreeFromText(xml_txt, config_->blackboard));
 
-  // create new path and set it on blackboard
   nav_msgs::msg::Path path;
   std::vector<geometry_msgs::msg::PoseStamped> goals;
   goals.resize(2);
@@ -112,13 +114,13 @@ TEST_F(GetPoseFromPathTestFixture, test_tick)
     tree_->rootNode()->executeTick();
   }
 
-  // the goal should have reached our server
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::SUCCESS);
 
-  // check if returned pose is correct
   geometry_msgs::msg::PoseStamped pose;
   EXPECT_TRUE(config_->blackboard->get<geometry_msgs::msg::PoseStamped>("pose", pose));
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(pose.header.frame_id, "test_frame_1");
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(pose.pose.position.x, 1.0);
 
   // halt node so another goal can be sent
@@ -134,22 +136,25 @@ TEST_F(GetPoseFromPathTestFixture, test_tick)
 
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::SUCCESS);
 
-  // check if returned pose is correct
   EXPECT_TRUE(config_->blackboard->get<geometry_msgs::msg::PoseStamped>("pose", pose));
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(pose.header.frame_id, "test_frame_1");
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(pose.pose.position.x, 2.0);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
   int all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
 
   return all_successful;

@@ -31,20 +31,26 @@ TruncatePath::TruncatePath(
   const std::string & name,
   const BT::NodeConfiguration & conf)
 : BT::ActionNodeBase(name, conf),
+// 实现该逻辑，并处理相关状态转换。
   distance_(1.0)
 {
+// 实现该逻辑，并处理相关状态转换。
   getInput("distance", distance_);
 }
 
+// 初始化 NodeStatus TruncatePath::tick 对象，读取参数并准备运行时依赖。
 inline BT::NodeStatus TruncatePath::tick()
 {
+// 初始化 NodeStatus::RUNNING); 对象，读取参数并准备运行时依赖。
   setStatus(BT::NodeStatus::RUNNING);
 
   nav_msgs::msg::Path input_path;
 
+// 实现该逻辑，并处理相关状态转换。
   getInput("input_path", input_path);
 
   if (input_path.poses.empty()) {
+// 实现该逻辑，并处理相关状态转换。
     setOutput("output_path", input_path);
     return BT::NodeStatus::SUCCESS;
   }
@@ -75,6 +81,7 @@ inline BT::NodeStatus TruncatePath::tick()
   input_path.poses.back().pose.orientation = nav2_util::geometry_utils::orientationAroundZAxis(
     final_angle);
 
+// 实现该逻辑，并处理相关状态转换。
   setOutput("output_path", input_path);
 
   return BT::NodeStatus::SUCCESS;
@@ -83,6 +90,7 @@ inline BT::NodeStatus TruncatePath::tick()
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::TruncatePath>("TruncatePath");

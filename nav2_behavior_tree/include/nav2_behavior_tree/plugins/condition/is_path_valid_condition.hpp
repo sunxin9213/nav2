@@ -48,16 +48,19 @@ public:
    * @brief The main override required by a BT action
    * @return BT::NodeStatus Status of tick execution
    */
+// 初始化 NodeStatus tick 对象，读取参数并准备运行时依赖。
   BT::NodeStatus tick() override;
 
   /**
    * @brief Creates list of BT ports
    * @return BT::PortsList Containing node-specific ports
    */
+// 初始化 PortsList providedPorts 对象，读取参数并准备运行时依赖。
   static BT::PortsList providedPorts()
   {
     return {
       BT::InputPort<nav_msgs::msg::Path>("path", "Path to Check"),
+// 初始化 InputPort<std::chrono::milliseconds> 对象，读取参数并准备运行时依赖。
       BT::InputPort<std::chrono::milliseconds>("server_timeout")
     };
   }
@@ -66,7 +69,6 @@ private:
   rclcpp::Node::SharedPtr node_;
   rclcpp::Client<nav2_msgs::srv::IsPathValid>::SharedPtr client_;
   // The timeout value while waiting for a responce from the
-  // is path valid service
   std::chrono::milliseconds server_timeout_;
 };
 

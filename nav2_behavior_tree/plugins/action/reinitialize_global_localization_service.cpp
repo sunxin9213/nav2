@@ -21,12 +21,14 @@ namespace nav2_behavior_tree
 ReinitializeGlobalLocalizationService::ReinitializeGlobalLocalizationService(
   const std::string & service_node_name,
   const BT::NodeConfiguration & conf)
+// 实现该逻辑，并处理相关状态转换。
 : BtServiceNode<std_srvs::srv::Empty>(service_node_name, conf)
 {}
 
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::ReinitializeGlobalLocalizationService>(

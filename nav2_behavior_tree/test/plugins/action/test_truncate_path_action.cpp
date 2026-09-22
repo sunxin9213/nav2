@@ -31,6 +31,7 @@
 class TruncatePathTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("change_goal_test_fixture");
@@ -56,6 +57,7 @@ public:
       "TruncatePath", builder);
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     delete config_;
@@ -64,6 +66,7 @@ public:
     factory_.reset();
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     tree_.reset();
@@ -82,9 +85,9 @@ BT::NodeConfiguration * TruncatePathTestFixture::config_ = nullptr;
 std::shared_ptr<BT::BehaviorTreeFactory> TruncatePathTestFixture::factory_ = nullptr;
 std::shared_ptr<BT::Tree> TruncatePathTestFixture::tree_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(TruncatePathTestFixture, test_tick)
 {
-  // create tree
   std::string xml_txt =
     R"(
       <root main_tree_to_execute = "MainTree" >
@@ -95,7 +98,6 @@ TEST_F(TruncatePathTestFixture, test_tick)
 
   tree_ = std::make_shared<BT::Tree>(factory_->createTreeFromText(xml_txt, config_->blackboard));
 
-  // create new goal and set it on blackboard
   nav_msgs::msg::Path path;
   path.header.stamp = node_->now();
 
@@ -117,6 +119,7 @@ TEST_F(TruncatePathTestFixture, test_tick)
   pose.pose.position.y = 0.5;
   path.poses.push_back(pose);
 
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(path.poses.size(), 4u);
 
   config_->blackboard->set("path", path);
@@ -129,27 +132,34 @@ TEST_F(TruncatePathTestFixture, test_tick)
   nav_msgs::msg::Path truncated_path;
   config_->blackboard->get("truncated_path", truncated_path);
 
+// 初始化 EXPECT_NE 对象，读取参数并准备运行时依赖。
   EXPECT_NE(path, truncated_path);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(truncated_path.poses.size(), 2u);
 
   double r, p, y;
   tf2::Quaternion q;
+// 实现该逻辑，并处理相关状态转换。
   tf2::fromMsg(truncated_path.poses.back().pose.orientation, q);
+// 初始化 Matrix3x3 对象，读取参数并准备运行时依赖。
   tf2::Matrix3x3(q).getRPY(r, p, y);
 
+// 初始化 EXPECT_NEAR 对象，读取参数并准备运行时依赖。
   EXPECT_NEAR(y, 0.463, 0.001);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
   int all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
 
   return all_successful;

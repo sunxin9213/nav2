@@ -59,6 +59,7 @@ public:
    * @brief A constructor for nav2_behavior_tree::PipelineSequence
    * @param name Name for the XML tag for this node
    */
+// 实现该逻辑，并处理相关状态转换。
   explicit PipelineSequence(const std::string & name);
 
   /**
@@ -66,11 +67,13 @@ public:
    * @param name Name for the XML tag for this node
    * @param config BT node configuration
    */
+// 实现该逻辑，并处理相关状态转换。
   PipelineSequence(const std::string & name, const BT::NodeConfiguration & config);
 
   /**
    * @brief The other (optional) override required by a BT action to reset node state
    */
+// 立即中断当前节点执行，并让上游状态按树结构继续传播。
   void halt() override;
 
   /**
@@ -84,6 +87,7 @@ protected:
    * @brief The main override required by a BT action
    * @return BT::NodeStatus Status of tick execution
    */
+// 初始化 NodeStatus tick 对象，读取参数并准备运行时依赖。
   BT::NodeStatus tick() override;
 
   std::size_t last_child_ticked_ = 0;

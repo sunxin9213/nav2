@@ -24,8 +24,10 @@ IsBatteryChargingCondition::IsBatteryChargingCondition(
   const BT::NodeConfiguration & conf)
 : BT::ConditionNode(condition_name, conf),
   battery_topic_("/battery_status"),
+// 实现该逻辑，并处理相关状态转换。
   is_battery_charging_(false)
 {
+// 实现该逻辑，并处理相关状态转换。
   getInput("battery_topic", battery_topic_);
   auto node = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
   callback_group_ = node->create_callback_group(
@@ -42,6 +44,7 @@ IsBatteryChargingCondition::IsBatteryChargingCondition(
     sub_option);
 }
 
+// 初始化 NodeStatus IsBatteryChargingCondition::tick 对象，读取参数并准备运行时依赖。
 BT::NodeStatus IsBatteryChargingCondition::tick()
 {
   callback_group_executor_.spin_some();
@@ -51,6 +54,7 @@ BT::NodeStatus IsBatteryChargingCondition::tick()
   return BT::NodeStatus::FAILURE;
 }
 
+// 实现该逻辑，并处理相关状态转换。
 void IsBatteryChargingCondition::batteryCallback(sensor_msgs::msg::BatteryState::SharedPtr msg)
 {
   is_battery_charging_ =
@@ -60,6 +64,7 @@ void IsBatteryChargingCondition::batteryCallback(sensor_msgs::msg::BatteryState:
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::IsBatteryChargingCondition>("IsBatteryCharging");

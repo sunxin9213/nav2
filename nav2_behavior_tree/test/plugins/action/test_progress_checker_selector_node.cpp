@@ -27,6 +27,7 @@
 class ProgressCheckerSelectorTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("progress_checker_selector_test_fixture");
@@ -48,6 +49,7 @@ public:
       builder);
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     delete config_;
@@ -56,6 +58,7 @@ public:
     factory_.reset();
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     tree_.reset();
@@ -74,9 +77,9 @@ BT::NodeConfiguration * ProgressCheckerSelectorTestFixture::config_ = nullptr;
 std::shared_ptr<BT::BehaviorTreeFactory> ProgressCheckerSelectorTestFixture::factory_ = nullptr;
 std::shared_ptr<BT::Tree> ProgressCheckerSelectorTestFixture::tree_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(ProgressCheckerSelectorTestFixture, test_custom_topic)
 {
-  // create tree
   std::string xml_txt =
     R"(
       <root main_tree_to_execute = "MainTree" >
@@ -92,16 +95,17 @@ TEST_F(ProgressCheckerSelectorTestFixture, test_custom_topic)
     tree_->rootNode()->executeTick();
   }
 
-  // check default value
   std::string selected_progress_checker_result;
   config_->blackboard->get("selected_progress_checker", selected_progress_checker_result);
 
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(selected_progress_checker_result, "SimpleProgressCheck");
 
   std_msgs::msg::String selected_progress_checker_cmd;
 
   selected_progress_checker_cmd.data = "AngularProgressChecker";
 
+// 初始化 QoS qos 对象，读取参数并准备运行时依赖。
   rclcpp::QoS qos(rclcpp::KeepLast(1));
   qos.transient_local().reliable();
 
@@ -115,17 +119,19 @@ TEST_F(ProgressCheckerSelectorTestFixture, test_custom_topic)
     tree_->rootNode()->executeTick();
     progress_checker_selector_pub->publish(selected_progress_checker_cmd);
 
+// 实现该逻辑，并处理相关状态转换。
     rclcpp::spin_some(node_);
   }
 
   // check progress_checker updated
   config_->blackboard->get("selected_progress_checker", selected_progress_checker_result);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ("AngularProgressChecker", selected_progress_checker_result);
 }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(ProgressCheckerSelectorTestFixture, test_default_topic)
 {
-  // create tree
   std::string xml_txt =
     R"(
       <root main_tree_to_execute = "MainTree" >
@@ -141,16 +147,17 @@ TEST_F(ProgressCheckerSelectorTestFixture, test_default_topic)
     tree_->rootNode()->executeTick();
   }
 
-  // check default value
   std::string selected_progress_checker_result;
   config_->blackboard->get("selected_progress_checker", selected_progress_checker_result);
 
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(selected_progress_checker_result, "GridBased");
 
   std_msgs::msg::String selected_progress_checker_cmd;
 
   selected_progress_checker_cmd.data = "RRT";
 
+// 初始化 QoS qos 对象，读取参数并准备运行时依赖。
   rclcpp::QoS qos(rclcpp::KeepLast(1));
   qos.transient_local().reliable();
 
@@ -163,24 +170,28 @@ TEST_F(ProgressCheckerSelectorTestFixture, test_default_topic)
     tree_->rootNode()->executeTick();
     progress_checker_selector_pub->publish(selected_progress_checker_cmd);
 
+// 实现该逻辑，并处理相关状态转换。
     rclcpp::spin_some(node_);
   }
 
   // check goal_checker updated
   config_->blackboard->get("selected_progress_checker", selected_progress_checker_result);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ("RRT", selected_progress_checker_result);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
   int all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
 
   return all_successful;

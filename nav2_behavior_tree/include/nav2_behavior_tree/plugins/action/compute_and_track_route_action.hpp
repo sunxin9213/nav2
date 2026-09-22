@@ -48,21 +48,25 @@ public:
   /**
    * @brief Function to perform some user-defined operation on tick
    */
+// 在每次 tick 时读取输入并准备下一步执行状态。
   void on_tick() override;
 
   /**
    * @brief Function to perform some user-defined operation upon successful completion of the action
    */
+// 初始化 NodeStatus on_success 对象，读取参数并准备运行时依赖。
   BT::NodeStatus on_success() override;
 
   /**
    * @brief Function to perform some user-defined operation upon abortion of the action
    */
+// 初始化 NodeStatus on_aborted 对象，读取参数并准备运行时依赖。
   BT::NodeStatus on_aborted() override;
 
   /**
    * @brief Function to perform some user-defined operation upon cancellation of the action
    */
+// 初始化 NodeStatus on_cancelled 对象，读取参数并准备运行时依赖。
   BT::NodeStatus on_cancelled() override;
 
   /**
@@ -76,12 +80,14 @@ public:
   /**
    * @brief Function to set all feedbacks and output ports to be null values
    */
+// 实现该逻辑，并处理相关状态转换。
   void resetFeedbackAndOutputPorts();
 
   /**
    * @brief Creates list of BT ports
    * @return BT::PortsList Containing basic ports along with node-specific ports
    */
+// 初始化 PortsList providedPorts 对象，读取参数并准备运行时依赖。
   static BT::PortsList providedPorts()
   {
     return providedBasicPorts(

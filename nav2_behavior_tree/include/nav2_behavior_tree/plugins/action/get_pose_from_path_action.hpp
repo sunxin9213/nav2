@@ -36,6 +36,7 @@ public:
     const BT::NodeConfiguration & conf);
 
 
+// 初始化 PortsList providedPorts 对象，读取参数并准备运行时依赖。
   static BT::PortsList providedPorts()
   {
     return {
@@ -47,6 +48,7 @@ public:
 
 private:
   void halt() override {}
+// 初始化 NodeStatus tick 对象，读取参数并准备运行时依赖。
   BT::NodeStatus tick() override;
 };
 

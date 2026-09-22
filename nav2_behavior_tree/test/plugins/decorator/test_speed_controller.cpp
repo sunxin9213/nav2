@@ -32,6 +32,7 @@ using namespace std::chrono_literals;  // NOLINT
 class SpeedControllerTestFixture : public nav2_behavior_tree::BehaviorTreeTestFixture
 {
 public:
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void SetUp()
   {
     odom_smoother_ = std::make_shared<nav2_util::OdomSmoother>(node_);
@@ -50,6 +51,7 @@ public:
     bt_node_->setChild(dummy_node_.get());
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown()
   {
     dummy_node_.reset();
@@ -77,6 +79,7 @@ SpeedControllerTestFixture::dummy_node_ = nullptr;
  * Current velocity is set using odom messages
  * The period is reset on the basis of current velocity after the last period is exceeded
  */
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(SpeedControllerTestFixture, test_behavior)
 {
   auto odom_pub = node_->create_publisher<nav_msgs::msg::Odometry>("odom", 1);
@@ -93,14 +96,12 @@ TEST_F(SpeedControllerTestFixture, test_behavior)
   EXPECT_EQ(bt_node_->executeTick(), BT::NodeStatus::SUCCESS);
   EXPECT_EQ(dummy_node_->status(), BT::NodeStatus::IDLE);
 
-  // after the first tick, period should be a default value of 1s
-  // first tick should return running since period has not exceeded
   EXPECT_EQ(bt_node_->executeTick(), BT::NodeStatus::RUNNING);
 
   // set the child node to success so node can return success
   dummy_node_->changeStatus(BT::NodeStatus::SUCCESS);
 
-  // should return success since period has exceeded and new period should be set to ~2s
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::sleep_for(1s);
   EXPECT_EQ(bt_node_->executeTick(), BT::NodeStatus::SUCCESS);
 
@@ -110,17 +111,19 @@ TEST_F(SpeedControllerTestFixture, test_behavior)
   odom_msg.twist.twist.linear.y = 0;
   odom_pub->publish(odom_msg);
 
-  // Period should be set to ~2s based on the last speed of 0.223 m/s
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::sleep_for(1s);
   EXPECT_EQ(bt_node_->executeTick(), BT::NodeStatus::RUNNING);
 
   dummy_node_->changeStatus(BT::NodeStatus::SUCCESS);
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::sleep_for(1s);
   EXPECT_EQ(bt_node_->executeTick(), BT::NodeStatus::SUCCESS);
 
   // period should be set to ~10s based on the last speed of 0 m/s
   // should return running for the first 9 seconds
   for (int i = 0; i < 9; ++i) {
+// 实现该逻辑，并处理相关状态转换。
     rclcpp::sleep_for(1s);
     EXPECT_EQ(bt_node_->executeTick(), BT::NodeStatus::RUNNING);
   }
@@ -128,21 +131,23 @@ TEST_F(SpeedControllerTestFixture, test_behavior)
   // set the child node to success so node can return success
   dummy_node_->changeStatus(BT::NodeStatus::SUCCESS);
 
-  // should return success since period has exceeded
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::sleep_for(1s);
   EXPECT_EQ(bt_node_->executeTick(), BT::NodeStatus::SUCCESS);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
   bool all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
 
   return all_successful;

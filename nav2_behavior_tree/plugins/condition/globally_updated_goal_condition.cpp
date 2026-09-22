@@ -24,11 +24,13 @@ GloballyUpdatedGoalCondition::GloballyUpdatedGoalCondition(
   const std::string & condition_name,
   const BT::NodeConfiguration & conf)
 : BT::ConditionNode(condition_name, conf),
+// 实现该逻辑，并处理相关状态转换。
   first_time(true)
 {
   node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
 }
 
+// 初始化 NodeStatus GloballyUpdatedGoalCondition::tick 对象，读取参数并准备运行时依赖。
 BT::NodeStatus GloballyUpdatedGoalCondition::tick()
 {
   if (first_time) {
@@ -55,6 +57,7 @@ BT::NodeStatus GloballyUpdatedGoalCondition::tick()
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::GloballyUpdatedGoalCondition>("GlobalUpdatedGoal");

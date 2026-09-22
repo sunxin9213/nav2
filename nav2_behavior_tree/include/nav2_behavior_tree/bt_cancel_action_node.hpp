@@ -47,6 +47,7 @@ public:
     const std::string & xml_tag_name,
     const std::string & action_name,
     const BT::NodeConfiguration & conf)
+// 初始化 ActionNodeBase 对象，读取参数并准备运行时依赖。
   : BT::ActionNodeBase(xml_tag_name, conf), action_name_(action_name)
   {
     node_ = config().blackboard->template get<rclcpp::Node::SharedPtr>("node");
@@ -58,6 +59,7 @@ public:
     // Get the required items from the blackboard
     server_timeout_ =
       config().blackboard->template get<std::chrono::milliseconds>("server_timeout");
+// 实现该逻辑，并处理相关状态转换。
     getInput<std::chrono::milliseconds>("server_timeout", server_timeout_);
     wait_for_service_timeout_ =
       config().blackboard->template get<std::chrono::milliseconds>("wait_for_service_timeout");
@@ -66,9 +68,9 @@ public:
     if (getInput("server_name", remapped_action_name)) {
       action_name_ = remapped_action_name;
     }
+// 实现该逻辑，并处理相关状态转换。
     createActionClient(action_name_);
 
-    // Give the derive class a chance to do any initialization
     RCLCPP_DEBUG(
       node_->get_logger(), "\"%s\" BtCancelActionNode initialized",
       xml_tag_name.c_str());
@@ -84,12 +86,12 @@ public:
    * @brief Create instance of an action client
    * @param action_name Action name to create client for
    */
+// 实现该逻辑，并处理相关状态转换。
   void createActionClient(const std::string & action_name)
   {
     // Now that we have the ROS node to use, create the action client for this BT action
     action_client_ = rclcpp_action::create_client<ActionT>(node_, action_name, callback_group_);
 
-    // Make sure the server is actually there before continuing
     RCLCPP_DEBUG(node_->get_logger(), "Waiting for \"%s\" action server", action_name.c_str());
     if (!action_client_->wait_for_action_server(wait_for_service_timeout_)) {
       RCLCPP_ERROR(
@@ -97,6 +99,7 @@ public:
         action_name.c_str(), wait_for_service_timeout_.count() / 1000.0);
       throw std::runtime_error(
               std::string("Action server ") + action_name +
+// 实现该逻辑，并处理相关状态转换。
               std::string(" not available"));
     }
   }
@@ -107,10 +110,12 @@ public:
    * @param addition Additional ports to add to BT port list
    * @return BT::PortsList Containing basic ports along with node-specific ports
    */
+// 初始化 PortsList providedBasicPorts 对象，读取参数并准备运行时依赖。
   static BT::PortsList providedBasicPorts(BT::PortsList addition)
   {
     BT::PortsList basic = {
       BT::InputPort<std::string>("server_name", "Action server name"),
+// 初始化 InputPort<std::chrono::milliseconds> 对象，读取参数并准备运行时依赖。
       BT::InputPort<std::chrono::milliseconds>("server_timeout")
     };
     basic.insert(addition.begin(), addition.end());
@@ -118,6 +123,7 @@ public:
     return basic;
   }
 
+// 立即中断当前节点执行，并让上游状态按树结构继续传播。
   void halt() override
   {
   }
@@ -126,6 +132,7 @@ public:
    * @brief Creates list of BT ports
    * @return BT::PortsList Containing basic ports along with node-specific ports
    */
+// 初始化 PortsList providedPorts 对象，读取参数并准备运行时依赖。
   static BT::PortsList providedPorts()
   {
     return providedBasicPorts({});
@@ -135,9 +142,10 @@ public:
    * @brief The main override required by a BT action
    * @return BT::NodeStatus Status of tick execution
    */
+// 初始化 NodeStatus tick 对象，读取参数并准备运行时依赖。
   BT::NodeStatus tick() override
   {
-    // setting the status to RUNNING to notify the BT Loggers (if any)
+// 初始化 NodeStatus::RUNNING); 对象，读取参数并准备运行时依赖。
     setStatus(BT::NodeStatus::RUNNING);
 
     // Cancel all the goals specified before 10ms from current time
@@ -162,15 +170,12 @@ protected:
   std::string action_name_;
   typename std::shared_ptr<rclcpp_action::Client<ActionT>> action_client_;
 
-  // The node that will be used for any ROS operations
   rclcpp::Node::SharedPtr node_;
   rclcpp::CallbackGroup::SharedPtr callback_group_;
   rclcpp::executors::SingleThreadedExecutor callback_group_executor_;
 
   // The timeout value while waiting for response from a server when a
-  // new action goal is canceled
   std::chrono::milliseconds server_timeout_;
-  // The timeout value for waiting for a service to response
   std::chrono::milliseconds wait_for_service_timeout_;
 };
 

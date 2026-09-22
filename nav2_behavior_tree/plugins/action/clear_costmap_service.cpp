@@ -23,44 +23,54 @@ namespace nav2_behavior_tree
 ClearEntireCostmapService::ClearEntireCostmapService(
   const std::string & service_node_name,
   const BT::NodeConfiguration & conf)
+// 实现该逻辑，并处理相关状态转换。
 : BtServiceNode<nav2_msgs::srv::ClearEntireCostmap>(service_node_name, conf)
 {
 }
 
+// 在每次 tick 时读取输入并准备下一步执行状态。
 void ClearEntireCostmapService::on_tick()
 {
+// 实现该逻辑，并处理相关状态转换。
   increment_recovery_count();
 }
 
 ClearCostmapExceptRegionService::ClearCostmapExceptRegionService(
   const std::string & service_node_name,
   const BT::NodeConfiguration & conf)
+// 实现该逻辑，并处理相关状态转换。
 : BtServiceNode<nav2_msgs::srv::ClearCostmapExceptRegion>(service_node_name, conf)
 {
 }
 
+// 在每次 tick 时读取输入并准备下一步执行状态。
 void ClearCostmapExceptRegionService::on_tick()
 {
   getInput("reset_distance", request_->reset_distance);
+// 实现该逻辑，并处理相关状态转换。
   increment_recovery_count();
 }
 
 ClearCostmapAroundRobotService::ClearCostmapAroundRobotService(
   const std::string & service_node_name,
   const BT::NodeConfiguration & conf)
+// 实现该逻辑，并处理相关状态转换。
 : BtServiceNode<nav2_msgs::srv::ClearCostmapAroundRobot>(service_node_name, conf)
 {
 }
 
+// 在每次 tick 时读取输入并准备下一步执行状态。
 void ClearCostmapAroundRobotService::on_tick()
 {
   getInput("reset_distance", request_->reset_distance);
+// 实现该逻辑，并处理相关状态转换。
   increment_recovery_count();
 }
 
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::ClearEntireCostmapService>("ClearEntireCostmap");

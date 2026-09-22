@@ -26,7 +26,9 @@
 class DriveOnHeadingActionServer : public TestActionServer<nav2_msgs::action::DriveOnHeading>
 {
 public:
+// 初始化 DriveOnHeadingActionServer 对象，读取参数并准备运行时依赖。
   DriveOnHeadingActionServer()
+// 初始化 TestActionServer 对象，读取参数并准备运行时依赖。
   : TestActionServer("drive_on_heading")
   {}
 
@@ -38,6 +40,7 @@ protected:
   override
   {
     nav2_msgs::action::DriveOnHeading::Result::SharedPtr result =
+// 实现该逻辑，并处理相关状态转换。
       std::make_shared<nav2_msgs::action::DriveOnHeading::Result>();
     bool return_success = getReturnSuccess();
     if (return_success) {
@@ -51,6 +54,7 @@ protected:
 class DriveOnHeadingActionTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("drive_on_heading_action_test_fixture");
@@ -65,12 +69,15 @@ public:
       node_);
     config_->blackboard->set<std::chrono::milliseconds>(
       "server_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(20));
     config_->blackboard->set<std::chrono::milliseconds>(
       "bt_loop_duration",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(10));
     config_->blackboard->set<std::chrono::milliseconds>(
       "wait_for_service_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(1000));
     config_->blackboard->set<bool>("initial_pose_received", false);
 
@@ -84,6 +91,7 @@ public:
     factory_->registerBuilder<nav2_behavior_tree::DriveOnHeadingAction>("DriveOnHeading", builder);
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     delete config_;
@@ -93,6 +101,7 @@ public:
     factory_.reset();
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     tree_.reset();
@@ -114,6 +123,7 @@ BT::NodeConfiguration * DriveOnHeadingActionTestFixture::config_ = nullptr;
 std::shared_ptr<BT::BehaviorTreeFactory> DriveOnHeadingActionTestFixture::factory_ = nullptr;
 std::shared_ptr<BT::Tree> DriveOnHeadingActionTestFixture::tree_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(DriveOnHeadingActionTestFixture, test_ports)
 {
   std::string xml_txt =
@@ -142,6 +152,7 @@ TEST_F(DriveOnHeadingActionTestFixture, test_ports)
   EXPECT_EQ(tree_->rootNode()->getInput<double>("speed"), 0.26);
 }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(DriveOnHeadingActionTestFixture, test_tick)
 {
   std::string xml_txt =
@@ -165,6 +176,7 @@ TEST_F(DriveOnHeadingActionTestFixture, test_tick)
   EXPECT_EQ(goal->speed, 0.26f);
 }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(DriveOnHeadingActionTestFixture, test_failure)
 {
   std::string xml_txt =
@@ -191,22 +203,25 @@ TEST_F(DriveOnHeadingActionTestFixture, test_failure)
   EXPECT_EQ(goal->speed, 0.26f);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
-  // initialize action server and spin on new thread
   DriveOnHeadingActionTestFixture::action_server_ = std::make_shared<DriveOnHeadingActionServer>();
+// 实现该逻辑，并处理相关状态转换。
   std::thread server_thread([]() {
+// 实现该逻辑，并处理相关状态转换。
       rclcpp::spin(DriveOnHeadingActionTestFixture::action_server_);
     });
 
   int all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
   server_thread.join();
 

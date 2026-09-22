@@ -29,6 +29,7 @@ IsStuckCondition::IsStuckCondition(
   is_stuck_(false),
   odom_history_size_(10),
   current_accel_(0.0),
+// 实现该逻辑，并处理相关状态转换。
   brake_accel_limit_(-10.0)
 {
   node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
@@ -51,6 +52,7 @@ IsStuckCondition::IsStuckCondition(
   RCLCPP_INFO_ONCE(node_->get_logger(), "Waiting on odometry");
 }
 
+// 评估当前条件是否满足 ~IsStuckCondition 所代表的判定逻辑。
 IsStuckCondition::~IsStuckCondition()
 {
   RCLCPP_DEBUG(node_->get_logger(), "Shutting down IsStuckCondition BT node");
@@ -58,6 +60,7 @@ IsStuckCondition::~IsStuckCondition()
   callback_group_executor_thread.join();
 }
 
+// 实现该逻辑，并处理相关状态转换。
 void IsStuckCondition::onOdomReceived(const typename nav_msgs::msg::Odometry::SharedPtr msg)
 {
   RCLCPP_INFO_ONCE(node_->get_logger(), "Got odometry");
@@ -68,10 +71,11 @@ void IsStuckCondition::onOdomReceived(const typename nav_msgs::msg::Odometry::Sh
 
   odom_history_.push_back(*msg);
 
-  // TODO(orduno) #383 Move the state calculation and is stuck to robot class
+// 实现该逻辑，并处理相关状态转换。
   updateStates();
 }
 
+// 初始化 NodeStatus IsStuckCondition::tick 对象，读取参数并准备运行时依赖。
 BT::NodeStatus IsStuckCondition::tick()
 {
   // TODO(orduno) #383 Once check for is stuck and state calculations are moved to robot class
@@ -79,14 +83,17 @@ BT::NodeStatus IsStuckCondition::tick()
   // if (robot_state_.isStuck()) {
 
   if (is_stuck_) {
+// 实现该逻辑，并处理相关状态转换。
     logStuck("Robot got stuck!");
     return BT::NodeStatus::SUCCESS;  // Successfully detected a stuck condition
   }
 
+// 实现该逻辑，并处理相关状态转换。
   logStuck("Robot is free");
   return BT::NodeStatus::FAILURE;  // Failed to detected a stuck condition
 }
 
+// 实现该逻辑，并处理相关状态转换。
 void IsStuckCondition::logStuck(const std::string & msg) const
 {
   static std::string prev_msg;
@@ -99,6 +106,7 @@ void IsStuckCondition::logStuck(const std::string & msg) const
   prev_msg = msg;
 }
 
+// 实现该逻辑，并处理相关状态转换。
 void IsStuckCondition::updateStates()
 {
   // Approximate acceleration
@@ -121,6 +129,7 @@ void IsStuckCondition::updateStates()
   is_stuck_ = isStuck();
 }
 
+// 检测机器人是否长时间卡住并需要执行恢复策略。
 bool IsStuckCondition::isStuck()
 {
   // TODO(orduno) #400 The robot getting stuck can result on different types of motion
@@ -144,6 +153,7 @@ bool IsStuckCondition::isStuck()
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::IsStuckCondition>("IsStuck");

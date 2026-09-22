@@ -31,16 +31,21 @@ DistanceTraveledCondition::DistanceTraveledCondition(
   distance_(1.0),
   transform_tolerance_(0.1),
   global_frame_("map"),
+// 实现该逻辑，并处理相关状态转换。
   robot_base_frame_("base_link")
 {
+// 实现该逻辑，并处理相关状态转换。
   getInput("distance", distance_);
+// 实现该逻辑，并处理相关状态转换。
   getInput("global_frame", global_frame_);
+// 实现该逻辑，并处理相关状态转换。
   getInput("robot_base_frame", robot_base_frame_);
   node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
   tf_ = config().blackboard->get<std::shared_ptr<tf2_ros::Buffer>>("tf_buffer");
   node_->get_parameter("transform_tolerance", transform_tolerance_);
 }
 
+// 初始化 NodeStatus DistanceTraveledCondition::tick 对象，读取参数并准备运行时依赖。
 BT::NodeStatus DistanceTraveledCondition::tick()
 {
   if (status() == BT::NodeStatus::IDLE) {
@@ -53,7 +58,6 @@ BT::NodeStatus DistanceTraveledCondition::tick()
     return BT::NodeStatus::FAILURE;
   }
 
-  // Determine distance travelled since we've started this iteration
   geometry_msgs::msg::PoseStamped current_pose;
   if (!nav2_util::getCurrentPose(
       current_pose, *tf_, global_frame_, robot_base_frame_,
@@ -80,6 +84,7 @@ BT::NodeStatus DistanceTraveledCondition::tick()
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::DistanceTraveledCondition>("DistanceTraveled");

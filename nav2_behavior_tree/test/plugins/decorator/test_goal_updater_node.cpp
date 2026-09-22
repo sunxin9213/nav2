@@ -30,6 +30,7 @@
 class GoalUpdaterTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("goal_updater_test_fixture");
@@ -55,6 +56,7 @@ public:
       "GoalUpdater", builder);
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     delete config_;
@@ -63,6 +65,7 @@ public:
     factory_.reset();
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     tree_.reset();
@@ -81,9 +84,9 @@ BT::NodeConfiguration * GoalUpdaterTestFixture::config_ = nullptr;
 std::shared_ptr<BT::BehaviorTreeFactory> GoalUpdaterTestFixture::factory_ = nullptr;
 std::shared_ptr<BT::Tree> GoalUpdaterTestFixture::tree_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(GoalUpdaterTestFixture, test_tick)
 {
-  // create tree
   std::string xml_txt =
     R"(
       <root main_tree_to_execute = "MainTree" >
@@ -98,7 +101,6 @@ TEST_F(GoalUpdaterTestFixture, test_tick)
   auto goal_updater_pub =
     node_->create_publisher<geometry_msgs::msg::PoseStamped>("goal_update", 10);
 
-  // create new goal and set it on blackboard
   geometry_msgs::msg::PoseStamped goal;
   goal.header.stamp = node_->now();
   goal.pose.position.x = 1.0;
@@ -110,9 +112,9 @@ TEST_F(GoalUpdaterTestFixture, test_tick)
   config_->blackboard->get("updated_goal", updated_goal);
 }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(GoalUpdaterTestFixture, test_older_goal_update)
 {
-  // create tree
   std::string xml_txt =
     R"(
       <root main_tree_to_execute = "MainTree" >
@@ -127,13 +129,11 @@ TEST_F(GoalUpdaterTestFixture, test_older_goal_update)
   auto goal_updater_pub =
     node_->create_publisher<geometry_msgs::msg::PoseStamped>("goal_update", 10);
 
-  // create new goal and set it on blackboard
   geometry_msgs::msg::PoseStamped goal;
   goal.header.stamp = node_->now();
   goal.pose.position.x = 1.0;
   config_->blackboard->set("goal", goal);
 
-  // publish updated_goal older than goal
   geometry_msgs::msg::PoseStamped goal_to_update;
   goal_to_update.header.stamp = rclcpp::Time(goal.header.stamp) - rclcpp::Duration(1, 0);
   goal_to_update.pose.position.x = 2.0;
@@ -143,14 +143,14 @@ TEST_F(GoalUpdaterTestFixture, test_older_goal_update)
   geometry_msgs::msg::PoseStamped updated_goal;
   config_->blackboard->get("updated_goal", updated_goal);
 
-  // expect to succeed and not update goal
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::SUCCESS);
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(updated_goal, goal);
 }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(GoalUpdaterTestFixture, test_get_latest_goal_update)
 {
-  // create tree
   std::string xml_txt =
     R"(
       <root main_tree_to_execute = "MainTree" >
@@ -165,13 +165,11 @@ TEST_F(GoalUpdaterTestFixture, test_get_latest_goal_update)
   auto goal_updater_pub =
     node_->create_publisher<geometry_msgs::msg::PoseStamped>("goal_update", 10);
 
-  // create new goal and set it on blackboard
   geometry_msgs::msg::PoseStamped goal;
   goal.header.stamp = node_->now();
   goal.pose.position.x = 1.0;
   config_->blackboard->set("goal", goal);
 
-  // publish updated_goal older than goal
   geometry_msgs::msg::PoseStamped goal_to_update_1;
   goal_to_update_1.header.stamp = node_->now();
   goal_to_update_1.pose.position.x = 2.0;
@@ -186,22 +184,23 @@ TEST_F(GoalUpdaterTestFixture, test_get_latest_goal_update)
   geometry_msgs::msg::PoseStamped updated_goal;
   config_->blackboard->get("updated_goal", updated_goal);
 
-  // expect to succeed
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::SUCCESS);
-  // expect to update goal with latest goal update
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(updated_goal, goal_to_update_2);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
   int all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
 
   return all_successful;

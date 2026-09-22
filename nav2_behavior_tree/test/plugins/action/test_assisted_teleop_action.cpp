@@ -25,7 +25,9 @@
 class AssistedTeleopActionServer : public TestActionServer<nav2_msgs::action::AssistedTeleop>
 {
 public:
+// 初始化 AssistedTeleopActionServer 对象，读取参数并准备运行时依赖。
   AssistedTeleopActionServer()
+// 初始化 TestActionServer 对象，读取参数并准备运行时依赖。
   : TestActionServer("assisted_teleop")
   {}
 
@@ -37,6 +39,7 @@ protected:
   override
   {
     nav2_msgs::action::AssistedTeleop::Result::SharedPtr result =
+// 实现该逻辑，并处理相关状态转换。
       std::make_shared<nav2_msgs::action::AssistedTeleop::Result>();
     bool return_success = getReturnSuccess();
     if (return_success) {
@@ -50,6 +53,7 @@ protected:
 class AssistedTeleopActionTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("backup_action_test_fixture");
@@ -64,12 +68,15 @@ public:
       node_);
     config_->blackboard->set<std::chrono::milliseconds>(
       "server_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(20));
     config_->blackboard->set<std::chrono::milliseconds>(
       "bt_loop_duration",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(10));
     config_->blackboard->set<std::chrono::milliseconds>(
       "wait_for_service_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(1000));
     config_->blackboard->set<bool>("initial_pose_received", false);
     config_->blackboard->set<int>("number_recoveries", 0);
@@ -84,6 +91,7 @@ public:
     factory_->registerBuilder<nav2_behavior_tree::AssistedTeleopAction>("AssistedTeleop", builder);
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     delete config_;
@@ -93,11 +101,13 @@ public:
     factory_.reset();
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void SetUp() override
   {
     config_->blackboard->set("number_recoveries", 0);
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     tree_.reset();
@@ -119,6 +129,7 @@ BT::NodeConfiguration * AssistedTeleopActionTestFixture::config_ = nullptr;
 std::shared_ptr<BT::BehaviorTreeFactory> AssistedTeleopActionTestFixture::factory_ = nullptr;
 std::shared_ptr<BT::Tree> AssistedTeleopActionTestFixture::tree_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(AssistedTeleopActionTestFixture, test_ports)
 {
   std::string xml_txt =
@@ -144,6 +155,7 @@ TEST_F(AssistedTeleopActionTestFixture, test_ports)
   EXPECT_EQ(tree_->rootNode()->getInput<double>("time_allowance"), 20.0);
 }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(AssistedTeleopActionTestFixture, test_tick)
 {
   std::string xml_txt =
@@ -168,6 +180,7 @@ TEST_F(AssistedTeleopActionTestFixture, test_tick)
   EXPECT_EQ(goal->time_allowance.sec, 10.0);
 }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(AssistedTeleopActionTestFixture, test_failure)
 {
   std::string xml_txt =
@@ -195,22 +208,25 @@ TEST_F(AssistedTeleopActionTestFixture, test_failure)
   EXPECT_EQ(goal->time_allowance.sec, 10.0);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
-  // initialize action server and spin on new thread
   AssistedTeleopActionTestFixture::action_server_ = std::make_shared<AssistedTeleopActionServer>();
+// 实现该逻辑，并处理相关状态转换。
   std::thread server_thread([]() {
+// 实现该逻辑，并处理相关状态转换。
       rclcpp::spin(AssistedTeleopActionTestFixture::action_server_);
     });
 
   int all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
   server_thread.join();
 

@@ -25,12 +25,14 @@
 class GloballyUpdatedGoalConditionTestFixture : public nav2_behavior_tree::BehaviorTreeTestFixture
 {
 public:
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void SetUp()
   {
     bt_node_ = std::make_shared<nav2_behavior_tree::GloballyUpdatedGoalCondition>(
       "globally_updated_goal", *config_);
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown()
   {
     bt_node_.reset();
@@ -43,6 +45,7 @@ protected:
 std::shared_ptr<nav2_behavior_tree::GloballyUpdatedGoalCondition>
 GloballyUpdatedGoalConditionTestFixture::bt_node_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(GloballyUpdatedGoalConditionTestFixture, test_behavior)
 {
   geometry_msgs::msg::PoseStamped goal;
@@ -57,16 +60,18 @@ TEST_F(GloballyUpdatedGoalConditionTestFixture, test_behavior)
   EXPECT_EQ(bt_node_->executeTick(), BT::NodeStatus::FAILURE);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
   bool all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
 
   return all_successful;

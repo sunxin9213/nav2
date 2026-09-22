@@ -25,6 +25,7 @@ namespace nav2_behavior_tree
 PathLongerOnApproach::PathLongerOnApproach(
   const std::string & name,
   const BT::NodeConfiguration & conf)
+// 实现 DecoratorNode 的控制或装饰逻辑，管理子节点执行顺序和状态转换。
 : BT::DecoratorNode(name, conf)
 {
   node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
@@ -57,10 +58,14 @@ bool PathLongerOnApproach::isNewPathLonger(
     old_path, 0);
 }
 
+// 初始化 NodeStatus PathLongerOnApproach::tick 对象，读取参数并准备运行时依赖。
 inline BT::NodeStatus PathLongerOnApproach::tick()
 {
+// 实现该逻辑，并处理相关状态转换。
   getInput("path", new_path_);
+// 实现该逻辑，并处理相关状态转换。
   getInput("prox_len", prox_len_);
+// 实现该逻辑，并处理相关状态转换。
   getInput("length_factor", length_factor_);
 
   if (first_time_ == false) {
@@ -71,11 +76,13 @@ inline BT::NodeStatus PathLongerOnApproach::tick()
     }
   }
 
+// 初始化 NodeStatus::RUNNING); 对象，读取参数并准备运行时依赖。
   setStatus(BT::NodeStatus::RUNNING);
 
   // Check if the path is updated and valid, compare the old and the new path length,
   // given the goal proximity and check if the new path is longer
   if (isPathUpdated(new_path_, old_path_) && isRobotInGoalProximity(old_path_, prox_len_) &&
+// 实现该逻辑，并处理相关状态转换。
     isNewPathLonger(new_path_, old_path_, length_factor_) && !first_time_)
   {
     const BT::NodeStatus child_state = child_node_->executeTick();
@@ -85,6 +92,7 @@ inline BT::NodeStatus PathLongerOnApproach::tick()
       case BT::NodeStatus::SUCCESS:
       case BT::NodeStatus::FAILURE:
         old_path_ = new_path_;
+// 实现该逻辑，并处理相关状态转换。
         resetChild();
         return child_state;
       default:
@@ -100,6 +108,7 @@ inline BT::NodeStatus PathLongerOnApproach::tick()
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::PathLongerOnApproach>("PathLongerOnApproach");

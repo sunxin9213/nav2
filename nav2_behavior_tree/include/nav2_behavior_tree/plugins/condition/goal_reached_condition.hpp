@@ -52,28 +52,33 @@ public:
    * @brief The main override required by a BT action
    * @return BT::NodeStatus Status of tick execution
    */
+// 初始化 NodeStatus tick 对象，读取参数并准备运行时依赖。
   BT::NodeStatus tick() override;
 
   /**
    * @brief Function to read parameters and initialize class variables
    */
+// 初始化 ROS 节点、参数和 TF/状态依赖，准备后续判断逻辑。
   void initialize();
 
   /**
    * @brief Checks if the current robot pose lies within a given distance from the goal
    * @return bool true when goal is reached, false otherwise
    */
+// 判断当前机器人位姿是否已进入目标阈值范围内。
   bool isGoalReached();
 
   /**
    * @brief Creates list of BT ports
    * @return BT::PortsList Containing node-specific ports
    */
+// 初始化 PortsList providedPorts 对象，读取参数并准备运行时依赖。
   static BT::PortsList providedPorts()
   {
     return {
       BT::InputPort<geometry_msgs::msg::PoseStamped>("goal", "Destination"),
       BT::InputPort<std::string>("global_frame", std::string("map"), "Global frame"),
+// 初始化 InputPort<std::string> 对象，读取参数并准备运行时依赖。
       BT::InputPort<std::string>("robot_base_frame", std::string("base_link"), "Robot base frame")
     };
   }
@@ -82,6 +87,7 @@ protected:
   /**
    * @brief Cleanup function
    */
+// 清理节点持有的资源，避免重复执行造成状态残留。
   void cleanup()
   {}
 

@@ -30,6 +30,7 @@ using std::placeholders::_1;
 PlannerSelector::PlannerSelector(
   const std::string & name,
   const BT::NodeConfiguration & conf)
+// 实现 SyncActionNode 的控制或装饰逻辑，管理子节点执行顺序和状态转换。
 : BT::SyncActionNode(name, conf)
 {
   node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
@@ -38,8 +39,10 @@ PlannerSelector::PlannerSelector(
     false);
   callback_group_executor_.add_callback_group(callback_group_, node_->get_node_base_interface());
 
+// 实现该逻辑，并处理相关状态转换。
   getInput("topic_name", topic_name_);
 
+// 初始化 QoS qos 对象，读取参数并准备运行时依赖。
   rclcpp::QoS qos(rclcpp::KeepLast(1));
   qos.transient_local().reliable();
 
@@ -52,6 +55,7 @@ PlannerSelector::PlannerSelector(
     sub_option);
 }
 
+// 初始化 NodeStatus PlannerSelector::tick 对象，读取参数并准备运行时依赖。
 BT::NodeStatus PlannerSelector::tick()
 {
   callback_group_executor_.spin_some();
@@ -63,6 +67,7 @@ BT::NodeStatus PlannerSelector::tick()
   // the topic input.
   if (last_selected_planner_.empty()) {
     std::string default_planner;
+// 实现该逻辑，并处理相关状态转换。
     getInput("default_planner", default_planner);
     if (default_planner.empty()) {
       return BT::NodeStatus::FAILURE;
@@ -71,12 +76,14 @@ BT::NodeStatus PlannerSelector::tick()
     }
   }
 
+// 实现该逻辑，并处理相关状态转换。
   setOutput("selected_planner", last_selected_planner_);
 
   return BT::NodeStatus::SUCCESS;
 }
 
 void
+// 实现该逻辑，并处理相关状态转换。
 PlannerSelector::callbackPlannerSelect(const std_msgs::msg::String::SharedPtr msg)
 {
   last_selected_planner_ = msg->data;
@@ -85,6 +92,7 @@ PlannerSelector::callbackPlannerSelect(const std_msgs::msg::String::SharedPtr ms
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::PlannerSelector>("PlannerSelector");

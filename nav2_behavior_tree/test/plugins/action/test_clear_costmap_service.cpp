@@ -26,7 +26,9 @@
 class ClearEntireCostmapService : public TestService<nav2_msgs::srv::ClearEntireCostmap>
 {
 public:
+// 初始化 ClearEntireCostmapService 对象，读取参数并准备运行时依赖。
   ClearEntireCostmapService()
+// 初始化 TestService 对象，读取参数并准备运行时依赖。
   : TestService("clear_entire_costmap")
   {}
 };
@@ -34,6 +36,7 @@ public:
 class ClearEntireCostmapServiceTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("clear_entire_costmap_test_fixture");
@@ -49,12 +52,15 @@ public:
       node_);
     config_->blackboard->set<std::chrono::milliseconds>(
       "server_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(20));
     config_->blackboard->set<std::chrono::milliseconds>(
       "bt_loop_duration",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(10));
     config_->blackboard->set<std::chrono::milliseconds>(
       "wait_for_service_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(1000));
     config_->blackboard->set<bool>("initial_pose_received", false);
     config_->blackboard->set<int>("number_recoveries", 0);
@@ -62,6 +68,7 @@ public:
     factory_->registerNodeType<nav2_behavior_tree::ClearEntireCostmapService>("ClearEntireCostmap");
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     delete config_;
@@ -71,11 +78,13 @@ public:
     factory_.reset();
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void SetUp() override
   {
     config_->blackboard->set("number_recoveries", 0);
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     tree_.reset();
@@ -96,6 +105,7 @@ BT::NodeConfiguration * ClearEntireCostmapServiceTestFixture::config_ = nullptr;
 std::shared_ptr<BT::BehaviorTreeFactory> ClearEntireCostmapServiceTestFixture::factory_ = nullptr;
 std::shared_ptr<BT::Tree> ClearEntireCostmapServiceTestFixture::tree_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(ClearEntireCostmapServiceTestFixture, test_tick)
 {
   std::string xml_txt =
@@ -115,7 +125,9 @@ TEST_F(ClearEntireCostmapServiceTestFixture, test_tick)
 class ClearCostmapExceptRegionService : public TestService<nav2_msgs::srv::ClearCostmapExceptRegion>
 {
 public:
+// 初始化 ClearCostmapExceptRegionService 对象，读取参数并准备运行时依赖。
   ClearCostmapExceptRegionService()
+// 初始化 TestService 对象，读取参数并准备运行时依赖。
   : TestService("clear_costmap_except_region")
   {}
 };
@@ -123,6 +135,7 @@ public:
 class ClearCostmapExceptRegionServiceTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("clear_costmap_except_region_test_fixture");
@@ -138,12 +151,15 @@ public:
       node_);
     config_->blackboard->set<std::chrono::milliseconds>(
       "server_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(10));
     config_->blackboard->set<std::chrono::milliseconds>(
       "bt_loop_duration",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(10));
     config_->blackboard->set<std::chrono::milliseconds>(
       "wait_for_service_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(1000));
     config_->blackboard->set<bool>("initial_pose_received", false);
     config_->blackboard->set<int>("number_recoveries", 0);
@@ -152,6 +168,7 @@ public:
       "ClearCostmapExceptRegion");
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     delete config_;
@@ -161,11 +178,13 @@ public:
     factory_.reset();
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void SetUp() override
   {
     config_->blackboard->set("number_recoveries", 0);
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     tree_.reset();
@@ -191,6 +210,7 @@ ClearCostmapExceptRegionServiceTestFixture::factory_ = nullptr;
 std::shared_ptr<BT::Tree>
 ClearCostmapExceptRegionServiceTestFixture::tree_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(ClearCostmapExceptRegionServiceTestFixture, test_tick)
 {
   std::string xml_txt =
@@ -210,7 +230,9 @@ TEST_F(ClearCostmapExceptRegionServiceTestFixture, test_tick)
 class ClearCostmapAroundRobotService : public TestService<nav2_msgs::srv::ClearCostmapAroundRobot>
 {
 public:
+// 初始化 ClearCostmapAroundRobotService 对象，读取参数并准备运行时依赖。
   ClearCostmapAroundRobotService()
+// 初始化 TestService 对象，读取参数并准备运行时依赖。
   : TestService("clear_costmap_around_robot")
   {}
 };
@@ -218,6 +240,7 @@ public:
 class ClearCostmapAroundRobotServiceTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("clear_costmap_around_robot_test_fixture");
@@ -233,12 +256,15 @@ public:
       node_);
     config_->blackboard->set<std::chrono::milliseconds>(
       "server_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(10));
     config_->blackboard->set<std::chrono::milliseconds>(
       "bt_loop_duration",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(10));
     config_->blackboard->set<std::chrono::milliseconds>(
       "wait_for_service_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(1000));
     config_->blackboard->set<bool>("initial_pose_received", false);
     config_->blackboard->set<int>("number_recoveries", 0);
@@ -247,6 +273,7 @@ public:
       "ClearCostmapAroundRobot");
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     delete config_;
@@ -256,11 +283,13 @@ public:
     factory_.reset();
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void SetUp() override
   {
     config_->blackboard->set("number_recoveries", 0);
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     tree_.reset();
@@ -286,6 +315,7 @@ ClearCostmapAroundRobotServiceTestFixture::factory_ = nullptr;
 std::shared_ptr<BT::Tree>
 ClearCostmapAroundRobotServiceTestFixture::tree_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(ClearCostmapAroundRobotServiceTestFixture, test_tick)
 {
   std::string xml_txt =
@@ -302,34 +332,43 @@ TEST_F(ClearCostmapAroundRobotServiceTestFixture, test_tick)
   EXPECT_EQ(config_->blackboard->get<int>("number_recoveries"), 1);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
-  // initialize service and spin on new thread
   ClearEntireCostmapServiceTestFixture::server_ = std::make_shared<ClearEntireCostmapService>();
+// 实现该逻辑，并处理相关状态转换。
   std::thread server_thread([]() {
+// 实现该逻辑，并处理相关状态转换。
       rclcpp::spin(ClearEntireCostmapServiceTestFixture::server_);
     });
 
   ClearCostmapExceptRegionServiceTestFixture::server_ =
+// 实现该逻辑，并处理相关状态转换。
     std::make_shared<ClearCostmapExceptRegionService>();
+// 实现该逻辑，并处理相关状态转换。
   std::thread server_thread_except_region([]() {
+// 实现该逻辑，并处理相关状态转换。
       rclcpp::spin(ClearCostmapExceptRegionServiceTestFixture::server_);
     });
 
   ClearCostmapAroundRobotServiceTestFixture::server_ =
+// 实现该逻辑，并处理相关状态转换。
     std::make_shared<ClearCostmapAroundRobotService>();
+// 实现该逻辑，并处理相关状态转换。
   std::thread server_thread_around_robot([]() {
+// 实现该逻辑，并处理相关状态转换。
       rclcpp::spin(ClearCostmapAroundRobotServiceTestFixture::server_);
     });
 
   int all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
   server_thread.join();
   server_thread_except_region.join();

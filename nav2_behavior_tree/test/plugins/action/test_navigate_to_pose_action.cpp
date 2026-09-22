@@ -30,7 +30,9 @@
 class NavigateToPoseActionServer : public TestActionServer<nav2_msgs::action::NavigateToPose>
 {
 public:
+// 初始化 NavigateToPoseActionServer 对象，读取参数并准备运行时依赖。
   NavigateToPoseActionServer()
+// 初始化 TestActionServer 对象，读取参数并准备运行时依赖。
   : TestActionServer("navigate_to_pose")
   {}
 
@@ -49,6 +51,7 @@ protected:
 class NavigateToPoseActionTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("navigate_to_pose_action_test_fixture");
@@ -64,12 +67,15 @@ public:
       node_);
     config_->blackboard->set<std::chrono::milliseconds>(
       "server_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(20));
     config_->blackboard->set<std::chrono::milliseconds>(
       "bt_loop_duration",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(10));
     config_->blackboard->set<std::chrono::milliseconds>(
       "wait_for_service_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(1000));
     config_->blackboard->set<bool>("initial_pose_received", false);
 
@@ -84,6 +90,7 @@ public:
       "NavigateToPose", builder);
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     delete config_;
@@ -93,6 +100,7 @@ public:
     factory_.reset();
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     tree_.reset();
@@ -114,9 +122,9 @@ BT::NodeConfiguration * NavigateToPoseActionTestFixture::config_ = nullptr;
 std::shared_ptr<BT::BehaviorTreeFactory> NavigateToPoseActionTestFixture::factory_ = nullptr;
 std::shared_ptr<BT::Tree> NavigateToPoseActionTestFixture::tree_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(NavigateToPoseActionTestFixture, test_tick)
 {
-  // create tree
   std::string xml_txt =
     R"(
       <root main_tree_to_execute = "MainTree" >
@@ -134,11 +142,9 @@ TEST_F(NavigateToPoseActionTestFixture, test_tick)
     tree_->rootNode()->executeTick();
   }
 
-  // goal should have reached our server
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::SUCCESS);
   EXPECT_EQ(action_server_->getCurrentGoal()->pose, pose);
 
-  // halt node so another goal can be sent
   tree_->rootNode()->halt();
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::IDLE);
 
@@ -155,24 +161,28 @@ TEST_F(NavigateToPoseActionTestFixture, test_tick)
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::SUCCESS);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
-  // initialize action server and spin on new thread
   NavigateToPoseActionTestFixture::action_server_ =
+// 实现该逻辑，并处理相关状态转换。
     std::make_shared<NavigateToPoseActionServer>();
 
+// 实现该逻辑，并处理相关状态转换。
   std::thread server_thread([]() {
+// 实现该逻辑，并处理相关状态转换。
       rclcpp::spin(NavigateToPoseActionTestFixture::action_server_);
     });
 
   int all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
   server_thread.join();
 

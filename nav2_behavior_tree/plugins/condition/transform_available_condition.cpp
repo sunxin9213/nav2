@@ -27,29 +27,35 @@ TransformAvailableCondition::TransformAvailableCondition(
   const std::string & condition_name,
   const BT::NodeConfiguration & conf)
 : BT::ConditionNode(condition_name, conf),
+// 实现该逻辑，并处理相关状态转换。
   was_found_(false)
 {
   node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
   tf_ = config().blackboard->get<std::shared_ptr<tf2_ros::Buffer>>("tf_buffer");
 
+// 实现该逻辑，并处理相关状态转换。
   getInput("child", child_frame_);
+// 实现该逻辑，并处理相关状态转换。
   getInput("parent", parent_frame_);
 
   if (child_frame_.empty() || parent_frame_.empty()) {
     RCLCPP_FATAL(
       node_->get_logger(), "Child frame (%s) or parent frame (%s) were empty.",
       child_frame_.c_str(), parent_frame_.c_str());
+// 实现该逻辑，并处理相关状态转换。
     exit(-1);
   }
 
   RCLCPP_DEBUG(node_->get_logger(), "Initialized an TransformAvailableCondition BT node");
 }
 
+// 评估当前条件是否满足 ~TransformAvailableCondition 所代表的判定逻辑。
 TransformAvailableCondition::~TransformAvailableCondition()
 {
   RCLCPP_DEBUG(node_->get_logger(), "Shutting down TransformAvailableCondition BT node");
 }
 
+// 初始化 NodeStatus TransformAvailableCondition::tick 对象，读取参数并准备运行时依赖。
 BT::NodeStatus TransformAvailableCondition::tick()
 {
   if (was_found_) {
@@ -75,6 +81,7 @@ BT::NodeStatus TransformAvailableCondition::tick()
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::TransformAvailableCondition>("TransformAvailable");

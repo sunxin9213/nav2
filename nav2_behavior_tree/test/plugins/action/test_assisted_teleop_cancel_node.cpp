@@ -26,7 +26,9 @@
 class CancelAssistedTeleopServer : public TestActionServer<nav2_msgs::action::AssistedTeleop>
 {
 public:
+// 初始化 CancelAssistedTeleopServer 对象，读取参数并准备运行时依赖。
   CancelAssistedTeleopServer()
+// 初始化 TestActionServer 对象，读取参数并准备运行时依赖。
   : TestActionServer("assisted_teleop")
   {}
 
@@ -37,7 +39,7 @@ protected:
     goal_handle)
   {
     while (!goal_handle->is_canceling()) {
-      // Assisted Teleop here until goal cancels
+// 实现该逻辑，并处理相关状态转换。
       std::this_thread::sleep_for(std::chrono::milliseconds(15));
     }
   }
@@ -46,6 +48,7 @@ protected:
 class CancelAssistedTeleopActionTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("cancel_back_up_action_test_fixture");
@@ -61,12 +64,15 @@ public:
       node_);
     config_->blackboard->set<std::chrono::milliseconds>(
       "server_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(20));
     config_->blackboard->set<std::chrono::milliseconds>(
       "bt_loop_duration",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(10));
     config_->blackboard->set<std::chrono::milliseconds>(
       "wait_for_service_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(1000));
     client_ = rclcpp_action::create_client<nav2_msgs::action::AssistedTeleop>(
       node_, "assisted_teleop");
@@ -82,6 +88,7 @@ public:
       "CancelAssistedTeleop", builder);
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     delete config_;
@@ -92,6 +99,7 @@ public:
     factory_.reset();
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     tree_.reset();
@@ -118,6 +126,7 @@ std::shared_ptr<BT::BehaviorTreeFactory>
 CancelAssistedTeleopActionTestFixture::factory_ = nullptr;
 std::shared_ptr<BT::Tree> CancelAssistedTeleopActionTestFixture::tree_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(CancelAssistedTeleopActionTestFixture, test_ports)
 {
   std::string xml_txt =
@@ -130,6 +139,7 @@ TEST_F(CancelAssistedTeleopActionTestFixture, test_ports)
 
   tree_ = std::make_shared<BT::Tree>(factory_->createTreeFromText(xml_txt, config_->blackboard));
   auto send_goal_options = rclcpp_action::Client<
+// 实现该逻辑，并处理相关状态转换。
     nav2_msgs::action::AssistedTeleop>::SendGoalOptions();
 
   // Creating a dummy goal_msg
@@ -139,36 +149,38 @@ TEST_F(CancelAssistedTeleopActionTestFixture, test_ports)
   client_->wait_for_action_server();
   client_->async_send_goal(goal_msg, send_goal_options);
 
-  // Adding a sleep so that the goal is indeed older than 10ms as described in our abstract class
+// 实现该逻辑，并处理相关状态转换。
   std::this_thread::sleep_for(std::chrono::milliseconds(15));
 
   // Executing tick
   tree_->rootNode()->executeTick();
 
-  // BT node should return success, once when the goal is cancelled
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::SUCCESS);
 
-  // Adding another test case to check if the goal is infact cancelling
   EXPECT_EQ(action_server_->isGoalCancelled(), true);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
-  // initialize action server and back_up on new thread
   CancelAssistedTeleopActionTestFixture::action_server_ =
+// 实现该逻辑，并处理相关状态转换。
     std::make_shared<CancelAssistedTeleopServer>();
+// 实现该逻辑，并处理相关状态转换。
   std::thread server_thread([]() {
+// 实现该逻辑，并处理相关状态转换。
       rclcpp::spin(CancelAssistedTeleopActionTestFixture::action_server_);
     });
 
   int all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
   server_thread.join();
 

@@ -29,7 +29,9 @@
 class FollowPathActionServer : public TestActionServer<nav2_msgs::action::FollowPath>
 {
 public:
+// 初始化 FollowPathActionServer 对象，读取参数并准备运行时依赖。
   FollowPathActionServer()
+// 初始化 TestActionServer 对象，读取参数并准备运行时依赖。
   : TestActionServer("follow_path")
   {}
 
@@ -48,6 +50,7 @@ protected:
 class FollowPathActionTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("follow_path_action_test_fixture");
@@ -63,12 +66,15 @@ public:
       node_);
     config_->blackboard->set<std::chrono::milliseconds>(
       "server_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(20));
     config_->blackboard->set<std::chrono::milliseconds>(
       "bt_loop_duration",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(10));
     config_->blackboard->set<std::chrono::milliseconds>(
       "wait_for_service_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(1000));
     config_->blackboard->set<bool>("initial_pose_received", false);
 
@@ -83,6 +89,7 @@ public:
       "FollowPath", builder);
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     delete config_;
@@ -92,6 +99,7 @@ public:
     factory_.reset();
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     tree_.reset();
@@ -113,9 +121,9 @@ BT::NodeConfiguration * FollowPathActionTestFixture::config_ = nullptr;
 std::shared_ptr<BT::BehaviorTreeFactory> FollowPathActionTestFixture::factory_ = nullptr;
 std::shared_ptr<BT::Tree> FollowPathActionTestFixture::tree_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(FollowPathActionTestFixture, test_tick)
 {
-  // create tree
   std::string xml_txt =
     R"(
       <root main_tree_to_execute = "MainTree" >
@@ -126,7 +134,6 @@ TEST_F(FollowPathActionTestFixture, test_tick)
 
   tree_ = std::make_shared<BT::Tree>(factory_->createTreeFromText(xml_txt, config_->blackboard));
 
-  // set new path on blackboard
   nav_msgs::msg::Path path;
   path.poses.resize(1);
   path.poses[0].pose.position.x = 1.0;
@@ -137,14 +144,12 @@ TEST_F(FollowPathActionTestFixture, test_tick)
     tree_->rootNode()->executeTick();
   }
 
-  // the goal should have reached our server
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::SUCCESS);
   EXPECT_EQ(tree_->rootNode()->getInput<std::string>("controller_id"), std::string("FollowPath"));
   EXPECT_EQ(action_server_->getCurrentGoal()->path.poses.size(), 1u);
   EXPECT_EQ(action_server_->getCurrentGoal()->path.poses[0].pose.position.x, 1.0);
   EXPECT_EQ(action_server_->getCurrentGoal()->controller_id, std::string("FollowPath"));
 
-  // halt node so another goal can be sent
   tree_->rootNode()->halt();
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::IDLE);
 
@@ -161,24 +166,28 @@ TEST_F(FollowPathActionTestFixture, test_tick)
   EXPECT_EQ(action_server_->getCurrentGoal()->path.poses[0].pose.position.x, -2.5);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
-  // initialize action server and spin on new thread
   FollowPathActionTestFixture::action_server_ =
+// 实现该逻辑，并处理相关状态转换。
     std::make_shared<FollowPathActionServer>();
 
+// 实现该逻辑，并处理相关状态转换。
   std::thread server_thread([]() {
+// 实现该逻辑，并处理相关状态转换。
       rclcpp::spin(FollowPathActionTestFixture::action_server_);
     });
 
   int all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
   server_thread.join();
 

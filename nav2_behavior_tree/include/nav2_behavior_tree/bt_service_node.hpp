@@ -61,6 +61,7 @@ public:
       config().blackboard->template get<std::chrono::milliseconds>("bt_loop_duration");
     server_timeout_ =
       config().blackboard->template get<std::chrono::milliseconds>("server_timeout");
+// 实现该逻辑，并处理相关状态转换。
     getInput<std::chrono::milliseconds>("server_timeout", server_timeout_);
     wait_for_service_timeout_ =
       config().blackboard->template get<std::chrono::milliseconds>("wait_for_service_timeout");
@@ -68,7 +69,7 @@ public:
     // timeout should be less than bt_loop_duration to be able to finish the current tick
     max_timeout_ = std::chrono::duration_cast<std::chrono::milliseconds>(bt_loop_duration * 0.5);
 
-    // Now that we have node_ to use, create the service client for this BT service
+// 实现该逻辑，并处理相关状态转换。
     getInput("service_name", service_name_);
     service_client_ = node_->create_client<ServiceT>(
       service_name_,
@@ -78,7 +79,6 @@ public:
     // Make a request for the service without parameter
     request_ = std::make_shared<typename ServiceT::Request>();
 
-    // Make sure the server is actually there before continuing
     RCLCPP_DEBUG(
       node_->get_logger(), "Waiting for \"%s\" service",
       service_name_.c_str());
@@ -109,10 +109,12 @@ public:
    * @param addition Additional ports to add to BT port list
    * @return BT::PortsList Containing basic ports along with node-specific ports
    */
+// 初始化 PortsList providedBasicPorts 对象，读取参数并准备运行时依赖。
   static BT::PortsList providedBasicPorts(BT::PortsList addition)
   {
     BT::PortsList basic = {
       BT::InputPort<std::string>("service_name", "please_set_service_name_in_BT_Node"),
+// 初始化 InputPort<std::chrono::milliseconds> 对象，读取参数并准备运行时依赖。
       BT::InputPort<std::chrono::milliseconds>("server_timeout")
     };
     basic.insert(addition.begin(), addition.end());
@@ -124,6 +126,7 @@ public:
    * @brief Creates list of BT ports
    * @return BT::PortsList Containing basic ports along with node-specific ports
    */
+// 初始化 PortsList providedPorts 对象，读取参数并准备运行时依赖。
   static BT::PortsList providedPorts()
   {
     return providedBasicPorts({});
@@ -133,6 +136,7 @@ public:
    * @brief The main override required by a BT service
    * @return BT::NodeStatus Status of tick execution
    */
+// 初始化 NodeStatus tick 对象，读取参数并准备运行时依赖。
   BT::NodeStatus tick() override
   {
     if (!request_sent_) {
@@ -140,7 +144,7 @@ public:
       // allowing the user the option to set it in on_tick
       should_send_request_ = true;
 
-      // user defined callback, may modify "should_send_request_".
+// 在每次 tick 时读取输入并准备下一步执行状态。
       on_tick();
 
       if (!should_send_request_) {
@@ -157,9 +161,11 @@ public:
   /**
    * @brief The other (optional) override required by a BT service.
    */
+// 立即中断当前节点执行，并让上游状态按树结构继续传播。
   void halt() override
   {
     request_sent_ = false;
+// 初始化 NodeStatus::IDLE); 对象，读取参数并准备运行时依赖。
     setStatus(BT::NodeStatus::IDLE);
   }
 
@@ -167,6 +173,7 @@ public:
    * @brief Function to perform some user-defined operation on tick
    * Fill in service request with information if necessary
    */
+// 在每次 tick 时读取输入并准备下一步执行状态。
   virtual void on_tick()
   {
   }
@@ -177,6 +184,7 @@ public:
    * @param response can be used to get the result of the service call in the BT Node.
    * @return BT::NodeStatus Returns SUCCESS by default, user may override to return another value
    */
+// 初始化 NodeStatus on_completion 对象，读取参数并准备运行时依赖。
   virtual BT::NodeStatus on_completion(std::shared_ptr<typename ServiceT::Response>/*response*/)
   {
     return BT::NodeStatus::SUCCESS;
@@ -186,6 +194,7 @@ public:
    * @brief Check the future and decide the status of BT
    * @return BT::NodeStatus SUCCESS if future complete before timeout, FAILURE otherwise
    */
+// 初始化 NodeStatus check_future 对象，读取参数并准备运行时依赖。
   virtual BT::NodeStatus check_future()
   {
     auto elapsed = (node_->now() - sent_time_).template to_chrono<std::chrono::milliseconds>();
@@ -203,6 +212,7 @@ public:
       }
 
       if (rc == rclcpp::FutureReturnCode::TIMEOUT) {
+// 实现该逻辑，并处理相关状态转换。
         on_wait_for_result();
         elapsed = (node_->now() - sent_time_).template to_chrono<std::chrono::milliseconds>();
         if (elapsed < server_timeout_) {
@@ -222,6 +232,7 @@ public:
    * @brief Function to perform some user-defined operation after a timeout waiting
    * for a result that hasn't been received yet
    */
+// 实现该逻辑，并处理相关状态转换。
   virtual void on_wait_for_result()
   {
   }
@@ -230,6 +241,7 @@ protected:
   /**
    * @brief Function to increment recovery count on blackboard if this node wraps a recovery
    */
+// 实现该逻辑，并处理相关状态转换。
   void increment_recovery_count()
   {
     int recovery_count = 0;
@@ -242,22 +254,17 @@ protected:
   typename std::shared_ptr<rclcpp::Client<ServiceT>> service_client_;
   std::shared_ptr<typename ServiceT::Request> request_;
 
-  // The node that will be used for any ROS operations
   rclcpp::Node::SharedPtr node_;
   rclcpp::CallbackGroup::SharedPtr callback_group_;
   rclcpp::executors::SingleThreadedExecutor callback_group_executor_;
 
   // The timeout value while to use in the tick loop while waiting for
-  // a result from the server
   std::chrono::milliseconds server_timeout_;
 
-  // The timeout value for BT loop execution
   std::chrono::milliseconds max_timeout_;
 
-  // The timeout value for waiting for a service to response
   std::chrono::milliseconds wait_for_service_timeout_;
 
-  // To track the server response when a new request is sent
   std::shared_future<typename ServiceT::Response::SharedPtr> future_result_;
   bool request_sent_{false};
   rclcpp::Time sent_time_;

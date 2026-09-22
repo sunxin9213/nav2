@@ -51,6 +51,7 @@ public:
    * @brief Creates list of BT ports
    * @return BT::PortsList Containing basic ports along with node-specific ports
    */
+// 初始化 PortsList providedPorts 对象，读取参数并准备运行时依赖。
   static BT::PortsList providedPorts()
   {
     return {
@@ -73,6 +74,7 @@ private:
   /**
    * @brief Function to perform some user-defined operation on tick
    */
+// 初始化 NodeStatus tick 对象，读取参数并准备运行时依赖。
   BT::NodeStatus tick() override;
 
   /**
@@ -80,6 +82,7 @@ private:
    *
    * @param msg the message with the id of the progress_checker_selector
    */
+// 实现该逻辑，并处理相关状态转换。
   void callbackProgressCheckerSelect(const std_msgs::msg::String::SharedPtr msg);
 
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr progress_checker_selector_sub_;

@@ -89,10 +89,10 @@ public:
    * @brief Function to explicitly reset all BT nodes to initial state
    * @param root_node Pointer to BT root node
    */
+// 初始化 TreeNode * root_node); 对象，读取参数并准备运行时依赖。
   void haltAllActions(BT::TreeNode * root_node);
 
 protected:
-  // The factory that will be used to dynamically construct the behavior tree
   BT::BehaviorTreeFactory factory_;
 };
 

@@ -31,6 +31,7 @@ using std::placeholders::_1;
 GoalUpdater::GoalUpdater(
   const std::string & name,
   const BT::NodeConfiguration & conf)
+// 实现 DecoratorNode 的控制或装饰逻辑，管理子节点执行顺序和状态转换。
 : BT::DecoratorNode(name, conf)
 {
   node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
@@ -51,10 +52,12 @@ GoalUpdater::GoalUpdater(
     sub_option);
 }
 
+// 初始化 NodeStatus GoalUpdater::tick 对象，读取参数并准备运行时依赖。
 inline BT::NodeStatus GoalUpdater::tick()
 {
   geometry_msgs::msg::PoseStamped goal;
 
+// 实现该逻辑，并处理相关状态转换。
   getInput("input_goal", goal);
 
   callback_group_executor_.spin_some();
@@ -72,11 +75,13 @@ inline BT::NodeStatus GoalUpdater::tick()
     }
   }
 
+// 实现该逻辑，并处理相关状态转换。
   setOutput("output_goal", goal);
   return child_node_->executeTick();
 }
 
 void
+// 实现该逻辑，并处理相关状态转换。
 GoalUpdater::callback_updated_goal(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
 {
   last_goal_received_ = *msg;
@@ -85,6 +90,7 @@ GoalUpdater::callback_updated_goal(const geometry_msgs::msg::PoseStamped::Shared
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::GoalUpdater>("GoalUpdater");

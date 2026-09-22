@@ -27,13 +27,16 @@ TimeExpiredCondition::TimeExpiredCondition(
   const std::string & condition_name,
   const BT::NodeConfiguration & conf)
 : BT::ConditionNode(condition_name, conf),
+// 实现该逻辑，并处理相关状态转换。
   period_(1.0)
 {
+// 实现该逻辑，并处理相关状态转换。
   getInput("seconds", period_);
   node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
   start_ = node_->now();
 }
 
+// 初始化 NodeStatus TimeExpiredCondition::tick 对象，读取参数并准备运行时依赖。
 BT::NodeStatus TimeExpiredCondition::tick()
 {
   if (status() == BT::NodeStatus::IDLE) {
@@ -58,6 +61,7 @@ BT::NodeStatus TimeExpiredCondition::tick()
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::TimeExpiredCondition>("TimeExpired");

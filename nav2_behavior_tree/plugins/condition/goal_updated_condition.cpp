@@ -22,9 +22,11 @@ namespace nav2_behavior_tree
 GoalUpdatedCondition::GoalUpdatedCondition(
   const std::string & condition_name,
   const BT::NodeConfiguration & conf)
+// 实现 ConditionNode 的控制或装饰逻辑，管理子节点执行顺序和状态转换。
 : BT::ConditionNode(condition_name, conf)
 {}
 
+// 初始化 NodeStatus GoalUpdatedCondition::tick 对象，读取参数并准备运行时依赖。
 BT::NodeStatus GoalUpdatedCondition::tick()
 {
   if (status() == BT::NodeStatus::IDLE) {
@@ -50,6 +52,7 @@ BT::NodeStatus GoalUpdatedCondition::tick()
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::GoalUpdatedCondition>("GoalUpdated");

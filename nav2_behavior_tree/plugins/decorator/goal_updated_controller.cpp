@@ -27,10 +27,12 @@ namespace nav2_behavior_tree
 GoalUpdatedController::GoalUpdatedController(
   const std::string & name,
   const BT::NodeConfiguration & conf)
+// 实现 DecoratorNode 的控制或装饰逻辑，管理子节点执行顺序和状态转换。
 : BT::DecoratorNode(name, conf)
 {
 }
 
+// 初始化 NodeStatus GoalUpdatedController::tick 对象，读取参数并准备运行时依赖。
 BT::NodeStatus GoalUpdatedController::tick()
 {
   if (status() == BT::NodeStatus::IDLE) {
@@ -43,6 +45,7 @@ BT::NodeStatus GoalUpdatedController::tick()
     goal_was_updated_ = true;
   }
 
+// 初始化 NodeStatus::RUNNING); 对象，读取参数并准备运行时依赖。
   setStatus(BT::NodeStatus::RUNNING);
 
   std::vector<geometry_msgs::msg::PoseStamped> current_goals;
@@ -82,6 +85,7 @@ BT::NodeStatus GoalUpdatedController::tick()
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::GoalUpdatedController>("GoalUpdatedController");

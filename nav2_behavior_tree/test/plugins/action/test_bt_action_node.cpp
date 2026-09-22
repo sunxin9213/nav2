@@ -34,8 +34,10 @@ using namespace std::placeholders;  // NOLINT
 class FibonacciActionServer : public rclcpp::Node
 {
 public:
+// 初始化 FibonacciActionServer 对象，读取参数并准备运行时依赖。
   FibonacciActionServer()
   : rclcpp::Node("fibonacci_node", rclcpp::NodeOptions()),
+// 实现该逻辑，并处理相关状态转换。
     sleep_duration_(0ms)
   {
     this->action_server_ = rclcpp_action::create_server<test_msgs::action::Fibonacci>(
@@ -46,14 +48,17 @@ public:
       "fibonacci",
       std::bind(&FibonacciActionServer::handle_goal, this, _1, _2),
       std::bind(&FibonacciActionServer::handle_cancel, this, _1),
+// 实现该逻辑，并处理相关状态转换。
       std::bind(&FibonacciActionServer::handle_accepted, this, _1));
   }
 
+// 实现该逻辑，并处理相关状态转换。
   void setHandleGoalSleepDuration(std::chrono::milliseconds sleep_duration)
   {
     sleep_duration_ = sleep_duration;
   }
 
+// 实现该逻辑，并处理相关状态转换。
   void setServerLoopRate(std::chrono::nanoseconds server_loop_rate)
   {
     server_loop_rate_ = server_loop_rate;
@@ -66,6 +71,7 @@ protected:
   {
     RCLCPP_INFO(this->get_logger(), "Goal is received..");
     if (sleep_duration_ > 0ms) {
+// 实现该逻辑，并处理相关状态转换。
       std::this_thread::sleep_for(sleep_duration_);
     }
     return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
@@ -80,7 +86,6 @@ protected:
   void handle_accepted(
     const std::shared_ptr<rclcpp_action::ServerGoalHandle<test_msgs::action::Fibonacci>> handle)
   {
-    // this needs to return quickly to avoid blocking the executor, so spin up a new thread
     std::thread{std::bind(&FibonacciActionServer::execute, this, _1), handle}.detach();
   }
 
@@ -101,6 +106,7 @@ protected:
       sequence.push_back(0);
       sequence.push_back(1);
 
+// 初始化 Rate rate 对象，读取参数并准备运行时依赖。
       rclcpp::Rate rate(server_loop_rate_);
       for (int i = 1; (i < goal->order) && rclcpp::ok(); ++i) {
         if (handle->is_canceling()) {
@@ -130,20 +136,25 @@ public:
   FibonacciAction(
     const std::string & xml_tag_name,
     const BT::NodeConfiguration & conf)
+// 初始化 BtActionNode<test_msgs::action::Fibonacci> 对象，读取参数并准备运行时依赖。
   : nav2_behavior_tree::BtActionNode<test_msgs::action::Fibonacci>(xml_tag_name, "fibonacci", conf)
   {}
 
+// 在每次 tick 时读取输入并准备下一步执行状态。
   void on_tick() override
   {
+// 实现该逻辑，并处理相关状态转换。
     getInput("order", goal_.order);
   }
 
+// 初始化 NodeStatus on_success 对象，读取参数并准备运行时依赖。
   BT::NodeStatus on_success() override
   {
     config().blackboard->set<std::vector<int>>("sequence", result_.result->sequence);
     return BT::NodeStatus::SUCCESS;
   }
 
+// 初始化 NodeStatus on_cancelled 对象，读取参数并准备运行时依赖。
   BT::NodeStatus on_cancelled() override
   {
     config().blackboard->set<std::vector<int>>("sequence", result_.result->sequence);
@@ -151,6 +162,7 @@ public:
     return BT::NodeStatus::SUCCESS;
   }
 
+// 初始化 PortsList providedPorts 对象，读取参数并准备运行时依赖。
   static BT::PortsList providedPorts()
   {
     return providedBasicPorts({BT::InputPort<int>("order", "Fibonacci order")});
@@ -160,6 +172,7 @@ public:
 class BTActionNodeTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("bt_action_node_test_fixture");
@@ -186,6 +199,7 @@ public:
     factory_->registerBuilder<FibonacciAction>("Fibonacci", builder);
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     delete config_;
@@ -195,6 +209,7 @@ public:
     factory_.reset();
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void SetUp() override
   {
     // initialize action server and spin on new thread
@@ -202,12 +217,15 @@ public:
     server_thread_ = std::make_shared<std::thread>(
       []() {
         while (rclcpp::ok() && BTActionNodeTestFixture::action_server_ != nullptr) {
+// 实现该逻辑，并处理相关状态转换。
           rclcpp::spin_some(BTActionNodeTestFixture::action_server_);
+// 实现该逻辑，并处理相关状态转换。
           std::this_thread::sleep_for(100ns);
         }
       });
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     action_server_.reset();
@@ -233,9 +251,9 @@ std::shared_ptr<BT::BehaviorTreeFactory> BTActionNodeTestFixture::factory_ = nul
 std::shared_ptr<BT::Tree> BTActionNodeTestFixture::tree_ = nullptr;
 std::shared_ptr<std::thread> BTActionNodeTestFixture::server_thread_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(BTActionNodeTestFixture, test_server_timeout_success)
 {
-  // create tree
   std::string xml_txt =
     R"(
       <root main_tree_to_execute = "MainTree" >
@@ -259,7 +277,7 @@ TEST_F(BTActionNodeTestFixture, test_server_timeout_success)
 
   BT::NodeStatus result = BT::NodeStatus::RUNNING;
 
-  // BT loop execution rate
+// 初始化 WallRate loopRate 对象，读取参数并准备运行时依赖。
   rclcpp::WallRate loopRate(10ms);
 
   // main BT execution loop
@@ -275,13 +293,13 @@ TEST_F(BTActionNodeTestFixture, test_server_timeout_success)
   // expected fibonacci sequence for order 5
   std::vector<int> expected = {0, 1, 1, 2, 3, 5};
 
-  // since the server timeout was larger than the action server goal handling duration
-  // the BT should have succeeded
+// 初始化 NodeStatus::SUCCESS); 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(result, BT::NodeStatus::SUCCESS);
 
-  // checking the output fibonacci sequence
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(sequence.size(), expected.size());
   for (size_t i = 0; i < expected.size(); ++i) {
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
     EXPECT_EQ(sequence[i], expected[i]);
   }
 
@@ -290,10 +308,10 @@ TEST_F(BTActionNodeTestFixture, test_server_timeout_success)
 
   // halt BT for a new execution cycle,
   // get if the on_cancelled is triggered from blackboard and assert
-  // that the on_cancelled triggers after halting node
   RCLCPP_INFO(node_->get_logger(), "Tree is halting.");
   tree_->haltTree();
   bool on_cancelled_triggered = config_->blackboard->get<bool>("on_cancelled_triggered");
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(on_cancelled_triggered, false);
 
   // setting a large action server goal handling duration
@@ -312,19 +330,18 @@ TEST_F(BTActionNodeTestFixture, test_server_timeout_success)
     loopRate.sleep();
   }
 
-  // since the server timeout was smaller than the action server goal handling duration
-  // the BT should have failed
+// 初始化 NodeStatus::FAILURE); 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(result, BT::NodeStatus::FAILURE);
 
-  // since the server timeout is 20ms and bt loop duration is 10ms, number of ticks should
-  // be at most 2, but it can be 1 too, because the tickOnce may execute two ticks.
+// 初始化 EXPECT_LE 对象，读取参数并准备运行时依赖。
   EXPECT_LE(ticks, 3);
+// 初始化 EXPECT_GE 对象，读取参数并准备运行时依赖。
   EXPECT_GE(ticks, 1);
 }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(BTActionNodeTestFixture, test_server_timeout_failure)
 {
-  // create tree
   std::string xml_txt =
     R"(
       <root main_tree_to_execute = "MainTree" >
@@ -349,7 +366,7 @@ TEST_F(BTActionNodeTestFixture, test_server_timeout_failure)
 
   BT::NodeStatus result = BT::NodeStatus::RUNNING;
 
-  // BT loop execution rate
+// 初始化 WallRate loopRate 对象，读取参数并准备运行时依赖。
   rclcpp::WallRate loopRate(10ms);
 
   // main BT execution loop
@@ -359,11 +376,10 @@ TEST_F(BTActionNodeTestFixture, test_server_timeout_failure)
     loopRate.sleep();
   }
 
-  // since the server timeout was smaller than the action server goal handling duration
-  // the BT should have failed
+// 初始化 NodeStatus::FAILURE); 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(result, BT::NodeStatus::FAILURE);
 
-  // since the server timeout is 90ms and bt loop duration is 10ms, number of ticks should be 9
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(ticks, 10);
 
   // start a new execution cycle with the previous BT to ensure previous state doesn't leak into
@@ -371,10 +387,10 @@ TEST_F(BTActionNodeTestFixture, test_server_timeout_failure)
 
   // halt BT for a new execution cycle
   // get if the on_cancel is triggered from blackboard and assert
-  // that the on_cancelled never can trigger after halting node
   RCLCPP_INFO(node_->get_logger(), "Tree is halting.");
   tree_->haltTree();
   bool on_cancelled_triggered = config_->blackboard->get<bool>("on_cancelled_triggered");
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(on_cancelled_triggered, false);
 
   // setting a small action server goal handling duration
@@ -393,14 +409,13 @@ TEST_F(BTActionNodeTestFixture, test_server_timeout_failure)
     loopRate.sleep();
   }
 
-  // since the server timeout was smaller than the action server goal handling duration
-  // the BT should have failed
+// 初始化 NodeStatus::SUCCESS); 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(result, BT::NodeStatus::SUCCESS);
 }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(BTActionNodeTestFixture, test_server_cancel)
 {
-  // create tree
   std::string xml_txt =
     R"(
       <root main_tree_to_execute = "MainTree" >
@@ -426,7 +441,7 @@ TEST_F(BTActionNodeTestFixture, test_server_cancel)
 
   BT::NodeStatus result = BT::NodeStatus::RUNNING;
 
-  // BT loop execution rate
+// 初始化 WallRate loopRate 对象，读取参数并准备运行时依赖。
   rclcpp::WallRate loopRate(100ms);
 
   // main BT execution loop
@@ -436,17 +451,16 @@ TEST_F(BTActionNodeTestFixture, test_server_cancel)
     loopRate.sleep();
   }
 
-  // halt BT for testing if the action node cancels the goal correctly
   RCLCPP_INFO(node_->get_logger(), "Tree is halting.");
   tree_->haltTree();
 
   // get if the on_cancel is triggered from blackboard and assert
   // that the on_cancel is triggered after halting node
   bool on_cancelled_triggered = config_->blackboard->get<bool>("on_cancelled_triggered");
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(on_cancelled_triggered, true);
 
-  // ticks variable must be 5 because execution time of the action server
-  // is at least 1000000 x 50 ms
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(ticks, 5);
 
   // send new goal to the action server for a new execution cycle
@@ -468,30 +482,31 @@ TEST_F(BTActionNodeTestFixture, test_server_cancel)
     loopRate.sleep();
   }
 
-  // halt BT for testing if the action node cancels the goal correctly
   RCLCPP_INFO(node_->get_logger(), "Tree is halting.");
   tree_->haltTree();
 
   // get if the on_cancel is triggered from blackboard and assert
   // that the on_cancel is triggered after halting node
   on_cancelled_triggered = config_->blackboard->get<bool>("on_cancelled_triggered");
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(on_cancelled_triggered, true);
 
-  // ticks variable must be 7 because execution time of the action server
-  // is at least 1000000 x 50 ms
+// 初始化 EXPECT_EQ 对象，读取参数并准备运行时依赖。
   EXPECT_EQ(ticks, 7);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
   int all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
 
   return all_successful;

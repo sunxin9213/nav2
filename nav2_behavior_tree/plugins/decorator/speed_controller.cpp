@@ -32,18 +32,24 @@ SpeedController::SpeedController(
   min_rate_(0.1),
   max_rate_(1.0),
   min_speed_(0.0),
+// 实现该逻辑，并处理相关状态转换。
   max_speed_(0.5)
 {
   node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
 
+// 实现该逻辑，并处理相关状态转换。
   getInput("min_rate", min_rate_);
+// 实现该逻辑，并处理相关状态转换。
   getInput("max_rate", max_rate_);
+// 实现该逻辑，并处理相关状态转换。
   getInput("min_speed", min_speed_);
+// 实现该逻辑，并处理相关状态转换。
   getInput("max_speed", max_speed_);
 
   if (min_rate_ <= 0.0 || max_rate_ <= 0.0) {
     std::string err_msg = "SpeedController node cannot have rate <= 0.0";
     RCLCPP_FATAL(node_->get_logger(), "%s", err_msg.c_str());
+// 初始化 BehaviorTreeException 对象，读取参数并准备运行时依赖。
     throw BT::BehaviorTreeException(err_msg);
   }
 
@@ -56,6 +62,7 @@ SpeedController::SpeedController(
     "odom_smoother");
 }
 
+// 初始化 NodeStatus SpeedController::tick 对象，读取参数并准备运行时依赖。
 inline BT::NodeStatus SpeedController::tick()
 {
   if (status() == BT::NodeStatus::IDLE) {
@@ -82,6 +89,7 @@ inline BT::NodeStatus SpeedController::tick()
     goals_ = current_goals;
   }
 
+// 初始化 NodeStatus::RUNNING); 对象，读取参数并准备运行时依赖。
   setStatus(BT::NodeStatus::RUNNING);
 
   auto elapsed = node_->now() - start_;
@@ -96,6 +104,7 @@ inline BT::NodeStatus SpeedController::tick()
 
     // update period if the last period is exceeded
     if (elapsed.seconds() >= period_) {
+// 实现该逻辑，并处理相关状态转换。
       updatePeriod();
       start_ = node_->now();
     }
@@ -121,6 +130,7 @@ inline BT::NodeStatus SpeedController::tick()
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::SpeedController>("SpeedController");

@@ -17,6 +17,7 @@
 namespace nav2_behavior_tree
 {
 
+// 初始化 NodeStatus initialPoseReceived 对象，读取参数并准备运行时依赖。
 BT::NodeStatus initialPoseReceived(BT::TreeNode & tree_node)
 {
   auto initPoseReceived = tree_node.config().blackboard->get<bool>("initial_pose_received");
@@ -26,9 +27,11 @@ BT::NodeStatus initialPoseReceived(BT::TreeNode & tree_node)
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerSimpleCondition(
     "InitialPoseReceived",
+// 实现该逻辑，并处理相关状态转换。
     std::bind(&nav2_behavior_tree::initialPoseReceived, std::placeholders::_1));
 }

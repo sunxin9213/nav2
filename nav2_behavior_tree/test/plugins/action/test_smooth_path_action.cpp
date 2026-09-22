@@ -29,7 +29,9 @@
 class SmoothPathActionServer : public TestActionServer<nav2_msgs::action::SmoothPath>
 {
 public:
+// 初始化 SmoothPathActionServer 对象，读取参数并准备运行时依赖。
   SmoothPathActionServer()
+// 初始化 TestActionServer 对象，读取参数并准备运行时依赖。
   : TestActionServer("smooth_path")
   {}
 
@@ -48,6 +50,7 @@ protected:
 class SmoothPathActionTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("smooth_path_action_test_fixture");
@@ -63,12 +66,15 @@ public:
       node_);
     config_->blackboard->set<std::chrono::milliseconds>(
       "server_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(20));
     config_->blackboard->set<std::chrono::milliseconds>(
       "bt_loop_duration",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(10));
     config_->blackboard->set<std::chrono::milliseconds>(
       "wait_for_service_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(1000));
     config_->blackboard->set<bool>("initial_pose_received", false);
 
@@ -83,6 +89,7 @@ public:
       "SmoothPath", builder);
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     delete config_;
@@ -92,6 +99,7 @@ public:
     factory_.reset();
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     tree_.reset();
@@ -113,9 +121,9 @@ BT::NodeConfiguration * SmoothPathActionTestFixture::config_ = nullptr;
 std::shared_ptr<BT::BehaviorTreeFactory> SmoothPathActionTestFixture::factory_ = nullptr;
 std::shared_ptr<BT::Tree> SmoothPathActionTestFixture::tree_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(SmoothPathActionTestFixture, test_tick)
 {
-  // create tree
   std::string xml_txt =
     R"(
       <root main_tree_to_execute = "MainTree" >
@@ -133,15 +141,12 @@ TEST_F(SmoothPathActionTestFixture, test_tick)
     tree_->rootNode()->executeTick();
   }
 
-  // goal should have reached our server
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::SUCCESS);
   EXPECT_EQ(action_server_->getCurrentGoal()->path, path);
 
-  // halt node so another goal can be sent
   tree_->rootNode()->halt();
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::IDLE);
 
-  // set new goal
   geometry_msgs::msg::PoseStamped pose;
   pose.pose.position.x = -2.5;
   pose.pose.orientation.x = 1.0;
@@ -153,29 +158,34 @@ TEST_F(SmoothPathActionTestFixture, test_tick)
   }
 
   nav_msgs::msg::Path path_empty;
+// 初始化 EXPECT_NE 对象，读取参数并准备运行时依赖。
   EXPECT_NE(path_empty, path);
   EXPECT_EQ(action_server_->getCurrentGoal()->path, path);
   EXPECT_EQ(tree_->rootNode()->status(), BT::NodeStatus::SUCCESS);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
-  // initialize action server and spin on new thread
   SmoothPathActionTestFixture::action_server_ =
+// 实现该逻辑，并处理相关状态转换。
     std::make_shared<SmoothPathActionServer>();
 
+// 实现该逻辑，并处理相关状态转换。
   std::thread server_thread([]() {
+// 实现该逻辑，并处理相关状态转换。
       rclcpp::spin(SmoothPathActionTestFixture::action_server_);
     });
 
   int all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
   server_thread.join();
 

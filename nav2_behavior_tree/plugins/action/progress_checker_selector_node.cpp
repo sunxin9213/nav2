@@ -29,12 +29,15 @@ using std::placeholders::_1;
 ProgressCheckerSelector::ProgressCheckerSelector(
   const std::string & name,
   const BT::NodeConfiguration & conf)
+// 实现 SyncActionNode 的控制或装饰逻辑，管理子节点执行顺序和状态转换。
 : BT::SyncActionNode(name, conf)
 {
   node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
 
+// 实现该逻辑，并处理相关状态转换。
   getInput("topic_name", topic_name_);
 
+// 初始化 QoS qos 对象，读取参数并准备运行时依赖。
   rclcpp::QoS qos(rclcpp::KeepLast(1));
   qos.transient_local().reliable();
 
@@ -42,8 +45,10 @@ ProgressCheckerSelector::ProgressCheckerSelector(
     topic_name_, qos, std::bind(&ProgressCheckerSelector::callbackProgressCheckerSelect, this, _1));
 }
 
+// 初始化 NodeStatus ProgressCheckerSelector::tick 对象，读取参数并准备运行时依赖。
 BT::NodeStatus ProgressCheckerSelector::tick()
 {
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::spin_some(node_);
 
   // This behavior always use the last selected progress checker received from the topic input.
@@ -53,6 +58,7 @@ BT::NodeStatus ProgressCheckerSelector::tick()
   // checker selection is not received from the topic input.
   if (last_selected_progress_checker_.empty()) {
     std::string default_progress_checker;
+// 实现该逻辑，并处理相关状态转换。
     getInput("default_progress_checker", default_progress_checker);
     if (default_progress_checker.empty()) {
       return BT::NodeStatus::FAILURE;
@@ -61,12 +67,14 @@ BT::NodeStatus ProgressCheckerSelector::tick()
     }
   }
 
+// 实现该逻辑，并处理相关状态转换。
   setOutput("selected_progress_checker", last_selected_progress_checker_);
 
   return BT::NodeStatus::SUCCESS;
 }
 
 void
+// 实现该逻辑，并处理相关状态转换。
 ProgressCheckerSelector::callbackProgressCheckerSelect(const std_msgs::msg::String::SharedPtr msg)
 {
   last_selected_progress_checker_ = msg->data;
@@ -75,6 +83,7 @@ ProgressCheckerSelector::callbackProgressCheckerSelect(const std_msgs::msg::Stri
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
+// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::ProgressCheckerSelector>("ProgressCheckerSelector");

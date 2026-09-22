@@ -26,7 +26,9 @@
 class WaitActionServer : public TestActionServer<nav2_msgs::action::Wait>
 {
 public:
+// 初始化 WaitActionServer 对象，读取参数并准备运行时依赖。
   WaitActionServer()
+// 初始化 TestActionServer 对象，读取参数并准备运行时依赖。
   : TestActionServer("wait")
   {}
 
@@ -40,6 +42,7 @@ protected:
 class WaitActionTestFixture : public ::testing::Test
 {
 public:
+// 初始化 SetUpTestCase 对象，读取参数并准备运行时依赖。
   static void SetUpTestCase()
   {
     node_ = std::make_shared<rclcpp::Node>("wait_action_test_fixture");
@@ -55,12 +58,15 @@ public:
       node_);
     config_->blackboard->set<std::chrono::milliseconds>(
       "server_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(20));
     config_->blackboard->set<std::chrono::milliseconds>(
       "bt_loop_duration",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(10));
     config_->blackboard->set<std::chrono::milliseconds>(
       "wait_for_service_timeout",
+// 实现该逻辑，并处理相关状态转换。
       std::chrono::milliseconds(1000));
     config_->blackboard->set<bool>("initial_pose_received", false);
     config_->blackboard->set<int>("number_recoveries", 0);
@@ -75,6 +81,7 @@ public:
     factory_->registerBuilder<nav2_behavior_tree::WaitAction>("Wait", builder);
   }
 
+// 初始化 TearDownTestCase 对象，读取参数并准备运行时依赖。
   static void TearDownTestCase()
   {
     delete config_;
@@ -84,11 +91,13 @@ public:
     factory_.reset();
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void SetUp() override
   {
     config_->blackboard->set("number_recoveries", 0);
   }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
   void TearDown() override
   {
     tree_.reset();
@@ -109,6 +118,7 @@ BT::NodeConfiguration * WaitActionTestFixture::config_ = nullptr;
 std::shared_ptr<BT::BehaviorTreeFactory> WaitActionTestFixture::factory_ = nullptr;
 std::shared_ptr<BT::Tree> WaitActionTestFixture::tree_ = nullptr;
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(WaitActionTestFixture, test_ports)
 {
   std::string xml_txt =
@@ -134,6 +144,7 @@ TEST_F(WaitActionTestFixture, test_ports)
   EXPECT_EQ(tree_->rootNode()->getInput<int>("wait_duration"), 10);
 }
 
+// 初始化测试环境和共享状态，准备后续断言与执行。
 TEST_F(WaitActionTestFixture, test_tick)
 {
   std::string xml_txt =
@@ -156,22 +167,25 @@ TEST_F(WaitActionTestFixture, test_tick)
   EXPECT_EQ(rclcpp::Duration(action_server_->getCurrentGoal()->time).seconds(), 5.0);
 }
 
+// 实现该逻辑，并处理相关状态转换。
 int main(int argc, char ** argv)
 {
+// 实现该逻辑，并处理相关状态转换。
   ::testing::InitGoogleTest(&argc, argv);
 
-  // initialize ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::init(argc, argv);
 
-  // initialize action server and spin on new thread
   WaitActionTestFixture::action_server_ = std::make_shared<WaitActionServer>();
+// 实现该逻辑，并处理相关状态转换。
   std::thread server_thread([]() {
+// 实现该逻辑，并处理相关状态转换。
       rclcpp::spin(WaitActionTestFixture::action_server_);
     });
 
   int all_successful = RUN_ALL_TESTS();
 
-  // shutdown ROS
+// 实现该逻辑，并处理相关状态转换。
   rclcpp::shutdown();
   server_thread.join();
 
