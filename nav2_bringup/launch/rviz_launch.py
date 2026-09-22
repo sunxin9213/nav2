@@ -27,6 +27,7 @@ from nav2_common.launch import ReplaceString
 
 
 def generate_launch_description():
+    # 启动 RViz；namespace 模式下先替换配置中的 <robot_namespace>，再重映射交互 topic。
     # Get the launch directory
     bringup_dir = get_package_share_directory('nav2_bringup')
 
@@ -60,6 +61,7 @@ def generate_launch_description():
         arguments=['-d', rviz_config_file],
         output='screen')
 
+    # RViz 配置不是 ROS 参数文件；通过文本替换把固定 topic/frame 前缀改成机器人命名空间。
     namespaced_rviz_config_file = ReplaceString(
             source_file=rviz_config_file,
             replacements={'<robot_namespace>': ('/', namespace)})
@@ -78,6 +80,7 @@ def generate_launch_description():
                     ('/clicked_point', 'clicked_point'),
                     ('/initialpose', 'initialpose')])
 
+    # RViz 退出时关闭 launch，避免单独运行 rviz_launch.py 时遗留后台进程。
     exit_event_handler = RegisterEventHandler(
         condition=UnlessCondition(use_namespace),
         event_handler=OnProcessExit(

@@ -47,6 +47,10 @@ using std::placeholders::_1;
 namespace nav2_navfn_planner
 {
 
+// NavFn 是 Nav2 中最经典的全局规划实现之一，使用“势场 + 回溯”的思路求最优可达路径。
+// 它并不是直接在世界坐标上做几何规划，而是把地图离散成网格，建立一个 costmap 形式的代价场；
+// 之后从目标反向扩散“势值”，让可达区域自带“到目标越来越接近”的梯度，
+// 最后从起点沿着势值下降方向回溯出一条全局路径。
 NavfnPlanner::NavfnPlanner()
 : tf_(nullptr), costmap_(nullptr)
 {
@@ -59,6 +63,9 @@ NavfnPlanner::~NavfnPlanner()
     name_.c_str());
 }
 
+// configure 阶段的重要职责是把 ROS 参数和底层 costmap 连接起来，
+// 让 planner 在运行时知道：允许多大误差去找合法终点、是否使用 A*、是否接受未知区域、
+// 是否保留最终接近目标时的一个朝向约束。
 void
 NavfnPlanner::configure(
   const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
@@ -92,11 +99,14 @@ NavfnPlanner::configure(
   node->get_parameter(name + ".use_final_approach_orientation", use_final_approach_orientation_);
 
   // Create a planner based on the new costmap size
+  // NavFn 实际上管理着一张内部二维势场数组，其尺寸必须与当前 costmap 一致；
+  // 如果地图大小变化（例如地图切换或 rolling_window 重设），需要重新分配网格空间。
   planner_ = std::make_unique<NavFn>(
     costmap_->getSizeInCellsX(),
     costmap_->getSizeInCellsY());
 }
 
+// 激活动态参数回调，使规划器运行期间可安全更新可变参数。
 void
 NavfnPlanner::activate()
 {
@@ -109,6 +119,7 @@ NavfnPlanner::activate()
     std::bind(&NavfnPlanner::dynamicParametersCallback, this, _1));
 }
 
+// 停止动态参数回调，阻止非 active 状态继续修改规划器配置。
 void
 NavfnPlanner::deactivate()
 {
@@ -118,6 +129,7 @@ NavfnPlanner::deactivate()
   dyn_params_handler_.reset();
 }
 
+// 释放 NavFn 网格缓存和规划器资源。
 void
 NavfnPlanner::cleanup()
 {
@@ -131,11 +143,17 @@ nav_msgs::msg::Path NavfnPlanner::createPlan(
   const geometry_msgs::msg::PoseStamped & start,
   const geometry_msgs::msg::PoseStamped & goal)
 {
+  // 将世界坐标起点/终点转换为栅格，运行 NavFn/A* 搜索并返回带 map frame 的 Path。
 #ifdef BENCHMARK_TESTING
   steady_clock::time_point a = steady_clock::now();
 #endif
 
-  // Update planner based on the new costmap size
+  // 全局规划流程分三步：
+  // 1) 使 NavFn 的内部网格与最新 costmap 尺寸保持一致；
+  // 2) 在 costmap 上求势场（potential field），让可达区域具有“到目标的下降梯度”；
+  // 3) 从势场中回溯得到一条可跟踪的路径并做最终朝向平滑处理。
+  // 整个算法的关键不是“找一条最短几何曲线”，而是把地图变成一个可传播的代价场，
+  // 然后沿着“势值下降方向”自然走到目标，天然适合栅格地图和障碍密集场景。
   if (isPlannerOutOfDate()) {
     planner_->setNavArr(
       costmap_->getSizeInCellsX(),
@@ -144,7 +162,8 @@ nav_msgs::msg::Path NavfnPlanner::createPlan(
 
   nav_msgs::msg::Path path;
 
-  // Corner case of the start(x,y) = goal(x,y)
+  // 起点与终点同一网格/近似同一位置时，直接返回一个唯一的 pose 路径；
+  // 此时不需要沿网格扩散求势场，避免无意义的长路径或振荡。
   if (start.pose.position.x == goal.pose.position.x &&
     start.pose.position.y == goal.pose.position.y)
   {
@@ -171,6 +190,13 @@ nav_msgs::msg::Path NavfnPlanner::createPlan(
     return path;
   }
 
+  // makePlan 内部会：
+  // - 将 world 坐标转换为 map 坐标；
+  // - 清除起点处机器人所在网格，避免它被误判为障碍；
+  // - 调用 NavFn 计算势场/路径；
+  // - 在终点附近搜索可行的最佳落点，允许 tolerance 范围内微调最终目标。
+  // 这里的 tolerance 很关键：即使目标点本身不可达，也可以在目标周围一定区域内寻找“最近可达点”，
+  // 从而避免因为一个栅格误差导致整条路径失败。
   if (!makePlan(start.pose, goal.pose, tolerance_, path)) {
     RCLCPP_WARN(
       logger_, "%s: failed to create plan with "
@@ -205,7 +231,14 @@ NavfnPlanner::makePlan(
   const geometry_msgs::msg::Pose & goal, double tolerance,
   nav_msgs::msg::Path & plan)
 {
-  // clear the plan, just in case
+  // 路径生成的核心思路是：
+  // 1) 使用 costmap 作为栅格地图；
+  // 2) 以起点为源，执行 Dijkstra/A* 形式的势场扩散；
+  // 3) 从目标反向回溯到起点，构造路径；
+  // 4) 若目标被障碍包围，则在 tolerance 区域内寻找最近的可达点作为替代终点。
+  // 这是一种经典的基于“导航代价场”的全局路径规划方法：
+  // 不是直接在地图上不断试探下一步，而是先算出每个栅格到目标的“代价梯度”，
+  // 再沿着梯度下降的方向走，通常能形成稳定、平滑且可追踪的路径。
   plan.poses.clear();
 
   plan.header.stamp = clock_->now();
@@ -261,6 +294,10 @@ NavfnPlanner::makePlan(
   map_goal[0] = mx;
   map_goal[1] = my;
 
+  // 这里的顺序很重要：
+  // setStart/setGoal 设定搜索源和目标，
+  // 然后调用 A* 或 Dijkstra 计算整张地图的势场。
+  // 也就是说，真正的“路径”并不是在这里直接生成，而是在之后通过 getPlanFromPotential() 逆向回溯得到的。
   planner_->setStart(map_goal);
   planner_->setGoal(map_start);
   if (use_astar_) {
@@ -303,7 +340,8 @@ NavfnPlanner::makePlan(
   }
 
   if (found_legal) {
-    // extract the plan
+    // 在找到合法终点之后，从势场中抽样回溯路径，
+    // 这一步会从目标反向走到起点，保存一串世界坐标路径点。
     if (getPlanFromPotential(best_pose, plan)) {
       smoothApproachToGoal(best_pose, plan);
 
@@ -380,6 +418,7 @@ NavfnPlanner::getPlanFromPotential(
   double wy = goal.position.y;
 
   // the potential has already been computed, so we won't update our copy of the costmap
+  // 这里假设势场已经被计算完，getPlanFromPotential 只负责从既有势场中追踪回路，不重复重算地图。
   unsigned int mx, my;
   if (!worldToMap(wx, wy, mx, my)) {
     RCLCPP_WARN(
@@ -398,6 +437,8 @@ NavfnPlanner::getPlanFromPotential(
   const int & max_cycles = (costmap_->getSizeInCellsX() >= costmap_->getSizeInCellsY()) ?
     (costmap_->getSizeInCellsX() * 4) : (costmap_->getSizeInCellsY() * 4);
 
+  // calcPath() 在已知势场的前提下，沿着“势值下降”的方向追踪路径，直到回到起点或达到最大循环数。
+  // 它返回的是回溯到起点的路径长度；如果为 0，则说明当前地图中不存在合法路径。
   int path_len = planner_->calcPath(max_cycles);
   if (path_len == 0) {
     return false;

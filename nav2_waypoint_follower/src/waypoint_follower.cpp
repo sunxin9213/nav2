@@ -27,6 +27,7 @@ namespace nav2_waypoint_follower
 using rcl_interfaces::msg::ParameterType;
 using std::placeholders::_1;
 
+// 创建 waypoint Action Server，并声明失败策略、循环频率和到达 waypoint 的任务插件。
 WaypointFollower::WaypointFollower(const rclcpp::NodeOptions & options)
 : nav2_util::LifecycleNode("waypoint_follower", "", options),
   waypoint_task_executor_loader_("nav2_waypoint_follower",
@@ -49,6 +50,8 @@ WaypointFollower::~WaypointFollower()
 }
 
 nav2_util::CallbackReturn
+// 创建导航 Action Client、follow_waypoints Action Server 和 waypoint task plugin。
+// 配置阶段只建立通信对象和插件实例，不开始执行 waypoint；真正的任务处理要等节点进入 active 状态。
 WaypointFollower::on_configure(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Configuring");
@@ -79,6 +82,9 @@ WaypointFollower::on_configure(const rclcpp_lifecycle::State & /*state*/)
     "follow_waypoints", std::bind(&WaypointFollower::followWaypoints, this));
 
   try {
+    // waypoint task executor 通过参数指定插件 ID，再由 pluginlib 根据 XML 中的类型字符串动态创建。
+    // 该插件只负责“到达某个 waypoint 之后要做什么”，不负责移动机器人本身；
+    // 移动任务仍然交给 navigate_to_pose Action，因此这里形成了“导航 + 到点任务”的组合结构。
     waypoint_task_executor_type_ = nav2_util::get_plugin_type_param(
       this,
       waypoint_task_executor_id_);
@@ -98,6 +104,8 @@ WaypointFollower::on_configure(const rclcpp_lifecycle::State & /*state*/)
 }
 
 nav2_util::CallbackReturn
+// 激活 waypoint Action、动态参数回调和生命周期 bond。
+// active 之前 Action Server 不应接受有效执行请求；activate() 使上层可以正式提交 follow_waypoints 任务。
 WaypointFollower::on_activate(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Activating");
@@ -116,6 +124,7 @@ WaypointFollower::on_activate(const rclcpp_lifecycle::State & /*state*/)
 }
 
 nav2_util::CallbackReturn
+// 停止 waypoint Action 并移除动态参数回调。
 WaypointFollower::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Deactivating");
@@ -130,6 +139,7 @@ WaypointFollower::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
 }
 
 nav2_util::CallbackReturn
+// 释放 waypoint Action 和 navigate_to_pose 客户端。
 WaypointFollower::on_cleanup(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Cleaning up");
@@ -148,6 +158,10 @@ WaypointFollower::on_shutdown(const rclcpp_lifecycle::State & /*state*/)
 }
 
 void
+// 依次发送 waypoint 导航目标，处理取消/抢占，并在到达后运行 waypoint task。
+// 该函数由 SimpleActionServer 触发，是整个节点的任务调度循环：
+// 外层 Action 的一个 goal 包含多个 Pose；每次只向 navigate_to_pose 发送一个 Pose，
+// 等待异步结果回调把 current_goal_status_ 改为成功或失败，再决定是否执行到点任务并进入下一个 waypoint。
 WaypointFollower::followWaypoints()
 {
   auto goal = action_server_->get_current_goal();
@@ -174,6 +188,8 @@ WaypointFollower::followWaypoints()
   bool new_goal = true;
 
   while (rclcpp::ok()) {
+    // 取消优先级高于当前 waypoint 的正常处理：先取消下游 navigate_to_pose 的全部目标，
+    // 再终止外层 follow_waypoints，避免导航客户端仍在移动而上层 Action 已经返回。
     // Check if asked to stop processing action
     if (action_server_->is_cancel_requested()) {
       auto cancel_future = nav_to_pose_client_->async_cancel_all_goals();
@@ -184,6 +200,9 @@ WaypointFollower::followWaypoints()
       return;
     }
 
+    // 抢占意味着新的 follow_waypoints goal 已经等待处理。
+    // 接受新 goal 后从第 0 个 waypoint 重新开始，并通过 new_goal 触发下一轮发送；
+    // 旧 goal 的剩余 waypoint 不再继续执行。
     // Check if asked to process another action
     if (action_server_->is_preempt_requested()) {
       RCLCPP_INFO(get_logger(), "Preempting the goal pose.");
@@ -192,6 +211,8 @@ WaypointFollower::followWaypoints()
       new_goal = true;
     }
 
+    // 只有在刚开始、抢占后或上一个 waypoint 已经结束时才发送新导航目标。
+    // new_goal 立即置 false，避免在等待异步结果期间每个循环重复发送同一个目标。
     // Check if we need to send a new goal
     if (new_goal) {
       new_goal = false;
@@ -211,6 +232,9 @@ WaypointFollower::followWaypoints()
     feedback->current_waypoint = goal_index;
     action_server_->publish_feedback(feedback);
 
+    // navigate_to_pose 的结果回调只负责把异步结果翻译成 ActionStatus；
+    // 这里才统一处理失败策略：stop_on_failure=true 时结束整个任务，
+    // 否则记录 missed waypoint 并继续发送后续 waypoint。
     if (current_goal_status_ == ActionStatus::FAILED) {
       failed_ids_.push_back(goal_index);
 
@@ -229,6 +253,9 @@ WaypointFollower::followWaypoints()
           " moving to next.", goal_index);
       }
     } else if (current_goal_status_ == ActionStatus::SUCCEEDED) {
+      // 导航成功与 waypoint task 成功是两个独立条件：
+      // 机器人先到达位置，再调用 task executor 执行拍照、等待、触发 IO 等到点行为。
+      // 因此 task 失败也会根据同一个 stop_on_failure 策略决定终止还是继续。
       RCLCPP_INFO(
         get_logger(), "Succeeded processing waypoint %i, processing waypoint task execution",
         goal_index);
@@ -258,6 +285,8 @@ WaypointFollower::followWaypoints()
     if (current_goal_status_ != ActionStatus::PROCESSING &&
       current_goal_status_ != ActionStatus::UNKNOWN)
     {
+      // 当前 waypoint 已经得到终态，推进索引并准备发送下一个目标。
+      // 当索引越过最后一个 waypoint 时，外层 Action 成功返回，同时把所有失败索引写入结果。
       // Update server state
       goal_index++;
       new_goal = true;
@@ -286,6 +315,8 @@ void
 WaypointFollower::resultCallback(
   const rclcpp_action::ClientGoalHandle<ClientT>::WrappedResult & result)
 {
+  // 下游 Action 是异步返回的，旧目标的延迟结果可能在抢占后到达。
+  // 先比较 goal ID，只允许当前 future_goal_handle_ 对应的结果改变状态，避免旧结果污染新任务。
   if (result.goal_id != future_goal_handle_.get()->get_goal_id()) {
     RCLCPP_DEBUG(
       get_logger(),
@@ -296,6 +327,7 @@ WaypointFollower::resultCallback(
 
   switch (result.code) {
     case rclcpp_action::ResultCode::SUCCEEDED:
+      // 结果回调不直接推进 waypoint；它只写入状态，由 followWaypoints() 主循环在下一周期消费。
       current_goal_status_ = ActionStatus::SUCCEEDED;
       return;
     case rclcpp_action::ResultCode::ABORTED:

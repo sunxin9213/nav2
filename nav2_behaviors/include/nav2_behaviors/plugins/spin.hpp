@@ -37,7 +37,9 @@ public:
   /**
    * @brief A constructor for nav2_behaviors::Spin
    */
+  // 创建旋转行为的反馈对象和运行时状态；参数在 onConfigure 中读取。
   Spin();
+  // 释放 Spin 自身资源，基类负责通用 Action Server 和速度发布器清理。
   ~Spin();
 
   /**
@@ -45,17 +47,20 @@ public:
    * @param command Goal to execute
    * @return Status of behavior
    */
+  // 读取目标角度并建立起始 yaw、截止时间，准备进入周期控制。
   Status onRun(const std::shared_ptr<const SpinAction::Goal> command) override;
 
   /**
    * @brief Configuration of behavior action
    */
+  // 声明并读取旋转速度、角加速度和前向模拟时间等参数。
   void onConfigure() override;
 
   /**
    * @brief Loop function to run behavior
    * @return Status of behavior
    */
+  // 根据已旋转角度发布角速度，接近目标时减速并在完成或失败时停止机器人。
   Status onCycleUpdate() override;
 
 protected:
@@ -66,6 +71,7 @@ protected:
    * @param pose2d Current pose
    * @return is collision free or not
    */
+  // 按当前角速度预测未来 yaw，在 Costmap 中检查旋转轨迹是否会碰撞。
   bool isCollisionFree(
     const double & distance,
     geometry_msgs::msg::Twist * cmd_vel,

@@ -27,6 +27,7 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
+    # 一体化仿真入口：启动 Gazebo、机器人状态发布器、机器人实体和完整 Nav2 bringup。
     # Get the launch directory
     bringup_dir = get_package_share_directory('nav2_bringup')
     launch_dir = os.path.join(bringup_dir, 'launch')
@@ -49,6 +50,7 @@ def generate_launch_description():
     use_rviz = LaunchConfiguration('use_rviz')
     headless = LaunchConfiguration('headless')
     world = LaunchConfiguration('world')
+    # x/y/z 单位为米，roll/pitch/yaw 单位为弧度；这些值决定机器人在 Gazebo 世界中的初始位姿。
     pose = {'x': LaunchConfiguration('x_pose', default='-2.00'),
             'y': LaunchConfiguration('y_pose', default='-0.50'),
             'z': LaunchConfiguration('z_pose', default='0.01'),
@@ -89,6 +91,7 @@ def generate_launch_description():
             bringup_dir, 'maps', 'turtlebot3_world.yaml'),
         description='Full path to map file to load')
 
+    # 仿真必须使用 Gazebo 发布的 /clock，否则 Nav2 定时器、TF 和传感器时间戳会不一致。
     declare_use_sim_time_cmd = DeclareLaunchArgument(
         'use_sim_time',
         default_value='true',
@@ -137,6 +140,7 @@ def generate_launch_description():
         default_value='True',
         description='Whether to execute gzclient)')
 
+    # world_only.model 只提供环境；robot_sdf 单独指定待生成的机器人模型。
     declare_world_cmd = DeclareLaunchArgument(
         'world',
         # TODO(orduno) Switch back once ROS argument passing has been fixed upstream
@@ -157,6 +161,7 @@ def generate_launch_description():
         description='Full path to robot sdf file to spawn the robot in gazebo')
 
     # Specify the actions
+    # gzserver 通过 ROS 初始化和 factory 插件提供 /clock、传感器桥接及 spawn_entity 服务。
     start_gazebo_server_cmd = ExecuteProcess(
         condition=IfCondition(use_simulator),
         cmd=['gzserver', '-s', 'libgazebo_ros_init.so',
@@ -173,6 +178,7 @@ def generate_launch_description():
     with open(urdf, 'r') as infp:
         robot_description = infp.read()
 
+    # robot_state_publisher 根据 URDF 发布 base_link、轮子、IMU 和激光等 TF 关系。
     start_robot_state_publisher_cmd = Node(
         condition=IfCondition(use_robot_state_pub),
         package='robot_state_publisher',
@@ -184,6 +190,7 @@ def generate_launch_description():
                      'robot_description': robot_description}],
         remappings=remappings)
 
+    # spawn_entity.py 将 SDF 模型插入 Gazebo，并把 robot_namespace 传给模型内 ROS 插件。
     start_gazebo_spawner_cmd = Node(
         package='gazebo_ros',
         executable='spawn_entity.py',
@@ -195,6 +202,7 @@ def generate_launch_description():
             '-x', pose['x'], '-y', pose['y'], '-z', pose['z'],
             '-R', pose['R'], '-P', pose['P'], '-Y', pose['Y']])
 
+    # RViz 与 Nav2 bringup 作为子 launch 启动，二者共享 namespace 和参数文件。
     rviz_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(launch_dir, 'rviz_launch.py')),
@@ -203,6 +211,7 @@ def generate_launch_description():
                           'use_namespace': use_namespace,
                           'rviz_config': rviz_config_file}.items())
 
+    # bringup_launch 再根据 slam 参数选择 SLAM 或地图定位流程。
     bringup_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(launch_dir, 'bringup_launch.py')),

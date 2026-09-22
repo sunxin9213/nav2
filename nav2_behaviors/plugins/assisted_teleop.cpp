@@ -19,6 +19,7 @@
 
 namespace nav2_behaviors
 {
+// 初始化遥控速度缓存和 AssistedTeleop Action 状态。
 AssistedTeleop::AssistedTeleop()
 : TimedBehavior<AssistedTeleopAction>(),
   feedback_(std::make_shared<AssistedTeleopAction::Feedback>())
@@ -31,7 +32,7 @@ void AssistedTeleop::onConfigure()
     throw std::runtime_error{"Failed to lock node"};
   }
 
-  // set up parameters
+  // projection_time 单位为秒，表示将当前遥控速度向前预测多长时间。
   nav2_util::declare_parameter_if_not_declared(
     node,
     "projection_time", rclcpp::ParameterValue(1.0));
@@ -39,10 +40,12 @@ void AssistedTeleop::onConfigure()
   nav2_util::declare_parameter_if_not_declared(
     node,
     "simulation_time_step", rclcpp::ParameterValue(0.1));
+  // simulation_time_step 默认 0.1 秒，决定碰撞预测轨迹的离散时间间隔。
 
   nav2_util::declare_parameter_if_not_declared(
     node,
     "cmd_vel_teleop", rclcpp::ParameterValue(std::string("cmd_vel_teleop")));
+  // cmd_vel_teleop 是遥控输入 Twist topic；SystemDefaultsQoS 遵循 ROS 2 系统默认通信策略。
 
   node->get_parameter("projection_time", projection_time_);
   node->get_parameter("simulation_time_step", simulation_time_step_);
@@ -63,6 +66,7 @@ void AssistedTeleop::onConfigure()
       this, std::placeholders::_1));
 }
 
+// 接收 AssistedTeleop goal，清除上次抢占状态并设置可选的执行截止时间。
 Status AssistedTeleop::onRun(const std::shared_ptr<const AssistedTeleopAction::Goal> command)
 {
   preempt_teleop_ = false;
@@ -71,12 +75,14 @@ Status AssistedTeleop::onRun(const std::shared_ptr<const AssistedTeleopAction::G
   return Status::SUCCEEDED;
 }
 
+// Action 完成后清空缓存速度和抢占标志，避免下一次 goal 继承旧遥控命令。
 void AssistedTeleop::onActionCompletion()
 {
   teleop_twist_ = geometry_msgs::msg::Twist();
   preempt_teleop_ = false;
 }
 
+// 根据遥控速度预测未来轨迹；若接近障碍物则按剩余安全时间比例缩放速度。
 Status AssistedTeleop::onCycleUpdate()
 {
   feedback_->current_teleop_duration = elasped_time_;
@@ -92,7 +98,7 @@ Status AssistedTeleop::onCycleUpdate()
     return Status::FAILED;
   }
 
-  // user states that teleop was successful
+  // 遥控端通过 preempt_teleop topic 发布空消息，表示用户主动结束 AssistedTeleop。
   if (preempt_teleop_) {
     stopRobot();
     return Status::SUCCEEDED;
@@ -150,6 +156,7 @@ Status AssistedTeleop::onCycleUpdate()
   return Status::RUNNING;
 }
 
+// 使用二维刚体运动学模型，将 Twist 在 projection_time 内积分到预测位姿。
 geometry_msgs::msg::Pose2D AssistedTeleop::projectPose(
   const geometry_msgs::msg::Pose2D & pose,
   const geometry_msgs::msg::Twist & twist,
@@ -170,11 +177,13 @@ geometry_msgs::msg::Pose2D AssistedTeleop::projectPose(
   return projected_pose;
 }
 
+// 缓存最新的遥控 Twist；实际发布由 onCycleUpdate 统一进行碰撞检查和限速。
 void AssistedTeleop::teleopVelocityCallback(const geometry_msgs::msg::Twist::SharedPtr msg)
 {
   teleop_twist_ = *msg;
 }
 
+// 收到空消息即设置抢占标志，下一次控制循环会停止机器人并完成 Action。
 void AssistedTeleop::preemptTeleopCallback(const std_msgs::msg::Empty::SharedPtr)
 {
   preempt_teleop_ = true;

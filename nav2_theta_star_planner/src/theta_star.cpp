@@ -18,6 +18,12 @@
 namespace theta_star
 {
 
+// Theta* 的关键思想是：
+// 在标准 A* 中，路径总是沿着网格边逐步移动；
+// 但在很多环境中，机器人其实可以“直接看见并跨过中间一段空旷区域”，
+// 因此它可以绕过中间节点，直接把更远的可见点连接起来，减少不必要的拐角。
+// 这就是 Theta* 里 LOS (Line of Sight) 判断的意义：
+// 只有当连接这两个状态之间不存在障碍时，才允许直接压缩路径，形成更自然的全局轨迹。
 ThetaStar::ThetaStar()
 : w_traversal_cost_(1.0),
   w_euc_cost_(2.0),
@@ -35,6 +41,8 @@ void ThetaStar::setStartAndGoal(
   const geometry_msgs::msg::PoseStamped & start,
   const geometry_msgs::msg::PoseStamped & goal)
 {
+  // 把世界坐标中的起点/终点转换到栅格坐标，
+  // 这样后续搜索和 LOS 判断都能在离散地图上进行，便于与 costmap 的索引逻辑保持一致。
   unsigned int s[2], d[2];
   costmap_->worldToMap(start.pose.position.x, start.pose.position.y, s[0], s[1]);
   costmap_->worldToMap(goal.pose.position.x, goal.pose.position.y, d[0], d[1]);
@@ -45,6 +53,11 @@ void ThetaStar::setStartAndGoal(
 
 bool ThetaStar::generatePath(std::vector<coordsW> & raw_path)
 {
+  // 这是整个 Theta* 搜索的入口：
+  // 1) 清空并重置内部节点缓存；
+  // 2) 把起点放进搜索集合；
+  // 3) 在优先队列中不断扩展最优候选节点；
+  // 4) 通过 LOS 判断决定是否可以跳过中间栅格，降低路径弯折。
   resetContainers();
   addToNodesData(index_generated_);
   double src_g_cost = getTraversalCost(src_.x, src_.y), src_h_cost = getHCost(src_.x, src_.y);
@@ -64,6 +77,8 @@ bool ThetaStar::generatePath(std::vector<coordsW> & raw_path)
       break;
     }
 
+    // resetParent() 会尝试用当前节点的父节点的父节点作为更优父节点，
+    // 如果 line-of-sight 允许，则直接跳过中间节点，减少冗余路径段。
     resetParent(curr_data);
     setNeighbors(curr_data);
 
@@ -84,6 +99,9 @@ bool ThetaStar::generatePath(std::vector<coordsW> & raw_path)
 
 void ThetaStar::resetParent(tree_node * curr_data)
 {
+  // 这一段是 Theta* 相比 A* 的关键优化：
+  // 不是只允许父节点直接连接，而是尝试评估“当前节点的祖先是否更适合做父节点”，
+  // 只要从当前节点到祖先节点之间满足 LOS，且总代价更小，就更新父节点。
   double g_cost, los_cost = 0;
   curr_data->is_in_queue = false;
   const tree_node * curr_par = curr_data->parent_id;
@@ -103,6 +121,8 @@ void ThetaStar::resetParent(tree_node * curr_data)
 
 void ThetaStar::setNeighbors(const tree_node * curr_data)
 {
+  // 对当前状态进行局部扩展：遍历其邻居节点，
+  // 对每个相邻栅格计算 g/h/f 值，并更新优先队列中的候选节点。
   int mx, my;
   tree_node * m_id = nullptr;
   double g_cost, h_cost, cal_cost;
@@ -152,6 +172,8 @@ void ThetaStar::setNeighbors(const tree_node * curr_data)
 
 void ThetaStar::backtrace(std::vector<coordsW> & raw_points, const tree_node * curr_n) const
 {
+  // 从终点往回追踪父指针，直到回到起点，
+  // 这样就能得到一条从起点到目标的路径，并随即转换到世界坐标系。
   std::vector<coordsW> path_rev;
   coordsW world{};
   do {
@@ -174,6 +196,10 @@ bool ThetaStar::losCheck(
   const int & x0, const int & y0, const int & x1, const int & y1,
   double & sl_cost) const
 {
+  // LOS (Line of Sight) 判断的核心逻辑：
+  // 检查从 (x0, y0) 到 (x1, y1) 的直线段是否穿过障碍，
+  // 若不穿过障碍，则说明两点在“可见”的状态下可以直接连接，
+  // 这正是 Theta* 与传统 A* 的关键区别。
   sl_cost = 0;
 
   int cx, cy;
@@ -229,6 +255,9 @@ bool ThetaStar::losCheck(
 
 void ThetaStar::resetContainers()
 {
+  // 每次搜索前都要重置节点索引和缓存状态，
+  // 这是因为节点之间的父子关系、open set、visited 集合都在当前规划周期中有效，
+  // 不能跨次循环污染旧状态。
   index_generated_ = 0;
   int last_size_x = size_x_;
   int last_size_y = size_y_;

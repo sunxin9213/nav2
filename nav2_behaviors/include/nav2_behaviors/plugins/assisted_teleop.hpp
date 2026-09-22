@@ -35,6 +35,7 @@ using AssistedTeleopAction = nav2_msgs::action::AssistedTeleop;
 class AssistedTeleop : public TimedBehavior<AssistedTeleopAction>
 {
 public:
+  // 创建遥控速度反馈对象；订阅者和参数在生命周期 configure 阶段创建。
   AssistedTeleop();
 
   /**
@@ -42,23 +43,27 @@ public:
    * @param command Goal to execute
    * @return Status of behavior
    */
+  // 开始一次辅助遥控 Action，清除抢占标志并设置可选超时。
   Status onRun(const std::shared_ptr<const AssistedTeleopAction::Goal> command) override;
 
   /**
    * @brief func to run at the completion of the action
    */
+  // 清空遥控速度和结束标志，避免下一个 goal 继承上一轮输入。
   void onActionCompletion() override;
 
   /**
    * @brief Loop function to run behavior
    * @return Status of behavior
    */
+  // 读取遥控输入、预测未来位姿并按碰撞风险缩放 Twist。
   Status onCycleUpdate() override;
 
 protected:
   /**
    * @brief Configuration of behavior action
    */
+  // 声明预测时间和遥控 topic 参数，并创建 Twist/抢占消息订阅。
   void onConfigure() override;
 
   /**
@@ -67,6 +72,7 @@ protected:
    * @param twist velocity to project pose by
    * @param projection_time time to project by
    */
+  // 使用当前 Pose2D 和 Twist 计算指定时间后的二维预测位姿。
   geometry_msgs::msg::Pose2D projectPose(
     const geometry_msgs::msg::Pose2D & pose,
     const geometry_msgs::msg::Twist & twist,
@@ -76,12 +82,14 @@ protected:
    * @brief Callback function for velocity subscriber
    * @param msg received Twist message
    */
+  // 缓存最新遥控速度；控制循环会在发布前执行碰撞检查。
   void teleopVelocityCallback(const geometry_msgs::msg::Twist::SharedPtr msg);
 
   /**
    * @brief Callback function to preempt assisted teleop
    * @param msg empty message
    */
+  // 接收空消息作为用户主动结束遥控的信号。
   void preemptTeleopCallback(const std_msgs::msg::Empty::SharedPtr msg);
 
   AssistedTeleopAction::Feedback::SharedPtr feedback_;

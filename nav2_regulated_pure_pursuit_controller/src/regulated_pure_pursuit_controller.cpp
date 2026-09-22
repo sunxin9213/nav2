@@ -38,6 +38,11 @@ using rcl_interfaces::msg::ParameterType;
 namespace nav2_regulated_pure_pursuit_controller
 {
 
+// Regulated Pure Pursuit 是一种经典的局部轨迹跟踪器：
+// 它不是直接对全局路径做复杂优化，而是从机器人当前位置朝前选取一个 look-ahead 点，
+// 然后把机器人看成“沿着一个圆弧转向”的运动模型，进而计算线速度和角速度。
+// 其关键特征是：在曲率较大、接近障碍或路径拐点较明显时，会自动降低线速度，
+// 这样能显著提高跟踪稳定性和避障安全性。
 void RegulatedPurePursuitController::configure(
   const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
   std::string name, std::shared_ptr<tf2_ros::Buffer> tf,
@@ -201,7 +206,9 @@ void RegulatedPurePursuitController::configure(
   carrot_pub_ = node->create_publisher<geometry_msgs::msg::PointStamped>("lookahead_point", 1);
   carrot_arc_pub_ = node->create_publisher<nav_msgs::msg::Path>("lookahead_collision_arc", 1);
 
-  // initialize collision checker and set costmap
+  // 使用当前局部 Costmap 初始化 footprint 碰撞检查器，供速度调节和碰撞预测使用。
+  // 这一层非常关键：即使路径看起来合理，若机器人轮廓在前方即将进入障碍区域，
+  // 仍然要通过 footprintCostAtPose 检查是否发生碰撞，并转化为安全控制量。
   collision_checker_ = std::make_unique<nav2_costmap_2d::
       FootprintCollisionChecker<nav2_costmap_2d::Costmap2D *>>(costmap_);
   collision_checker_->setCostmap(costmap_);
@@ -286,6 +293,8 @@ geometry_msgs::msg::TwistStamped RegulatedPurePursuitController::computeVelocity
   std::unique_lock<nav2_costmap_2d::Costmap2D::mutex_t> lock(*(costmap->getMutex()));
 
   // Update for the current goal checker's state
+  // 这里先读取目标检测器提供的容差参数，
+  // 比如距离终点允许误差和速度容差；随后局部控制器会根据目标附近的特性决定是否切换到“朝向终点旋转”的状态。
   geometry_msgs::msg::Pose pose_tolerance;
   geometry_msgs::msg::Twist vel_tolerance;
   if (!goal_checker->getTolerances(pose_tolerance, vel_tolerance)) {
@@ -295,9 +304,13 @@ geometry_msgs::msg::TwistStamped RegulatedPurePursuitController::computeVelocity
   }
 
   // Transform path to robot base frame
+  // 全局路径是以 map / odom 等全局坐标系表示的，
+  // 但控制器本质上要在机器人本体坐标系中做前视点选择，因此要先把全局路径转换到机器人坐标系。
   auto transformed_plan = transformGlobalPlan(pose);
 
   // Find look ahead distance and point on path and publish
+  // 前视距离决定控制器“看多远”，越远则转向更平滑，但越容易被障碍和曲率影响；
+  // 这里可按速度动态调节，也可使用固定 lookahead 值。
   double lookahead_dist = getLookAheadDistance(speed);
 
   // Check for reverse driving
@@ -318,6 +331,8 @@ geometry_msgs::msg::TwistStamped RegulatedPurePursuitController::computeVelocity
 
   // Find distance^2 to look ahead point (carrot) in robot base frame
   // This is the chord length of the circle
+  // 前视点相对机器人基坐标系的距离，就是控制器要“追踪的圆弧弦长”；
+  // 通过这个距离和偏移量，可以估计当前要走的曲率，从而决定后续角速度。
   const double carrot_dist2 =
     (carrot_pose.pose.position.x * carrot_pose.pose.position.x) +
     (carrot_pose.pose.position.y * carrot_pose.pose.position.y);
@@ -329,6 +344,8 @@ geometry_msgs::msg::TwistStamped RegulatedPurePursuitController::computeVelocity
   }
 
   // Setting the velocity direction
+  // 如果允许倒退，控制器会根据前视点在机器人前后方向上的位置决定是向前还是向后运动；
+  // 默认通常只允许前进，避免方向切换导致不稳定。
   double sign = 1.0;
   if (allow_reversing_) {
     sign = carrot_pose.pose.position.x >= 0.0 ? 1.0 : -1.0;
@@ -337,6 +354,9 @@ geometry_msgs::msg::TwistStamped RegulatedPurePursuitController::computeVelocity
   linear_vel = desired_linear_vel_;
 
   // Make sure we're in compliance with basic constraints
+  // 这里的关键分支是：当接近目标或当前前进方向偏离路径太大时，
+  // 控制器不再用一般的 pure pursuit 公式，而是切换成“对准路径/目标”的旋转指令；
+  // 否则才按曲率和碰撞约束求解线速度与角速度。
   double angle_to_heading;
   if (shouldRotateToGoalHeading(carrot_pose)) {
     double angle_to_goal = tf2::getYaw(transformed_plan.poses.back().pose.orientation);
@@ -354,6 +374,8 @@ geometry_msgs::msg::TwistStamped RegulatedPurePursuitController::computeVelocity
   }
 
   // Collision checking on this velocity heading
+  // 在生成控制命令之后，再做一轮碰撞前瞻检查，
+  // 若当前速度会在可见范围内导致机器人与障碍相撞，则抛出异常，让上层控制器回避这条命令。
   const double & carrot_dist = hypot(carrot_pose.pose.position.x, carrot_pose.pose.position.y);
   if (use_collision_detection_ && isCollisionImminent(pose, linear_vel, angular_vel, carrot_dist)) {
     throw nav2_core::PlannerException("RegulatedPurePursuitController detected collision ahead!");
@@ -371,6 +393,8 @@ bool RegulatedPurePursuitController::shouldRotateToPath(
   const geometry_msgs::msg::PoseStamped & carrot_pose, double & angle_to_path)
 {
   // Whether we should rotate robot to rough path heading
+  // 若前视点相对机器人所在方向偏航角过大，说明机器人目前正在“偏离路径”很远的状态，
+  // 这时最稳妥的策略不是继续用 pure pursuit 追踪，而是先转头对齐路径方向。
   angle_to_path = atan2(carrot_pose.pose.position.y, carrot_pose.pose.position.x);
   return use_rotate_to_heading_ && fabs(angle_to_path) > rotate_to_heading_min_angle_;
 }
@@ -388,6 +412,8 @@ void RegulatedPurePursuitController::rotateToHeading(
   const double & angle_to_path, const geometry_msgs::msg::Twist & curr_speed)
 {
   // Rotate in place using max angular velocity / acceleration possible
+  // 对齐路径或目标朝向时，不需要持续前进，而是用最大可行角速度进行原地转向；
+  // 同时限制角加速度，避免超调造成抖动或绕过目标。
   linear_vel = 0.0;
   const double sign = angle_to_path > 0.0 ? 1.0 : -1.0;
   angular_vel = sign * rotate_to_heading_angular_vel_;
@@ -444,6 +470,9 @@ geometry_msgs::msg::PoseStamped RegulatedPurePursuitController::getLookAheadPoin
   const nav_msgs::msg::Path & transformed_plan)
 {
   // Find the first pose which is at a distance greater than the lookahead distance
+  // 这是 pure pursuit 的核心：寻找路径上“距离机器人超过前视距离”的第一个点；
+  // 这个点通常作为“目标追踪点”。如果它刚好落在两点之间，则用线段-圆交点公式做插值，
+  // 得到更精确的前视点，从而实现平滑跟踪。
   auto goal_pose_it = std::find_if(
     transformed_plan.poses.begin(), transformed_plan.poses.end(), [&](const auto & ps) {
       return hypot(ps.pose.position.x, ps.pose.position.y) >= lookahead_dist;
@@ -479,6 +508,9 @@ bool RegulatedPurePursuitController::isCollisionImminent(
 {
   // Note(stevemacenski): This may be a bit unusual, but the robot_pose is in
   // odom frame and the carrot_pose is in robot base frame.
+  // 这一步是局部控制器里最关键的安全层：
+  // 不仅要看当前时刻有没有碰撞，还要用当前速度和角速度做有限时间前瞻，
+  // 预测未来一段时间内机器人足迹是否会侵入障碍区，防止“当前看起来没问题但未来立刻撞上去”。
 
   // check current point is OK
   if (inCollision(
@@ -637,6 +669,10 @@ void RegulatedPurePursuitController::applyConstraints(
   const double & curvature, const geometry_msgs::msg::Twist & /*curr_speed*/,
   const double & pose_cost, const nav_msgs::msg::Path & path, double & linear_vel, double & sign)
 {
+  // 速度约束的本质是：
+  // 1) 曲率过大时用更小线速度来保证转弯稳定；
+  // 2) 靠近障碍时用更小线速度降低碰撞风险；
+  // 3) 在接近目标时进一步减速，避免欠驱动导致终点穿过。
   double curvature_vel = linear_vel;
   double cost_vel = linear_vel;
 
@@ -698,6 +734,8 @@ void RegulatedPurePursuitController::setSpeedLimit(
 nav_msgs::msg::Path RegulatedPurePursuitController::transformGlobalPlan(
   const geometry_msgs::msg::PoseStamped & pose)
 {
+  // 全局路径需要转换到机器人坐标系以便做前视点和曲率计算；
+  // 同时还要裁剪掉已经太远或已经走过的路径段，保证局部规划器只关心“当前附近”的路径。
   if (global_plan_.poses.empty()) {
     throw nav2_core::PlannerException("Received plan with zero length");
   }
@@ -767,7 +805,9 @@ nav_msgs::msg::Path RegulatedPurePursuitController::transformGlobalPlan(
 double RegulatedPurePursuitController::findVelocitySignChange(
   const nav_msgs::msg::Path & transformed_plan)
 {
-  // Iterating through the transformed global path to determine the position of the cusp
+  // 这是 path cusp 检测：
+  // 若路径在某一段上发生方向改变，导致两个相邻方向向量点积 < 0，
+  // 说明存在“尖点”或明显转折；此时如果允许倒退，控制器要避免前视点跨过该尖点导致不稳定。
   for (unsigned int pose_id = 1; pose_id < transformed_plan.poses.size() - 1; ++pose_id) {
     // We have two vectors for the dot product OA and AB. Determining the vectors.
     double oa_x = transformed_plan.poses[pose_id].pose.position.x -

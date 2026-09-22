@@ -32,6 +32,7 @@ using nav2_util::LifecycleServiceClient;
 namespace nav2_lifecycle_manager
 {
 
+// 创建普通 ROS 2 管理节点，声明 autostart、受管节点列表和 bond 重连参数，并创建管理服务。
 LifecycleManager::LifecycleManager(const rclcpp::NodeOptions & options)
 : Node("lifecycle_manager", options), diagnostics_updater_(this)
 {
@@ -40,7 +41,9 @@ LifecycleManager::LifecycleManager(const rclcpp::NodeOptions & options)
   // The list of names is parameterized, allowing this module to be used with a different set
   // of nodes
   declare_parameter("node_names", rclcpp::PARAMETER_STRING_ARRAY);
+  // autostart=false 时等待外部 /manage_nodes 请求；true 时初始化完成后自动启动全部节点。
   declare_parameter("autostart", rclcpp::ParameterValue(false));
+  // bond_timeout 和重连时长单位为秒，用于判断生命周期节点是否仍存活以及是否尝试恢复。
   declare_parameter("bond_timeout", 4.0);
   declare_parameter("bond_respawn_max_duration", 10.0);
   declare_parameter("attempt_respawn_reconnection", true);
@@ -115,6 +118,7 @@ LifecycleManager::~LifecycleManager()
   service_thread_.reset();
 }
 
+// 将 STARTUP/RESET/SHUTDOWN/PAUSE/RESUME 服务命令分派到对应生命周期操作。
 void
 LifecycleManager::managerCallback(
   const std::shared_ptr<rmw_request_id_t>/*request_header*/,
@@ -140,6 +144,7 @@ LifecycleManager::managerCallback(
   }
 }
 
+// 返回受管节点系统是否整体处于 active 状态，供监控或上层节点快速查询。
 void
 LifecycleManager::isActiveCallback(
   const std::shared_ptr<rmw_request_id_t>/*request_header*/,
@@ -159,6 +164,7 @@ LifecycleManager::CreateActiveDiagnostic(diagnostic_updater::DiagnosticStatusWra
   }
 }
 
+// 创建每个受管节点的生命周期服务客户端，后续通过这些客户端发送状态转换。
 void
 LifecycleManager::createLifecycleServiceClients()
 {
@@ -178,6 +184,7 @@ LifecycleManager::destroyLifecycleServiceClients()
   }
 }
 
+// 为 active 节点创建 bond 心跳连接；4 秒默认超时用于发现节点失联。
 bool
 LifecycleManager::createBondConnection(const std::string & node_name)
 {
@@ -208,6 +215,7 @@ LifecycleManager::createBondConnection(const std::string & node_name)
   return true;
 }
 
+// 向单个节点发送 lifecycle transition，并校验其最终 primary state；激活时建立 bond。
 bool
 LifecycleManager::changeStateForNode(const std::string & node_name, std::uint8_t transition)
 {
@@ -229,6 +237,7 @@ LifecycleManager::changeStateForNode(const std::string & node_name, std::uint8_t
   return true;
 }
 
+// 批量改变节点状态；configure/activate 按正序，deactivate/cleanup/shutdown 按逆序执行。
 bool
 LifecycleManager::changeStateForAllNodes(std::uint8_t transition, bool hard_change)
 {
@@ -266,6 +275,7 @@ LifecycleManager::changeStateForAllNodes(std::uint8_t transition, bool hard_chan
   return true;
 }
 
+// 依次停用、清理和关闭全部受管节点，保证依赖关系按反向顺序释放。
 void
 LifecycleManager::shutdownAllNodes()
 {
@@ -275,6 +285,7 @@ LifecycleManager::shutdownAllNodes()
   changeStateForAllNodes(Transition::TRANSITION_UNCONFIGURED_SHUTDOWN);
 }
 
+// 执行 configure + activate，成功后标记系统 active 并启动 bond 检查定时器。
 bool
 LifecycleManager::startup()
 {
@@ -291,6 +302,7 @@ LifecycleManager::startup()
   return true;
 }
 
+// 停止 bond 监控并逆序关闭所有受管节点，最后清理客户端和系统状态。
 bool
 LifecycleManager::shutdown()
 {

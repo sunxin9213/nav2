@@ -41,6 +41,7 @@ using std::placeholders::_1;
 namespace nav2_planner
 {
 
+// 创建生命周期规划服务，声明规划器插件列表和期望频率，并构造全局 Costmap。
 PlannerServer::PlannerServer(const rclcpp::NodeOptions & options)
 : nav2_util::LifecycleNode("planner_server", "", options),
   gp_loader_("nav2_core", "nav2_core::GlobalPlanner"),
@@ -76,6 +77,7 @@ PlannerServer::~PlannerServer()
   costmap_thread_.reset();
 }
 
+// 配置 Costmap、动态加载 GlobalPlanner 插件，并创建规划 Action Server 与路径发布器。
 nav2_util::CallbackReturn
 PlannerServer::on_configure(const rclcpp_lifecycle::State & /*state*/)
 {
@@ -165,6 +167,7 @@ PlannerServer::on_configure(const rclcpp_lifecycle::State & /*state*/)
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
+// 激活路径发布器、规划 Action、Costmap 和所有规划器插件，并创建动态参数回调。
 nav2_util::CallbackReturn
 PlannerServer::on_activate(const rclcpp_lifecycle::State & /*state*/)
 {
@@ -198,6 +201,7 @@ PlannerServer::on_activate(const rclcpp_lifecycle::State & /*state*/)
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
+// 停止规划请求和路径发布，停用 Costmap/插件并移除动态参数回调。
 nav2_util::CallbackReturn
 PlannerServer::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
 {
@@ -229,6 +233,7 @@ PlannerServer::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
+// 释放 Action、TF、Costmap 线程和规划器实例，使节点可重新配置。
 nav2_util::CallbackReturn
 PlannerServer::on_cleanup(const rclcpp_lifecycle::State & /*state*/)
 {
@@ -454,6 +459,14 @@ PlannerServer::computePlanThroughPoses()
   }
 }
 
+// 全局规划主流程：
+// 1) 检查 Action 是否有效、目标是否被取消或抢占；
+// 2) 等待 costmap 初始化完成，避免使用尚未清空/更新的地图；
+// 3) 获取机器人当前位姿或使用调用方显式指定的 start；
+// 4) 将 start / goal 统一转换到全局 frame；
+// 5) 调用对应 planner plugin 生成路径；
+// 6) 验证路径有效性并发布给 RViz / 其他节点；
+// 7) 返回 Action 成功结果，完成一次规划任务。
 void
 PlannerServer::computePlan()
 {
@@ -515,6 +528,11 @@ PlannerServer::computePlan()
   }
 }
 
+// 这个函数是全局规划器的统一入口：
+// 它根据 planner_id 从 planners_ 哈希表中选中具体插件，
+// 然后对 start/goal 执行 createPlan()；
+// 如果未指定 planner_id 且只装载了一个插件，则采用默认插件；
+// 否则返回错误，防止调用方发出不存在的 planner 名称。
 nav_msgs::msg::Path
 PlannerServer::getPlan(
   const geometry_msgs::msg::PoseStamped & start,

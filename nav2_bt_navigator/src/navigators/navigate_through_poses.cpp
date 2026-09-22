@@ -23,6 +23,7 @@ namespace nav2_bt_navigator
 {
 
 bool
+// 配置多目标导航的黑板键和里程计平滑器；目标列表由后续 Action goal 写入黑板。
 NavigateThroughPosesNavigator::configure(
   rclcpp_lifecycle::LifecycleNode::WeakPtr parent_node,
   std::shared_ptr<nav2_util::OdomSmoother> odom_smoother)
@@ -49,6 +50,7 @@ NavigateThroughPosesNavigator::configure(
 }
 
 std::string
+// 读取 default_nav_through_poses_bt_xml；未覆盖时使用默认多目标重规划/恢复树。
 NavigateThroughPosesNavigator::getDefaultBTFilepath(
   rclcpp_lifecycle::LifecycleNode::WeakPtr parent_node)
 {
@@ -70,6 +72,7 @@ NavigateThroughPosesNavigator::getDefaultBTFilepath(
 }
 
 bool
+// 加载目标指定的行为树 XML，并把多个目标位姿写入行为树黑板。
 NavigateThroughPosesNavigator::goalReceived(ActionT::Goal::ConstSharedPtr goal)
 {
   auto bt_xml_filename = goal->behavior_tree;
@@ -94,6 +97,7 @@ NavigateThroughPosesNavigator::goalCompleted(
 }
 
 void
+// 发布当前位姿、剩余路径距离、剩余目标数量、预计时间和恢复次数反馈。
 NavigateThroughPosesNavigator::onLoop()
 {
   using namespace nav2_util::geometry_utils;  // NOLINT
@@ -174,6 +178,7 @@ NavigateThroughPosesNavigator::onLoop()
 }
 
 void
+// 仅当 pending goal 使用同一 XML 时接受抢占，避免运行中的树结构被中途替换。
 NavigateThroughPosesNavigator::onPreempt(ActionT::Goal::ConstSharedPtr goal)
 {
   RCLCPP_INFO(logger_, "Received goal preemption request");
@@ -199,6 +204,7 @@ NavigateThroughPosesNavigator::onPreempt(ActionT::Goal::ConstSharedPtr goal)
 }
 
 void
+// 重置导航计时和恢复次数，并把目标序列写入黑板供 BT 节点消费。
 NavigateThroughPosesNavigator::initializeGoalPoses(ActionT::Goal::ConstSharedPtr goal)
 {
   if (goal->poses.size() > 0) {

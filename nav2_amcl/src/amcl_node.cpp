@@ -59,6 +59,7 @@ namespace nav2_amcl
 {
 using nav2_util::geometry_utils::orientationAroundZAxis;
 
+// 创建 AMCL 生命周期节点并声明粒子滤波、激光模型、TF 和初始位姿参数。
 AmclNode::AmclNode(const rclcpp::NodeOptions & options)
 : nav2_util::LifecycleNode("amcl", "", options)
 {

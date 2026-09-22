@@ -62,6 +62,7 @@ using namespace std::placeholders;
 namespace nav2_map_server
 {
 
+// 创建生命周期地图节点并声明地图文件、发布 topic 和坐标系参数。
 MapServer::MapServer(const rclcpp::NodeOptions & options)
 : nav2_util::LifecycleNode("map_server", "", options), map_available_(false)
 {
@@ -78,6 +79,7 @@ MapServer::~MapServer()
 }
 
 nav2_util::CallbackReturn
+// 读取 YAML 地图，创建 GetMap/LoadMap 服务和 transient_local 地图发布器。
 MapServer::on_configure(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Configuring");
@@ -112,7 +114,7 @@ MapServer::on_configure(const rclcpp_lifecycle::State & /*state*/)
     service_prefix + std::string(service_name_),
     std::bind(&MapServer::getMapCallback, this, _1, _2, _3));
 
-  // Create a publisher using the QoS settings to emulate a ROS1 latched topic
+  // transient_local + reliable + KeepLast(1) 让后来加入的订阅者也能收到最后一张地图。
   occ_pub_ = create_publisher<nav_msgs::msg::OccupancyGrid>(
     topic_name,
     rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable());
@@ -126,6 +128,7 @@ MapServer::on_configure(const rclcpp_lifecycle::State & /*state*/)
 }
 
 nav2_util::CallbackReturn
+// 激活地图发布器并立即发布已加载地图，随后建立生命周期 bond。
 MapServer::on_activate(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Activating");
@@ -144,6 +147,7 @@ MapServer::on_activate(const rclcpp_lifecycle::State & /*state*/)
 }
 
 nav2_util::CallbackReturn
+// 停用地图发布器并销毁生命周期 bond，但保留已加载地图内存。
 MapServer::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Deactivating");
@@ -157,6 +161,7 @@ MapServer::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
 }
 
 nav2_util::CallbackReturn
+// 释放地图服务、发布器和 OccupancyGrid，使节点能够重新加载地图。
 MapServer::on_cleanup(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Cleaning up");
@@ -182,6 +187,7 @@ void MapServer::getMapCallback(
   const std::shared_ptr<nav_msgs::srv::GetMap::Request>/*request*/,
   std::shared_ptr<nav_msgs::srv::GetMap::Response> response)
 {
+  // 只有 active 状态允许提供地图服务，避免返回未配置或已清理的数据。
   // if not in ACTIVE state, ignore request
   if (get_current_state().id() != lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE) {
     RCLCPP_WARN(
@@ -198,6 +204,7 @@ void MapServer::loadMapCallback(
   const std::shared_ptr<nav2_msgs::srv::LoadMap::Request> request,
   std::shared_ptr<nav2_msgs::srv::LoadMap::Response> response)
 {
+  // 运行时加载新 YAML 地图；成功后发布新的 OccupancyGrid 供定位和规划节点更新。
   // if not in ACTIVE state, ignore request
   if (get_current_state().id() != lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE) {
     RCLCPP_WARN(

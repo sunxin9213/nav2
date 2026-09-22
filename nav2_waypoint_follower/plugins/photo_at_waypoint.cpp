@@ -35,6 +35,8 @@ void PhotoAtWaypoint::initialize(
   const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
   const std::string & plugin_name)
 {
+  // 拍照插件在初始化阶段准备最新图像缓存、输出目录和相机订阅；
+  // 到达 waypoint 时只保存缓存中的最近一帧，不在导航 Action 中等待新的图像到达。
   auto node = parent.lock();
 
   curr_frame_msg_ = std::make_shared<sensor_msgs::msg::Image>();
@@ -59,6 +61,8 @@ void PhotoAtWaypoint::initialize(
   node->get_parameter(plugin_name + ".image_format", image_format_);
 
   // get inputted save directory and make sure it exists, if not log and create  it
+  // 输出目录是插件能否正常工作的前置条件；创建失败时禁用插件，
+  // 让上层不会继续执行一个必然无法保存图像的任务。
   save_dir_ = save_dir_as_string;
   try {
     if (!std::filesystem::exists(save_dir_)) {
@@ -101,6 +105,9 @@ void PhotoAtWaypoint::initialize(
 bool PhotoAtWaypoint::processAtWaypoint(
   const geometry_msgs::msg::PoseStamped & curr_pose, const int & curr_waypoint_index)
 {
+  // 文件名同时包含 waypoint 索引和时间戳秒数，便于把照片与一次导航任务关联起来。
+  // 当前帧的读取、ROS Image 到 OpenCV Mat 的转换和写盘处于同一异常处理范围内，
+  // 任一环节失败都会返回 false，由 WaypointFollower 决定终止还是继续。
   if (!is_enabled_) {
     RCLCPP_WARN(
       logger_,
@@ -137,6 +144,8 @@ bool PhotoAtWaypoint::processAtWaypoint(
 
 void PhotoAtWaypoint::imageCallback(const sensor_msgs::msg::Image::SharedPtr msg)
 {
+  // 相机回调与 processAtWaypoint() 可能运行在不同执行路径，
+  // 用同一把互斥锁保护“最新帧指针”的替换和读取，避免拍照时拿到不一致的消息状态。
   std::lock_guard<std::mutex> guard(global_mutex_);
   curr_frame_msg_ = msg;
 }
@@ -145,6 +154,8 @@ void PhotoAtWaypoint::deepCopyMsg2Mat(
   const sensor_msgs::msg::Image::SharedPtr & msg,
   cv::Mat & mat)
 {
+  // cv_bridge 先把 ROS Image 映射为 OpenCV 图像；随后复制到独立 Mat，
+  // 使写盘过程不依赖相机回调继续持有的消息内存。
   cv_bridge::CvImageConstPtr cv_bridge_ptr = cv_bridge::toCvShare(msg, msg->encoding);
   cv::Mat frame = cv_bridge_ptr->image;
   if (msg->encoding == "rgb8") {

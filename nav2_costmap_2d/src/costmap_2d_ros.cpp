@@ -58,6 +58,7 @@ using rcl_interfaces::msg::ParameterType;
 
 namespace nav2_costmap_2d
 {
+// 创建 Costmap 生命周期节点并声明地图尺寸、分辨率、坐标系、图层和更新频率参数。
 Costmap2DROS::Costmap2DROS(const std::string & name)
 : Costmap2DROS(name, "/", name) {}
 
@@ -159,6 +160,10 @@ Costmap2DROS::~Costmap2DROS()
 }
 
 nav2_util::CallbackReturn
+// Costmap2DROS 的配置阶段相当于整个导航栈的“地图装配工厂”：
+// 它读取地图尺寸、分辨率、足迹、层列表和 TF 参数，
+// 然后使用 pluginlib 动态实例化 static / obstacle / inflation 等 layer，
+// 并把它们按顺序接入 LayeredCostmap，最终形成能供 planner/controller 使用的 global costmap。
 Costmap2DROS::on_configure(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Configuring");
@@ -167,7 +172,7 @@ Costmap2DROS::on_configure(const rclcpp_lifecycle::State & /*state*/)
   callback_group_ = create_callback_group(
     rclcpp::CallbackGroupType::MutuallyExclusive, false);
 
-  // Create the costmap itself
+  // LayeredCostmap 将静态地图、障碍物、膨胀和过滤器合成为最终代价地图。
   layered_costmap_ = std::make_unique<LayeredCostmap>(
     global_frame_, rolling_window_, track_unknown_space_);
 
@@ -186,7 +191,7 @@ Costmap2DROS::on_configure(const rclcpp_lifecycle::State & /*state*/)
   tf_buffer_->setCreateTimerInterface(timer_interface);
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-  // Then load and add the plug-ins to the costmap
+  // 按参数中的 ID/类型加载插件；初始化期间锁住 Costmap，避免并发更新未完成图层。
   for (unsigned int i = 0; i < plugin_names_.size(); ++i) {
     RCLCPP_INFO(get_logger(), "Using plugin \"%s\"", plugin_names_[i].c_str());
 
@@ -226,7 +231,7 @@ Costmap2DROS::on_configure(const rclcpp_lifecycle::State & /*state*/)
     RCLCPP_INFO(get_logger(), "Initialized costmap filter \"%s\"", filter_names_[i].c_str());
   }
 
-  // Create the publishers and subscribers
+  // 创建 footprint 输入、发布的 footprint 和 Costmap 发布器；QoS 由具体消息用途决定。
   footprint_sub_ = create_subscription<geometry_msgs::msg::Polygon>(
     "footprint",
     rclcpp::SystemDefaultsQoS(),

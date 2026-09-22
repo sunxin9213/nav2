@@ -37,6 +37,7 @@ amcl:
     z_max: 0.05
     z_rand: 0.5
     z_short: 0.05
+    # robot1 的独立 Nav2 参数文件；节点由 launch 放入 robot1 namespace，避免与其他机器人冲突。
     scan_topic: scan
 
 bt_navigator:

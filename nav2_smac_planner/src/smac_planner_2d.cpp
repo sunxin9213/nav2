@@ -45,6 +45,12 @@ SmacPlanner2D::~SmacPlanner2D()
     _name.c_str());
 }
 
+// SMAC (State Lattice / A*) 全局规划器的核心思想是：
+// 用离散网格状态空间模拟机器人可达状态，用 A* 搜索一条最优或近似最优路径；
+// 在路径生成后再用 smoother 对结果做平滑处理，以获得更适合底盘跟踪的轨迹。
+// 因此该插件既关心“能否找到路径”，也关心“路径是否够平滑、能否稳定执行”。
+// 与 NavFn 的势场法不同，SMAC 更直接地把搜索过程写成了显式的 graph expansion，
+// 对于狭窄通道、复杂障碍地图，往往能提供更稳定、更可控的最优/近似最优路径。
 void SmacPlanner2D::configure(
   const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
   std::string name, std::shared_ptr<tf2_ros::Buffer>/*tf*/,
@@ -108,6 +114,8 @@ void SmacPlanner2D::configure(
   }
 
   // Initialize collision checker
+  // 这是搜索过程中判断“某个状态是否合法”的关键判定器：
+  // 它会参考 costmap、机器人足迹和 2D 运动模型，判断下一步是否会撞墙或越过障碍。
   _collision_checker = GridCollisionChecker(_costmap, 1 /*for 2D, most be 1*/, node);
   _collision_checker.setFootprint(
     costmap_ros->getRobotFootprint(),
@@ -115,6 +123,8 @@ void SmacPlanner2D::configure(
     0.0 /*for 2D cost at inscribed isn't relevent*/);
 
   // Initialize A* template
+  // A* 的角色是“状态搜索引擎”：给定起点、终点和碰撞检查器，
+  // 它在离散网格中不断扩展最小代价状态，直到找到目标或达到搜索上限。
   _a_star = std::make_unique<AStarAlgorithm<Node2D>>(_motion_model, _search_info);
   _a_star->initialize(
     _allow_unknown,
@@ -125,6 +135,9 @@ void SmacPlanner2D::configure(
     1.0 /*unused for 2D*/);
 
   // Initialize path smoother
+  // 搜索得到的路径往往还停留在“网格化”的离散节点上，
+  // 其中某些拐角很尖锐，不够适合底盘执行，因此需要平滑器在路径上做去噪和修正。
+  // 对于 2D 全向/差速机器人，通常走 holonomic 处理方式，把路径看成网格搜索结果再做优化。
   SmootherParams params;
   params.get(node, name);
   params.holonomic_ = true;  // So smoother will treat this as a grid search
@@ -200,6 +213,9 @@ nav_msgs::msg::Path SmacPlanner2D::createPlan(
   std::unique_lock<nav2_costmap_2d::Costmap2D::mutex_t> lock(*(_costmap->getMutex()));
 
   // Downsample costmap, if required
+  // 在较大地图或高分辨率地图上，直接全图搜索可能过慢；
+  // 因此可以按 factor 对 costmap 做下采样，减少状态数但维持主要障碍结构，
+  // 这是一种典型的工程上的权衡：速度 vs. 最优路径精度。
   nav2_costmap_2d::Costmap2D * costmap = _costmap;
   if (_costmap_downsampler) {
     costmap = _costmap_downsampler->downsample(_downsampling_factor);
@@ -247,7 +263,13 @@ nav_msgs::msg::Path SmacPlanner2D::createPlan(
     return plan;
   }
 
-  // Compute plan
+  // 这里是核心搜索阶段：
+  // - 先将机器人当前位姿映射到网格坐标；
+  // - 再将目标映射到网格坐标；
+  // - 然后让 A* 在离散状态空间中搜索从起点到目标的可行路径；
+  // - 对于 2D 场景，通常使用 8 邻域或更高效的状态扩展方式进行 cost / heuristic 判定。
+  // 这种搜索的本质是：以“状态节点”为单位，按优先级弹出最小 f(n) 的节点，
+  // 同时维护 open set / close set，直到找到一条从起点到目标的低代价路径。
   Node2D::CoordinateVector path;
   int num_iterations = 0;
   std::string error;
@@ -282,11 +304,15 @@ nav_msgs::msg::Path SmacPlanner2D::createPlan(
   }
 
   // Publish raw path for debug
+  // 计算出原始网格路径后，发布它供调试和可视化显示，
+  // 后续再用 smoother 处理最终可执行轨迹，这种分层方式有利于诊断搜索是否稳定。
   if (_raw_plan_publisher->get_subscription_count() > 0) {
     _raw_plan_publisher->publish(plan);
   }
 
   // Find how much time we have left to do smoothing
+  // 在 SMAC 中，路径平滑本质上是“给搜索结果做后处理”，
+  // 它不负责找路径，而是优化路径质量并利用剩余规划时间预算提高路径可执行性。
   steady_clock::time_point b = steady_clock::now();
   duration<double> time_span = duration_cast<duration<double>>(b - a);
   double time_remaining = _max_planning_time - static_cast<double>(time_span.count());
@@ -297,6 +323,8 @@ nav_msgs::msg::Path SmacPlanner2D::createPlan(
 #endif
 
   // Smooth plan
+  // `smooth()` 会在不破坏安全性的前提下，压扁离散网格上的转角，
+  // 让最终路径更贴近底盘实际可执行轨迹，减少急拐和局部抖动。
   _smoother->smooth(plan, costmap, time_remaining);
 
   // If use_final_approach_orientation=true, interpolate the last pose orientation from the
@@ -304,6 +332,10 @@ nav_msgs::msg::Path SmacPlanner2D::createPlan(
   // it does not rotate.
   // And deal with corner case of plan of length 1
   // If use_final_approach_orientation=false (default), override last pose orientation to match goal
+  // 最终路径的朝向处理是为了满足底盘跟踪要求：
+  // 如果想让机器人在接近终点时保持当前接近方向，不做额外旋转，
+  // 就使用前一个路径点来推算最终 yaw；
+  // 否则就直接对齐 goal 的朝向，保证目标姿态一致。
   size_t plan_size = plan.poses.size();
   if (_use_final_approach_orientation) {
     if (plan_size == 1) {

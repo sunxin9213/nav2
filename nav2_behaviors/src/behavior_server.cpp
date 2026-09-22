@@ -22,6 +22,7 @@
 namespace behavior_server
 {
 
+// 创建生命周期节点并声明行为插件、Costmap、TF 和控制循环所需的 ROS 2 参数。
 BehaviorServer::BehaviorServer(const rclcpp::NodeOptions & options)
 : LifecycleNode("behavior_server", "", options),
   plugin_loader_("nav2_core", "nav2_core::Behavior"),
@@ -59,11 +60,13 @@ BehaviorServer::BehaviorServer(const rclcpp::NodeOptions & options)
 }
 
 
+// 析构时释放插件实例；具体 ROS 2 资源由生命周期清理阶段先行释放。
 BehaviorServer::~BehaviorServer()
 {
   behaviors_.clear();
 }
 
+// 配置阶段创建 TF、Costmap 订阅和碰撞检查器，并加载所有行为插件；失败会阻止节点激活。
 nav2_util::CallbackReturn
 BehaviorServer::on_configure(const rclcpp_lifecycle::State & /*state*/)
 {
@@ -99,6 +102,7 @@ BehaviorServer::on_configure(const rclcpp_lifecycle::State & /*state*/)
 }
 
 
+// 根据行为 ID 读取插件类型，通过 pluginlib 动态创建实例并注入共享 ROS 2 依赖。
 bool
 BehaviorServer::loadBehaviorPlugins()
 {
@@ -124,6 +128,7 @@ BehaviorServer::loadBehaviorPlugins()
   return true;
 }
 
+// 激活所有行为的 Action Server 和发布器，并建立生命周期管理所需的 bond 连接。
 nav2_util::CallbackReturn
 BehaviorServer::on_activate(const rclcpp_lifecycle::State & /*state*/)
 {
@@ -139,6 +144,7 @@ BehaviorServer::on_activate(const rclcpp_lifecycle::State & /*state*/)
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
+// 停止接受行为请求并停用插件发布器，随后销毁 bond 连接。
 nav2_util::CallbackReturn
 BehaviorServer::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
 {
@@ -155,6 +161,7 @@ BehaviorServer::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
+// 清理插件和 TF、Costmap、碰撞检查器等资源，使节点可以重新配置。
 nav2_util::CallbackReturn
 BehaviorServer::on_cleanup(const rclcpp_lifecycle::State & /*state*/)
 {
@@ -175,6 +182,7 @@ BehaviorServer::on_cleanup(const rclcpp_lifecycle::State & /*state*/)
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
+// 响应节点关闭生命周期事件；此处不再创建资源，只报告关闭状态。
 nav2_util::CallbackReturn
 BehaviorServer::on_shutdown(const rclcpp_lifecycle::State &)
 {

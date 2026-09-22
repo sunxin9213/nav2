@@ -34,6 +34,7 @@ using namespace std::chrono_literals;
 
 // A behavior for testing the base class
 
+// 用可控字符串模拟行为的成功、初始化失败和运行期完成，隔离测试 TimedBehavior 的 Action 流程。
 class DummyBehavior : public TimedBehavior<BehaviorAction>
 {
 public:
@@ -91,6 +92,7 @@ private:
 
 // Define a test class to hold the context for the tests
 
+// 测试夹具创建 LifecycleNode、TF、Costmap 碰撞检查器和 Action Client，模拟真实 ROS 2 依赖。
 class BehaviorTest : public ::testing::Test
 {
 protected:
@@ -99,6 +101,7 @@ protected:
 
   void SetUp() override
   {
+    // 构造测试节点并声明行为服务端所依赖的 Costmap 和 footprint topic 参数。
     node_lifecycle_ =
       std::make_shared<rclcpp_lifecycle::LifecycleNode>(
       "LifecycleBehaviorTestNode", rclcpp::NodeOptions());
@@ -110,6 +113,7 @@ protected:
       rclcpp::ParameterValue(std::string("local_costmap/published_footprint")));
 
     tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node_lifecycle_->get_clock());
+    // 为 TF Buffer 注入 ROS 2 定时器接口，使 TransformListener 能处理时间相关查询。
     auto timer_interface = std::make_shared<tf2_ros::CreateTimerROS>(
       node_lifecycle_->get_node_base_interface(),
       node_lifecycle_->get_node_timers_interface());
@@ -131,6 +135,7 @@ protected:
       node_lifecycle_->get_name());
 
     behavior_ = std::make_shared<DummyBehavior>();
+    // 直接 configure/activate 行为，测试不依赖完整 BehaviorServer 生命周期管理器。
     behavior_->configure(node_lifecycle_, "Behavior", tf_buffer_, collision_checker_);
     behavior_->activate();
 
@@ -146,6 +151,7 @@ protected:
 
   bool sendCommand(const std::string & command)
   {
+    // 等待 Action Server 出现后异步发送 goal，并验证 goal 是否被服务端接受。
     if (!client_->wait_for_action_server(4s)) {
       std::cout << "Server not up" << std::endl;
       return false;
@@ -176,6 +182,7 @@ protected:
 
   Status getOutcome()
   {
+    // 将 rclcpp_action 的结果码映射为行为基类使用的 Status 枚举。
     if (getResult().code == rclcpp_action::ResultCode::SUCCEEDED) {
       return Status::SUCCEEDED;
     }
@@ -185,6 +192,7 @@ protected:
 
   ClientGoalHandle::WrappedResult getResult()
   {
+    // 异步请求 Action result，并通过 spin_until_future_complete 驱动 ROS 2 回调直到完成。
     std::cout << "Getting async result..." << std::endl;
     auto future_result = client_->async_get_result(goal_handle_);
     std::cout << "Waiting on future..." << std::endl;

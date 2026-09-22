@@ -51,10 +51,12 @@ public:
    * @brief A constructor for nav2_lifecycle_manager::LifecycleManager
    * @param options Additional options to control creation of the node.
    */
+  // 创建管理节点并声明受管节点、自动启动和 bond 监控参数。
   explicit LifecycleManager(const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
   /**
    * @brief A destructor for nav2_lifecycle_manager::LifecycleManager
    */
+  // 停止服务线程和 bond 监控，释放生命周期客户端。
   ~LifecycleManager();
 
 protected:

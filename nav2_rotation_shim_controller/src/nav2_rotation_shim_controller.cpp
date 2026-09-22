@@ -34,6 +34,10 @@ RotationShimController::RotationShimController()
 {
 }
 
+// Rotation Shim 控制器的设计目的是：
+// 当当前路径方向与机器人朝向明显不一致时，先执行一次“旋转到接近路径方向”的过渡动作，
+// 之后再把控制权交还给真正的主控制器。
+// 这样可以避免在局部路径切换时直接给出一个不合理的前进命令，从而产生抖动或局部最优解问题。
 void RotationShimController::configure(
   const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
   std::string name, std::shared_ptr<tf2_ros::Buffer> tf,
@@ -152,6 +156,10 @@ void RotationShimController::cleanup()
   position_goal_checker_.reset();
 }
 
+// 这个函数是整个 shim 逻辑的核心：
+// - 若需要进行目标朝向旋转，则先对最终目标进行角度判断；
+// - 否则检查当前 path 是否发生明显偏航，如果偏航超过阈值，就先执行原地旋转；
+// - 只有当机器人已对齐新路径粗略方向时，才把控制权交给主控制器继续进行正常追踪。
 geometry_msgs::msg::TwistStamped RotationShimController::computeVelocityCommands(
   const geometry_msgs::msg::PoseStamped & pose,
   const geometry_msgs::msg::Twist & velocity,
@@ -313,6 +321,9 @@ RotationShimController::computeRotateToHeadingCommand(
   return cmd_vel;
 }
 
+// 在旋转过程中，不能只看当前姿态，还需要对未来一段时间内的旋转轨迹做碰撞预测；
+// 这里通过 forward simulation 估计机器人在接下来若干控制周期里的 footprint 位置，
+// 若出现 lethal obstacle 或未知区域阻挡，则直接抛出异常，防止继续执行危险转向。
 void RotationShimController::isCollisionFree(
   const geometry_msgs::msg::TwistStamped & cmd_vel,
   const double & angular_distance_to_heading,

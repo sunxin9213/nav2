@@ -46,6 +46,7 @@ namespace nav2_core
 class PlannerException : public std::runtime_error
 {
 public:
+  // 携带规划失败原因向 Planner Server 传播；上层可将异常转换为 Action 失败结果。
   explicit PlannerException(const std::string description)
   : std::runtime_error(description) {}
   using Ptr = std::shared_ptr<PlannerException>;

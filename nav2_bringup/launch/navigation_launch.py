@@ -27,6 +27,7 @@ from nav2_common.launch import RewrittenYaml
 
 
 def generate_launch_description():
+    # 启动规划、控制、行为、BT 导航、路点和速度平滑节点，并交给生命周期管理器统一激活。
     # Get the launch directory
     bringup_dir = get_package_share_directory('nav2_bringup')
 
@@ -40,6 +41,7 @@ def generate_launch_description():
     use_respawn = LaunchConfiguration('use_respawn')
     log_level = LaunchConfiguration('log_level')
 
+    # 这些节点必须全部进入 active，导航栈才具备完整的规划-控制执行链。
     lifecycle_nodes = ['controller_server',
                        'smoother_server',
                        'planner_server',
@@ -58,6 +60,7 @@ def generate_launch_description():
                   ('/tf_static', 'tf_static')]
 
     # Create our own temporary YAML files that include substitutions
+    # RewrittenYaml 将 launch 参数覆盖到参数文件，并按 namespace 重建参数树。
     param_substitutions = {
         'use_sim_time': use_sim_time,
         'autostart': autostart}
@@ -94,20 +97,21 @@ def generate_launch_description():
 
     declare_use_composition_cmd = DeclareLaunchArgument(
         'use_composition', default_value='False',
-        description='Use composed bringup if True')
+        description='Use composed bringup if True')  # true 使用同一容器加载组件，false 启动独立进程。
 
     declare_container_name_cmd = DeclareLaunchArgument(
         'container_name', default_value='nav2_container',
-        description='the name of conatiner that nodes will load in if use composition')
+        description='the name of conatiner that nodes will load in if use composition')  # 组合模式下必须与容器节点名匹配。
 
     declare_use_respawn_cmd = DeclareLaunchArgument(
         'use_respawn', default_value='False',
-        description='Whether to respawn if a node crashes. Applied when composition is disabled.')
+        description='Whether to respawn if a node crashes. Applied when composition is disabled.')  # respawn_delay 固定为 2 秒。
 
     declare_log_level_cmd = DeclareLaunchArgument(
         'log_level', default_value='info',
         description='log level')
 
+    # 独立进程模式：每个服务器拥有独立进程，故障隔离更好但进程通信开销更高。
     load_nodes = GroupAction(
         condition=IfCondition(PythonExpression(['not ', use_composition])),
         actions=[
@@ -193,6 +197,7 @@ def generate_launch_description():
         ]
     )
 
+    # 组合模式：将同一组 composable node 加载到目标容器，适合性能敏感的部署。
     load_composable_nodes = LoadComposableNodes(
         condition=IfCondition(use_composition),
         target_container=container_name_full,
@@ -269,4 +274,5 @@ def generate_launch_description():
     ld.add_action(load_nodes)
     ld.add_action(load_composable_nodes)
 
+    # 返回同时包含独立进程分支和组合节点分支的启动描述，运行时仅执行满足条件的一支。
     return ld

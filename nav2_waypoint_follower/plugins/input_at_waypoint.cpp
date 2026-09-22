@@ -40,6 +40,8 @@ void InputAtWaypoint::initialize(
   const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
   const std::string & plugin_name)
 {
+  // 该插件把外部 Empty 消息当作“允许离开当前 waypoint”的同步信号。
+  // timeout 使用秒，防止外部设备或人工确认永远不来时阻塞整个 waypoint 序列。
   auto node = parent.lock();
 
   if (!node) {
@@ -74,6 +76,8 @@ void InputAtWaypoint::initialize(
 
 void InputAtWaypoint::Cb(const std_msgs::msg::Empty::SharedPtr /*msg*/)
 {
+  // 回调只设置标志位，不直接结束 processAtWaypoint()；
+  // 主线程会在下一次轮询时读取该标志，避免跨线程直接操作任务控制流。
   std::lock_guard<std::mutex> lock(mutex_);
   input_received_ = true;
 }
@@ -82,6 +86,8 @@ bool InputAtWaypoint::processAtWaypoint(
   const geometry_msgs::msg::PoseStamped & /*curr_pose*/,
   const int & curr_waypoint_index)
 {
+  // 到达 waypoint 后清除上一点的输入状态，再以固定频率等待新的外部确认。
+  // 收到消息返回 true；超时返回 false，由 WaypointFollower 的 stop_on_failure 策略决定后续行为。
   if (!is_enabled_) {
     return true;
   }

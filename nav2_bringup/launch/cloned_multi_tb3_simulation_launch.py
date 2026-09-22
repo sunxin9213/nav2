@@ -128,14 +128,12 @@ def generate_launch_description():
                                   'autostart': autostart,
                                   'use_rviz': 'False',
                                   'use_simulator': 'False',
-                                  'headless': 'False',
                                   'use_robot_state_pub': use_robot_state_pub,
                                   'x_pose': TextSubstitution(text=str(init_pose['x'])),
                                   'y_pose': TextSubstitution(text=str(init_pose['y'])),
                                   'z_pose': TextSubstitution(text=str(init_pose['z'])),
                                   'roll': TextSubstitution(text=str(init_pose['roll'])),
                                   'pitch': TextSubstitution(text=str(init_pose['pitch'])),
-                                  'yaw': TextSubstitution(text=str(init_pose['yaw'])),
                                   'robot_name':TextSubstitution(text=robot_name), }.items())
         ])
 
@@ -143,7 +141,6 @@ def generate_launch_description():
 
     # Create the launch description and populate
     ld = LaunchDescription()
-
     # Declare the launch options
     ld.add_action(declare_simulator_cmd)
     ld.add_action(declare_world_cmd)

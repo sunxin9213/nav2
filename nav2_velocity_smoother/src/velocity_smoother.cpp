@@ -29,6 +29,7 @@ using rcl_interfaces::msg::ParameterType;
 namespace nav2_velocity_smoother
 {
 
+// 创建生命周期速度平滑节点；last_command_time 用于检测输入超时。
 VelocitySmoother::VelocitySmoother(const rclcpp::NodeOptions & options)
 : LifecycleNode("velocity_smoother", "", options),
   last_command_time_{0, 0, get_clock()->get_clock_type()}
@@ -44,6 +45,7 @@ VelocitySmoother::~VelocitySmoother()
 }
 
 nav2_util::CallbackReturn
+// 读取平滑频率、[x,y,theta] 速度/加速度限制，配置 OPEN_LOOP/CLOSED_LOOP 输入输出。
 VelocitySmoother::on_configure(const rclcpp_lifecycle::State &)
 {
   RCLCPP_INFO(get_logger(), "Configuring velocity smoother");
@@ -60,6 +62,7 @@ VelocitySmoother::on_configure(const rclcpp_lifecycle::State &)
   node->get_parameter("feedback", feedback_type);
   node->get_parameter("scale_velocities", scale_velocities_);
 
+  // 三元组顺序为 [x, y, theta]，线速度单位 m/s，角速度单位 rad/s。
   // Kinematics
   declare_parameter_if_not_declared(
     node, "max_velocity", rclcpp::ParameterValue(std::vector<double>{0.50, 0.0, 2.5}));
@@ -129,6 +132,7 @@ VelocitySmoother::on_configure(const rclcpp_lifecycle::State &)
 }
 
 nav2_util::CallbackReturn
+// 激活输出 publisher 和定时器；定时器周期为 1000/smoothing_frequency 毫秒。
 VelocitySmoother::on_activate(const rclcpp_lifecycle::State &)
 {
   RCLCPP_INFO(get_logger(), "Activating");
@@ -147,6 +151,7 @@ VelocitySmoother::on_activate(const rclcpp_lifecycle::State &)
 }
 
 nav2_util::CallbackReturn
+// 停止平滑定时器和输出发布器，移除动态参数回调。
 VelocitySmoother::on_deactivate(const rclcpp_lifecycle::State &)
 {
   RCLCPP_INFO(get_logger(), "Deactivating");
@@ -181,6 +186,7 @@ VelocitySmoother::on_shutdown(const rclcpp_lifecycle::State &)
 
 void VelocitySmoother::inputCommandCallback(const geometry_msgs::msg::Twist::SharedPtr msg)
 {
+  // 丢弃 NaN/Inf 速度，避免非法浮点值传播到底盘控制器。
   // If message contains NaN or Inf, ignore
   if (!nav2_util::validateTwist(*msg)) {
     RCLCPP_ERROR(get_logger(), "Velocity message contains NaNs or Infs! Ignoring as invalid!");

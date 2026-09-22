@@ -27,6 +27,7 @@
 namespace nav2_collision_monitor
 {
 
+// 创建碰撞监控生命周期节点，读取多边形、传感器源和速度限制策略参数。
 CollisionMonitor::CollisionMonitor(const rclcpp::NodeOptions & options)
 : nav2_util::LifecycleNode("collision_monitor", "", options),
   process_active_(false), robot_action_prev_{DO_NOTHING, {-1.0, -1.0, -1.0}},
@@ -41,6 +42,7 @@ CollisionMonitor::~CollisionMonitor()
 }
 
 nav2_util::CallbackReturn
+// 配置 TF、输入传感器订阅、碰撞多边形和 cmd_vel 输出链路。
 CollisionMonitor::on_configure(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Configuring");
@@ -71,6 +73,7 @@ CollisionMonitor::on_configure(const rclcpp_lifecycle::State & /*state*/)
 }
 
 nav2_util::CallbackReturn
+// 激活传感器订阅、速度发布器和碰撞检查循环，使监控结果能够限制机器人速度。
 CollisionMonitor::on_activate(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Activating");
@@ -97,6 +100,7 @@ CollisionMonitor::on_activate(const rclcpp_lifecycle::State & /*state*/)
 }
 
 nav2_util::CallbackReturn
+// 停止碰撞监控输出并停用 ROS 2 生命周期通信实体。
 CollisionMonitor::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Deactivating");
@@ -122,6 +126,7 @@ CollisionMonitor::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
 }
 
 nav2_util::CallbackReturn
+// 清理传感器、TF、碰撞多边形和发布器资源，为下一次配置做准备。
 CollisionMonitor::on_cleanup(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Cleaning up");

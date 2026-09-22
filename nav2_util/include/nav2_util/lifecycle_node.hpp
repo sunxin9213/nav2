@@ -43,6 +43,7 @@ public:
    * @param namespace Namespace for the node, if any
    * @param options Node options
    */
+  // 创建 Nav2 统一生命周期节点；options 可携带参数覆盖、自动声明和组件组合配置。
   LifecycleNode(
     const std::string & node_name,
     const std::string & ns = "",
@@ -76,6 +77,7 @@ public:
     const std::string & description = "", const std::string & additional_constraints = "",
     bool read_only = false)
   {
+    // ParameterDescriptor 将描述、只读属性和约束暴露给 ROS 2 参数系统，便于运行时校验和工具展示。
     auto descriptor = rcl_interfaces::msg::ParameterDescriptor();
 
     descriptor.name = name;
@@ -101,6 +103,7 @@ public:
     const std::string & description = "", const std::string & additional_constraints = "",
     bool read_only = false)
   {
+    // floating_point_range 的 from/to/step 分别表示允许范围和步长，单位由具体参数定义。
     auto descriptor = rcl_interfaces::msg::ParameterDescriptor();
 
     descriptor.name = name;
@@ -130,6 +133,7 @@ public:
     const std::string & description = "", const std::string & additional_constraints = "",
     bool read_only = false)
   {
+    // integer_range 为整型参数提供同样的 ROS 2 参数约束元数据。
     auto descriptor = rcl_interfaces::msg::ParameterDescriptor();
 
     descriptor.name = name;
@@ -177,11 +181,13 @@ public:
   /**
    * @brief Create bond connection to lifecycle manager
    */
+  // 创建与 Lifecycle Manager 的 bond，用于监测节点是否仍存活。
   void createBond();
 
   /**
    * @brief Destroy bond connection to lifecycle manager
    */
+  // 销毁 bond，结束与 Lifecycle Manager 的存活连接。
   void destroyBond();
 
 protected:

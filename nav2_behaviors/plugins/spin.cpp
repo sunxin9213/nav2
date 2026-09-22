@@ -28,6 +28,7 @@ using namespace std::chrono_literals;
 namespace nav2_behaviors
 {
 
+// 初始化 Spin 的 Action 反馈和角速度控制状态；实际参数在生命周期 configure 阶段读取。
 Spin::Spin()
 : TimedBehavior<SpinAction>(),
   feedback_(std::make_shared<SpinAction::Feedback>()),
@@ -43,6 +44,7 @@ Spin::Spin()
 
 Spin::~Spin() = default;
 
+// 声明旋转行为参数：预测时间单位为秒，角速度单位为 rad/s，角加速度单位为 rad/s^2。
 void Spin::onConfigure()
 {
   auto node = node_.lock();
@@ -53,24 +55,29 @@ void Spin::onConfigure()
   nav2_util::declare_parameter_if_not_declared(
     node,
     "simulate_ahead_time", rclcpp::ParameterValue(2.0));
+  // 默认向前模拟 2.0 秒，用于在发送旋转速度前检查未来姿态是否会碰撞。
   node->get_parameter("simulate_ahead_time", simulate_ahead_time_);
 
   nav2_util::declare_parameter_if_not_declared(
     node,
     "max_rotational_vel", rclcpp::ParameterValue(1.0));
+  // 最大角速度默认 1.0 rad/s，限制旋转行为的最高转速。
   node->get_parameter("max_rotational_vel", max_rotational_vel_);
 
   nav2_util::declare_parameter_if_not_declared(
     node,
     "min_rotational_vel", rclcpp::ParameterValue(0.4));
+  // 最小角速度默认 0.4 rad/s，避免接近目标时速度过小而难以克服静摩擦。
   node->get_parameter("min_rotational_vel", min_rotational_vel_);
 
   nav2_util::declare_parameter_if_not_declared(
     node,
     "rotational_acc_lim", rclcpp::ParameterValue(3.2));
+  // 角加速度上限默认 3.2 rad/s^2，用于根据剩余角度平滑减速。
   node->get_parameter("rotational_acc_lim", rotational_acc_lim_);
 }
 
+// 读取 Spin Action goal，获取当前 yaw，并计算本次旋转的截止时间。
 Status Spin::onRun(const std::shared_ptr<const SpinAction::Goal> command)
 {
   geometry_msgs::msg::PoseStamped current_pose;
@@ -96,6 +103,7 @@ Status Spin::onRun(const std::shared_ptr<const SpinAction::Goal> command)
   return Status::SUCCEEDED;
 }
 
+// 根据当前姿态计算已旋转角度，发布反馈和受限角速度，完成时发送零速度。
 Status Spin::onCycleUpdate()
 {
   rclcpp::Duration time_remaining = end_time_ - this->clock_->now();
@@ -163,6 +171,7 @@ bool Spin::isCollisionFree(
   geometry_msgs::msg::Pose2D & pose2d)
 {
   // Simulate ahead by simulate_ahead_time_ in cycle_frequency_ increments
+  // 将当前角速度离散模拟到未来轨迹；第一次查询刷新 Costmap，后续查询复用缓存数据。
   int cycle_count = 0;
   double sim_position_change;
   const int max_cycle_count = static_cast<int>(cycle_frequency_ * simulate_ahead_time_);

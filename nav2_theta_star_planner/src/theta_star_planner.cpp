@@ -20,6 +20,10 @@
 
 namespace nav2_theta_star_planner
 {
+// Theta* 是在 A* 的基础上增强“直线可见性”判断的全局规划方法：
+// 它不是简单地沿网格边进行扩展，而是允许在不经过中间栅格点的情况下，
+// 直接连接到更远处的可见状态，从而生成更自然、更接近最短路径的轨迹。
+// 这使得它在复杂栅格地图中，通常比标准网格 A* 更适合产生更少拐角的路径。
 void ThetaStarPlanner::configure(
   const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
   std::string name, std::shared_ptr<tf2_ros::Buffer> tf,
@@ -84,6 +88,12 @@ void ThetaStarPlanner::deactivate()
   RCLCPP_INFO(logger_, "Deactivating plugin %s of type nav2_theta_star_planner", name_.c_str());
 }
 
+// 路径生成的主步骤是：
+// 1) 将世界坐标转换到地图坐标；
+// 2) 检查起点/终点是否可行，处理同点或越界的边界情况；
+// 3) 调用 Theta* 生成离散路径；
+// 4) 将离散路径做线性插值，得到更密集的连续路径；
+// 5) 最后根据 use_final_approach_orientation 参数，修正终点朝向以减少最后一段旋转。
 nav_msgs::msg::Path ThetaStarPlanner::createPlan(
   const geometry_msgs::msg::PoseStamped & start,
   const geometry_msgs::msg::PoseStamped & goal)
@@ -168,6 +178,9 @@ nav_msgs::msg::Path ThetaStarPlanner::createPlan(
   return global_path;
 }
 
+// 获取最终全局路径时，先判断起点和终点是否位于障碍或不可规划区域；
+// 若安全，则调用 generatePath() 生成原始离散路径，随后进行线性插值，
+// 这样输出的路径编号更均匀，便于局部规划器对其做路径跟踪和前视点采样。
 void ThetaStarPlanner::getPlan(nav_msgs::msg::Path & global_path)
 {
   std::vector<coordsW> path;
@@ -184,6 +197,9 @@ void ThetaStarPlanner::getPlan(nav_msgs::msg::Path & global_path)
   global_path.header.frame_id = global_frame_;
 }
 
+// linearInterpolation 的作用是把离散的路径节点重新按分辨率密化，
+// 这样从地图网格角点到连续路径之间，不会出现“点太稀疏导致局部控制器无法稳定跟踪”的问题。
+// 其核心方式是对相邻节点做线段采样，并按固定步长插入中间点。
 nav_msgs::msg::Path ThetaStarPlanner::linearInterpolation(
   const std::vector<coordsW> & raw_path,
   const double & dist_bw_points)

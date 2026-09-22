@@ -17,4 +17,5 @@
 #include "nav2_behaviors/plugins/drive_on_heading.hpp"
 
 #include "pluginlib/class_list_macros.hpp"
+// 将模板实例导出为 nav2_core::Behavior 插件，使 BehaviorServer 能按 XML/plugin 参数动态加载它。
 PLUGINLIB_EXPORT_CLASS(nav2_behaviors::DriveOnHeading<>, nav2_core::Behavior)

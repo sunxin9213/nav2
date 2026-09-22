@@ -65,6 +65,10 @@ DWBLocalPlanner::DWBLocalPlanner()
 {
 }
 
+// DWB（Dynamic Window Approach / trajectory critic）局部规划器的本质：
+// 不直接输出一个单一“最优控制量”，而是先生成大量候选轨迹，
+// 再用一组 critic（代价评估器）对每条轨迹打分，选择最优动作。
+// 这类方法适合局部避障，因为它天然支持“速度、避障、路径跟踪、终端约束”多目标平衡。
 void DWBLocalPlanner::configure(
   const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
   std::string name, std::shared_ptr<tf2_ros::Buffer> tf,
@@ -238,6 +242,11 @@ DWBLocalPlanner::setPlan(const nav_msgs::msg::Path & path)
   global_plan_ = path2d;
 }
 
+// 局部规划的主循环：
+// 1) 对当前机器人位姿和速度做状态输入；
+// 2) 依据全局路径和这一步的速度状态，生成候选轨迹；
+// 3) 对轨迹应用一批 critic：碰撞、路径跟踪误差、速度范围、转向平滑性等；
+// 4) 取最优 critic 得分对应的速度命令输出给底盘。
 geometry_msgs::msg::TwistStamped
 DWBLocalPlanner::computeVelocityCommands(
   const geometry_msgs::msg::PoseStamped & pose,

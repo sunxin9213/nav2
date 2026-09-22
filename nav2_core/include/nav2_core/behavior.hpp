@@ -40,6 +40,7 @@ public:
    */
   virtual ~Behavior() {}
 
+  // 生命周期配置阶段注入父节点、TF Buffer 和碰撞检查器；插件应在此读取参数并创建通信实体。
   /**
    * @param  parent pointer to user's node
    * @param  name The name of this planner
@@ -51,16 +52,19 @@ public:
     const std::string & name, std::shared_ptr<tf2_ros::Buffer> tf,
     std::shared_ptr<nav2_costmap_2d::CostmapTopicCollisionChecker> collision_checker) = 0;
 
+  // 清理配置阶段创建的资源，使同一插件实例可以安全地重新配置。
   /**
    * @brief Method to cleanup resources used on shutdown.
    */
   virtual void cleanup() = 0;
 
+  // 生命周期进入 active 时启用 Action、发布器或内部线程。
   /**
    * @brief Method to active Behavior and any threads involved in execution.
    */
   virtual void activate() = 0;
 
+  // 生命周期离开 active 时停止处理请求和发布控制命令。
   /**
    * @brief Method to deactive Behavior and any threads involved in execution.
    */

@@ -59,6 +59,7 @@ public:
    * @param options Options to pass to the underlying rcl_action_server_t
    */
   template<typename NodeT>
+  // 使用完整 ROS 2 节点接口创建 Action Server；默认不单独开线程，由外部 executor 驱动回调。
   explicit SimpleActionServer(
     NodeT node,
     const std::string & action_name,
@@ -105,6 +106,7 @@ public:
     server_timeout_(server_timeout),
     spin_thread_(spin_thread)
   {
+    // server_timeout 默认 500 ms，用于等待取消/抢占处理；spin_thread=true 时创建独立单线程 executor。
     using namespace std::placeholders;  // NOLINT
     if (spin_thread_) {
       callback_group_ = node_base_interface->create_callback_group(
@@ -138,6 +140,7 @@ public:
     const rclcpp_action::GoalUUID & /*uuid*/,
     std::shared_ptr<const typename ActionT::Goal>/*goal*/)
   {
+    // 非 active 状态拒绝 goal，保证生命周期节点不会在未激活时执行动作。
     std::lock_guard<std::recursive_mutex> lock(update_mutex_);
 
     if (!server_active_) {
@@ -157,6 +160,7 @@ public:
   rclcpp_action::CancelResponse handle_cancel(
     const std::shared_ptr<rclcpp_action::ServerGoalHandle<ActionT>> handle)
   {
+    // 只有仍 active 的 goal 才接受取消请求，避免对已结束句柄重复操作。
     std::lock_guard<std::recursive_mutex> lock(update_mutex_);
 
     if (!handle->is_active()) {
@@ -176,6 +180,7 @@ public:
    */
   void handle_accepted(const std::shared_ptr<rclcpp_action::ServerGoalHandle<ActionT>> handle)
   {
+    // 新 goal 到来时放入 pending；当前 goal 结束后再切换，避免并发执行两个动作。
     std::lock_guard<std::recursive_mutex> lock(update_mutex_);
     debug_msg("Receiving a new goal");
 
@@ -211,6 +216,7 @@ public:
    */
   void work()
   {
+    // 后台循环反复调用业务 execute_callback，直到取消、抢占、异常或 ROS 2 关闭。
     while (rclcpp::ok() && !stop_execution_ && is_active(current_handle_)) {
       debug_msg("Executing the goal...");
       try {

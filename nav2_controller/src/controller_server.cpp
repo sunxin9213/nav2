@@ -34,6 +34,7 @@ using std::placeholders::_1;
 namespace nav2_controller
 {
 
+// 创建控制服务并声明频率、速度阈值、失败容忍度和插件 ID 等 ROS 2 参数。
 ControllerServer::ControllerServer(const rclcpp::NodeOptions & options)
 : nav2_util::LifecycleNode("controller_server", "", options),
   progress_checker_loader_("nav2_core", "nav2_core::ProgressChecker"),
@@ -75,6 +76,7 @@ ControllerServer::~ControllerServer()
   costmap_thread_.reset();
 }
 
+// 配置 Costmap、进展/目标检查器、控制器插件、odom 订阅和 FollowPath Action。
 nav2_util::CallbackReturn
 ControllerServer::on_configure(const rclcpp_lifecycle::State & /*state*/)
 {
@@ -214,6 +216,7 @@ ControllerServer::on_configure(const rclcpp_lifecycle::State & /*state*/)
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
+// 激活 Costmap、控制器插件、速度发布器和 FollowPath Action，并注册动态参数回调。
 nav2_util::CallbackReturn
 ControllerServer::on_activate(const rclcpp_lifecycle::State & /*state*/)
 {
@@ -354,6 +357,13 @@ bool ControllerServer::findGoalCheckerId(
   return true;
 }
 
+// 局部控制的主循环本质上是一个闭环状态机：
+// - 先解析 controller_id 和 goal_checker_id；
+// - 把全局路径交给当前控制器；
+// - 进入循环，周期性读取当前机器人位姿、速度和路径状态；
+// - 调用 controller plugin 生成速度指令；
+// - 持续检查是否达到目标；
+// - 如果取消或失败，则发布零速度并结束任务。
 void ControllerServer::computeControl()
 {
   std::lock_guard<std::mutex> lock(dynamic_params_lock_);
@@ -463,6 +473,12 @@ void ControllerServer::setPlannerPath(const nav_msgs::msg::Path & path)
   current_path_ = path;
 }
 
+// 这一段是控制回路里最核心的“闭环更新”：
+// 当前位姿来自 costmap 的机器人定位；
+// progress_checker_ 确认机器人还在向目标前进，避免卡死；
+// 之后请求当前控制器输出最优速度；
+// 若控制器抛出 PlannerException，则根据 failure_tolerance_ 决定是否保留上一次有效命令，
+// 直到超过容忍阈值才认为控制失败。
 void ControllerServer::computeAndPublishVelocity()
 {
   geometry_msgs::msg::PoseStamped pose;

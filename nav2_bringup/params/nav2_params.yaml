@@ -1,12 +1,15 @@
+# AMCL 使用 LaserScan、里程计和静态地图估计 map->odom 位姿；仿真时 use_sim_time 必须与 /clock 一致。
 amcl:
   ros__parameters:
     use_sim_time: True
+    # alpha1~alpha5 是运动模型噪声系数；值越大表示越不信任里程计，粒子扩散更明显。
     alpha1: 0.2
     alpha2: 0.2
     alpha3: 0.2
     alpha4: 0.2
     alpha5: 0.2
     base_frame_id: "base_footprint"
+    # beamskip 参数用于忽略地图与实时环境不一致的激光束；do_beamskip=false 时这些阈值不生效。
     beam_skip_distance: 0.5
     beam_skip_error_threshold: 0.9
     beam_skip_threshold: 0.3
@@ -16,8 +19,10 @@ amcl:
     laser_likelihood_max_dist: 2.0
     laser_max_range: 100.0
     laser_min_range: -1.0
+    # likelihood_field 使用地图距离场评估激光匹配，适合室内 2D 栅格地图。
     laser_model_type: "likelihood_field"
     max_beams: 60
+    # 粒子数越多定位更稳定但 CPU 开销越高；500~2000 常用于小型室内机器人。
     max_particles: 2000
     min_particles: 500
     odom_frame_id: "odom"
@@ -30,6 +35,7 @@ amcl:
     save_pose_rate: 0.5
     sigma_hit: 0.2
     tf_broadcast: true
+    # TF 时间容差单位为秒；1.0 可容忍仿真/网络延迟，但可能使用较旧位姿。
     transform_tolerance: 1.0
     update_min_a: 0.2
     update_min_d: 0.25
@@ -39,12 +45,14 @@ amcl:
     z_short: 0.05
     scan_topic: scan
 
+# BT Navigator 将导航 Action 转为行为树 tick，并通过插件库加载 XML 节点。
 bt_navigator:
   ros__parameters:
     use_sim_time: True
     global_frame: map
     robot_base_frame: base_link
     odom_topic: /odom
+    # 行为树循环周期单位为毫秒；10 ms 约等于 100 Hz，影响反应速度和 CPU 占用。
     bt_loop_duration: 10
     default_server_timeout: 20
     wait_for_service_timeout: 1000
@@ -52,6 +60,7 @@ bt_navigator:
     # nav2_bt_navigator/navigate_to_pose_w_replanning_and_recovery.xml
     # nav2_bt_navigator/navigate_through_poses_w_replanning_and_recovery.xml
     # They can be set here or via a RewrittenYaml remap from a parent launch file to Nav2.
+    # 每个库名对应一个动态库，必须包含 XML 中使用的节点注册，否则行为树创建会失败。
     plugin_lib_names:
       - nav2_compute_path_to_pose_action_bt_node
       - nav2_compute_path_through_poses_action_bt_node
@@ -109,19 +118,23 @@ bt_navigator_navigate_to_pose_rclcpp_node:
   ros__parameters:
     use_sim_time: True
 
+# Controller Server 周期性读取路径并输出 cmd_vel；FollowPath 下的 DWB 参数控制速度采样和评分。
 controller_server:
   ros__parameters:
     use_sim_time: True
+    # 控制频率单位为 Hz；20 Hz 是 TurtleBot3 仿真常用值，提高频率会增加计算量。
     controller_frequency: 20.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.5
     min_theta_velocity_threshold: 0.001
     failure_tolerance: 0.3
+    # 插件列表中的 ID 必须与下方同名配置块一致，字符串本身不是 C++ 类型名。
     progress_checker_plugin: "progress_checker"
     goal_checker_plugins: ["general_goal_checker"] # "precise_goal_checker"
     controller_plugins: ["FollowPath"]
 
     # Progress checker parameters
+    # 在 movement_time_allowance 内至少移动 required_movement_radius，否则判定机器人没有进展。
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
       required_movement_radius: 0.5
@@ -132,17 +145,20 @@ controller_server:
     #  xy_goal_tolerance: 0.25
     #  yaw_goal_tolerance: 0.25
     #  stateful: True
+    # xy_goal_tolerance 单位米，yaw_goal_tolerance 单位弧度；stateful 会保持接近目标后的通过状态。
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
       xy_goal_tolerance: 0.25
       yaw_goal_tolerance: 0.25
     # DWB parameters
+    # DWB 在 sim_time 秒内模拟多条速度轨迹，再由 critics 对障碍物、路径和目标距离评分。
     FollowPath:
       plugin: "dwb_core::DWBLocalPlanner"
       debug_trajectory_details: True
       min_vel_x: 0.0
       min_vel_y: 0.0
+      # TurtleBot3 最大线速度 0.26 m/s，max_vel_theta 为最大角速度 rad/s。
       max_vel_x: 0.26
       max_vel_y: 0.0
       max_vel_theta: 1.0
@@ -151,6 +167,7 @@ controller_server:
       min_speed_theta: 0.0
       # Add high threshold velocity for turtlebot 3 issue.
       # https://github.com/ROBOTIS-GIT/turtlebot3_simulations/issues/75
+      # 加速度单位 m/s^2，角加速度单位 rad/s^2；负值 decel 表示减速度方向。
       acc_lim_x: 2.5
       acc_lim_y: 0.0
       acc_lim_theta: 3.2
@@ -160,6 +177,7 @@ controller_server:
       vx_samples: 20
       vy_samples: 5
       vtheta_samples: 20
+      # 每条候选轨迹向前模拟 1.7 秒；更长更保守，但计算和预测误差更大。
       sim_time: 1.7
       linear_granularity: 0.05
       angular_granularity: 0.025
@@ -180,24 +198,30 @@ controller_server:
       RotateToGoal.slowing_factor: 5.0
       RotateToGoal.lookahead_time: -1.0
 
+# 局部 Costmap 以 odom 为滚动窗口坐标系，服务于实时避障和局部控制。
 local_costmap:
   local_costmap:
     ros__parameters:
+      # update_frequency 单位 Hz，决定传感器数据更新代价地图的频率。
       update_frequency: 5.0
       publish_frequency: 2.0
       global_frame: odom
       robot_base_frame: base_link
       use_sim_time: True
+      # rolling_window=true 让 3 m x 3 m 地图跟随机器人移动，而不是固定在全局原点。
       rolling_window: true
       width: 3
       height: 3
+      # 分辨率单位米/栅格；0.05 表示每个栅格 5 cm，精度越高内存和计算量越大。
       resolution: 0.05
       robot_radius: 0.22
+      # VoxelLayer 处理 3D 障碍，InflationLayer 将障碍物扩张为安全代价区域。
       plugins: ["voxel_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
         inflation_radius: 0.55
+      # VoxelLayer 的 z_resolution 和 z_voxels 共同决定垂直体素覆盖范围。
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
         enabled: True
@@ -214,6 +238,7 @@ local_costmap:
           clearing: True
           marking: True
           data_type: "LaserScan"
+          # raytrace 范围用于清除自由空间，obstacle 范围用于标记障碍物，单位均为米。
           raytrace_max_range: 3.0
           raytrace_min_range: 0.0
           obstacle_max_range: 2.5
@@ -223,6 +248,7 @@ local_costmap:
         map_subscribe_transient_local: True
       always_send_full_costmap: True
 
+# 全局 Costmap 固定在 map 坐标系，融合静态地图与实时障碍，为全局规划提供约束。
 global_costmap:
   global_costmap:
     ros__parameters:
@@ -233,6 +259,7 @@ global_costmap:
       use_sim_time: True
       robot_radius: 0.22
       resolution: 0.05
+      # 保留未知区域；规划器可结合 allow_unknown 决定是否允许穿越这些区域。
       track_unknown_space: true
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
       obstacle_layer:
@@ -258,13 +285,16 @@ global_costmap:
         inflation_radius: 0.55
       always_send_full_costmap: True
 
+# Map Server 读取地图元数据 YAML 并发布栅格地图；yaml_filename 会被 launch 的 map 参数重写。
 map_server:
   ros__parameters:
     use_sim_time: True
     # Overridden in launch by the "map" launch configuration or provided default value.
     # To use in yaml, remove the default "map" value in the tb3_simulation_launch.py file & provide full path to map below.
+    # 空字符串表示由 bringup launch 注入实际地图路径。
     yaml_filename: ""
 
+# Map Saver 将地图保存为 YAML 加图像；free/occupied 阈值决定栅格分类。
 map_saver:
   ros__parameters:
     use_sim_time: True
@@ -273,17 +303,21 @@ map_saver:
     occupied_thresh_default: 0.65
     map_subscribe_transient_local: True
 
+# Planner Server 根据起点、终点和全局 Costmap 生成全局路径。
 planner_server:
   ros__parameters:
     expected_planner_frequency: 20.0
     use_sim_time: True
+    # 列表中的 ID 必须对应下方配置块，可同时配置多个规划器并由 BT 选择。
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: "nav2_navfn_planner/NavfnPlanner"
+      # tolerance 单位米，允许终点落在目标附近的可行栅格，而非严格中心点。
       tolerance: 0.5
       use_astar: false
       allow_unknown: true
 
+# Smoother Server 对规划路径做几何平滑，迭代次数和 tolerance 决定质量与计算量。
 smoother_server:
   ros__parameters:
     use_sim_time: True
@@ -294,10 +328,12 @@ smoother_server:
       max_its: 1000
       do_refinement: True
 
+# Behavior Server 提供 Spin、BackUp、DriveOnHeading、AssistedTeleop 和 Wait 等行为 Action。
 behavior_server:
   ros__parameters:
     costmap_topic: local_costmap/costmap_raw
     footprint_topic: local_costmap/published_footprint
+    # 行为循环频率单位 Hz；必须与机器人底盘响应速度和 Costmap 更新频率匹配。
     cycle_frequency: 10.0
     behavior_plugins: ["spin", "backup", "drive_on_heading", "assisted_teleop", "wait"]
     spin:
@@ -312,8 +348,10 @@ behavior_server:
       plugin: "nav2_behaviors/AssistedTeleop"
     global_frame: odom
     robot_base_frame: base_link
+    # 行为插件读取 odom->base_link，TF 时间容差单位秒；过小可能导致动作直接失败。
     transform_tolerance: 0.1
     use_sim_time: true
+    # 行为向前预测 2 秒做碰撞检查；值越大越保守，也越依赖更大范围的局部 Costmap。
     simulate_ahead_time: 2.0
     max_rotational_vel: 1.0
     min_rotational_vel: 0.4
@@ -323,6 +361,7 @@ robot_state_publisher:
   ros__parameters:
     use_sim_time: True
 
+# Waypoint Follower 顺序执行多个导航目标，并可在每个 waypoint 暂停。
 waypoint_follower:
   ros__parameters:
     use_sim_time: True
@@ -332,19 +371,26 @@ waypoint_follower:
     wait_at_waypoint:
       plugin: "nav2_waypoint_follower::WaitAtWaypoint"
       enabled: True
+      # 暂停时长单位毫秒；200 表示每个 waypoint 停留 0.2 秒。
       waypoint_pause_duration: 200
 
+# Velocity Smoother 对控制器输出做频率、加速度和超时约束，保护底盘执行器。
 velocity_smoother:
   ros__parameters:
     use_sim_time: True
+    # 平滑输出频率单位 Hz；应与底盘期望控制周期匹配。
     smoothing_frequency: 20.0
     scale_velocities: False
+    # OPEN_LOOP 不依赖 odom 反馈；有可靠里程计时可改用闭环反馈提高跟踪准确性。
     feedback: "OPEN_LOOP"
+    # 三元组顺序为 [vx, vy, vtheta]，单位分别为 m/s、m/s、rad/s。
     max_velocity: [0.26, 0.0, 1.0]
     min_velocity: [-0.26, 0.0, -1.0]
+    # max_accel/max_decel 三元组单位为 m/s^2、m/s^2、rad/s^2。
     max_accel: [2.5, 0.0, 3.2]
     max_decel: [-2.5, 0.0, -3.2]
     odom_topic: "odom"
     odom_duration: 0.1
     deadband_velocity: [0.0, 0.0, 0.0]
+    # 超过 1 秒未收到新速度命令时输出停止命令，避免通信中断后机器人继续运动。
     velocity_timeout: 1.0

@@ -17,6 +17,7 @@
 namespace nav2_behaviors
 {
 
+// 将 BackUp goal 规范化为负向 X 轴运动，并记录初始位姿用于距离反馈。
 Status BackUp::onRun(const std::shared_ptr<const BackUpAction::Goal> command)
 {
   if (command->target.y != 0.0 || command->target.z != 0.0) {
@@ -27,6 +28,7 @@ Status BackUp::onRun(const std::shared_ptr<const BackUpAction::Goal> command)
   }
 
   // Silently ensure that both the speed and direction are negative.
+  // 倒车只允许沿机器人 X 轴运动；无论 goal 是否为正值，这里都转换为负距离和负速度。
   command_x_ = -std::fabs(command->target.x);
   command_speed_ = -std::fabs(command->speed);
   command_time_allowance_ = command->time_allowance;

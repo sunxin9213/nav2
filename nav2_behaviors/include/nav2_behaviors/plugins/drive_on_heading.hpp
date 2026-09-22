@@ -58,6 +58,7 @@ public:
    */
   Status onRun(const std::shared_ptr<const typename ActionT::Goal> command) override
   {
+    // DriveOnHeading 只支持沿机器人 X 轴直线运动，因此拒绝 Y/Z 分量。
     if (command->target.y != 0.0 || command->target.z != 0.0) {
       RCLCPP_INFO(
         this->logger_,
@@ -66,6 +67,7 @@ public:
     }
 
     // Ensure that both the speed and direction have the same sign
+    // 速度和目标距离必须同号：同号表示前进，异号会导致方向约束不一致。
     if (!((command->target.x > 0.0) == (command->speed > 0.0)) ) {
       RCLCPP_ERROR(this->logger_, "Speed and command sign did not match");
       return Status::FAILED;
@@ -75,6 +77,7 @@ public:
     command_speed_ = command->speed;
     command_time_allowance_ = command->time_allowance;
 
+    // time_allowance 是 Action goal 提供的最大允许时长；为 0 时表示不启用超时限制。
     end_time_ = this->clock_->now() + command_time_allowance_;
 
     if (!nav2_util::getCurrentPose(
@@ -94,6 +97,7 @@ public:
    */
   Status onCycleUpdate() override
   {
+    // 每个控制周期重新查询 TF 位姿，用实际距离反馈判断是否到达目标。
     rclcpp::Duration time_remaining = end_time_ - this->clock_->now();
     if (time_remaining.seconds() < 0.0 && command_time_allowance_.seconds() > 0.0) {
       this->stopRobot();
@@ -130,6 +134,7 @@ public:
 
     bool forward = command_speed_ > 0.0;
     if (acceleration_limit_ == 0.0 || deceleration_limit_ == 0.0) {
+      // 任一加减速度限制为 0 时直接使用目标速度，不进行速度斜坡约束。
       RCLCPP_INFO_ONCE(this->logger_, "DriveOnHeading: no acceleration or deceleration limits set");
       cmd_vel->linear.x = command_speed_;
     } else {
@@ -145,6 +150,7 @@ public:
       cmd_vel->linear.x = std::clamp(command_speed_, min_feasible_speed, max_feasible_speed);
 
       // Check if we need to slow down to avoid overshooting
+      // 根据剩余距离和减速度计算可安全停车的最大速度，避免越过目标点。
       auto remaining_distance = std::fabs(command_x_) - distance;
       double max_vel_to_stop = std::sqrt(-2.0 * deceleration_limit_ * remaining_distance);
       if (max_vel_to_stop < std::abs(cmd_vel->linear.x)) {
@@ -153,6 +159,7 @@ public:
     }
 
     // Ensure we don't go below minimum speed
+    // 最小速度用于克服低速下的执行器死区，但必须结合现场安全速度进行配置。
     if (std::fabs(cmd_vel->linear.x) < minimum_speed_) {
       cmd_vel->linear.x = forward ? minimum_speed_ : -minimum_speed_;
     }
@@ -195,6 +202,7 @@ protected:
     geometry_msgs::msg::Pose2D & pose2d)
   {
     // Simulate ahead by simulate_ahead_time_ in this->cycle_frequency_ increments
+    // 沿当前朝向预测未来直线位置，并在每个离散点调用 Costmap 碰撞检查器。
     int cycle_count = 0;
     double sim_position_change;
     const double diff_dist = abs(command_x_) - distance;
@@ -233,6 +241,7 @@ protected:
     nav2_util::declare_parameter_if_not_declared(
       node,
       "simulate_ahead_time", rclcpp::ParameterValue(2.0));
+    // 默认预测未来 2.0 秒；预测时间越长越保守，但计算量和对局部 Costmap 的依赖也越高。
     node->get_parameter("simulate_ahead_time", simulate_ahead_time_);
 
     nav2_util::declare_parameter_if_not_declared(
@@ -247,6 +256,8 @@ protected:
     node->get_parameter(this->behavior_name_ + ".acceleration_limit", acceleration_limit_);
     node->get_parameter(this->behavior_name_ + ".deceleration_limit", deceleration_limit_);
     node->get_parameter(this->behavior_name_ + ".minimum_speed", minimum_speed_);
+    // acceleration_limit/deceleration_limit 单位为 m/s^2，minimum_speed 单位为 m/s。
+    // 代码要求加速度为非负、减速度为非正；配置反向时会自动取绝对值修正。
     if (acceleration_limit_ < 0.0 || deceleration_limit_ > 0.0) {
       RCLCPP_ERROR(
         this->logger_,

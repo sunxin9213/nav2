@@ -28,12 +28,14 @@ Wait::Wait()
 
 Wait::~Wait() = default;
 
+// 将 Action goal 中的等待时长转换为 ROS 2 时间点；command->time 使用消息定义的 Duration。
 Status Wait::onRun(const std::shared_ptr<const WaitAction::Goal> command)
 {
   wait_end_ = node_.lock()->now() + rclcpp::Duration(command->time);
   return Status::SUCCEEDED;
 }
 
+// 按节点时钟计算剩余时间并发布反馈；时间未到返回 RUNNING，否则完成 Action。
 Status Wait::onCycleUpdate()
 {
   auto current_point = node_.lock()->now();

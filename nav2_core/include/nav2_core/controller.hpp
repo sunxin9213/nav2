@@ -68,6 +68,7 @@ public:
    */
   virtual ~Controller() {}
 
+  // 配置控制器插件的父节点、TF 和 Costmap；插件通常在这里声明参数并创建 publisher。
   /**
    * @param  parent pointer to user's node
    * @param  costmap_ros A pointer to the costmap
@@ -77,16 +78,19 @@ public:
     std::string name, std::shared_ptr<tf2_ros::Buffer>,
     std::shared_ptr<nav2_costmap_2d::Costmap2DROS>) = 0;
 
+  // 释放控制器持有的参数、线程和通信资源。
   /**
    * @brief Method to cleanup resources.
    */
   virtual void cleanup() = 0;
 
+  // 允许控制器开始响应路径并输出速度命令。
   /**
    * @brief Method to active planner and any threads involved in execution.
    */
   virtual void activate() = 0;
 
+  // 停止控制器输出，避免非 active 状态继续驱动底盘。
   /**
    * @brief Method to deactive planner and any threads involved in execution.
    */
@@ -116,6 +120,7 @@ public:
     const geometry_msgs::msg::Twist & velocity,
     nav2_core::GoalChecker * goal_checker) = 0;
 
+  // 设置线速度上限；percentage=true 时按机器人最大速度百分比解释，否则按 m/s 解释。
   /**
    * @brief Limits the maximum linear speed of the robot.
    * @param speed_limit expressed in absolute value (in m/s)

@@ -36,6 +36,7 @@ amcl:
     z_max: 0.05
     z_rand: 0.5
     z_short: 0.05
+    # 多机器人通用参数模板：launch 会把 <robot_namespace> 替换为每个机器人的 namespace，避免 scan/topic 串线。
     scan_topic: scan
 
 bt_navigator:
@@ -210,7 +211,8 @@ local_costmap:
         observation_sources: scan
         scan:
           # '<robot_namespace>' keyword shall be replaced with 'namespace' where user defined.
-          # It doesn't need to start with '/'
+            # 局部 Costmap 的传感器 topic 必须带机器人 namespace，避免多个机器人互相读取 LaserScan。
+            topic: <robot_namespace>/scan
           topic: <robot_namespace>/scan
           max_obstacle_height: 2.0
           clearing: True
@@ -319,7 +321,8 @@ behavior_server:
     simulate_ahead_time: 2.0
     max_rotational_vel: 1.0
     min_rotational_vel: 0.4
-    rotational_acc_lim: 3.2
+            # 全局 Costmap 同样按机器人 namespace 订阅 scan，但地图本身可以来自共享静态地图。
+            topic: <robot_namespace>/scan
 
 waypoint_follower:
   ros__parameters:

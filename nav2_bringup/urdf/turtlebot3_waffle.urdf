@@ -1,5 +1,6 @@
 <?xml version="1.0" ?>
 <robot name="turtlebot3_waffle" xmlns:xacro="http://ros.org/wiki/xacro">
+  <!-- robot 是 URDF 根元素；xmlns:xacro 允许后续使用 xacro 扩展语法，即使本文件当前主要由固定 XML 组成。 -->
   <!-- <xacro:include filename="$(find turtlebot3_description)/urdf/common_properties.urdf"/>
 
   <xacro:property name="r200_cam_rgb_px" value="0.005"/>
@@ -48,14 +49,17 @@
     <color rgba="1.0 1.0 1.0 1.0"/>
   </material>
 
+  <!-- base_footprint 是贴近地面的二维定位参考系，通常供 AMCL 使用；base_link 是机器人本体坐标系。 -->
   <link name="base_footprint"/>
 
+  <!-- fixed joint 表示两个坐标系无相对运动，origin 的 xyz 单位米、rpy 单位弧度。 -->
   <joint name="base_joint" type="fixed">
     <parent link="base_footprint"/>
     <child link="base_link" />
     <origin xyz="0 0 0.010" rpy="0 0 0"/>
   </joint>
 
+  <!-- link 描述刚体；visual 只影响显示，collision 参与物理/碰撞，inertial 参与 Gazebo 动力学。 -->
   <link name="base_link">
     <visual>
       <origin xyz="-0.064 0 0.0" rpy="0 0 0"/>
@@ -65,6 +69,7 @@
       <material name="light_black"/>
     </visual>
 
+    <!-- 以盒体近似底盘碰撞几何，尺寸单位米；近似几何比高精度网格更适合实时碰撞计算。 -->
     <collision>
       <origin xyz="-0.064 0 0.047" rpy="0 0 0"/>
       <geometry>
@@ -72,6 +77,7 @@
       </geometry>
     </collision>
 
+    <!-- mass 单位 kg，inertia 单位 kg*m^2；这些值影响仿真加速度和受力响应。 -->
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <mass value="1.3729096e+00"/>
@@ -81,6 +87,7 @@
     </inertial>
   </link>
 
+  <!-- continuous joint 允许车轮无限旋转；axis 定义旋转轴，轮距和半径决定差速运动学。 -->
   <joint name="wheel_left_joint" type="continuous">
     <parent link="base_link"/>
     <child link="wheel_left_link"/>
@@ -113,6 +120,7 @@
       </inertial>
   </link>
 
+  <!-- 左右轮分别发布 joint state，并由 Gazebo 差速插件根据 cmd_vel 驱动。 -->
   <joint name="wheel_right_joint" type="continuous">
     <parent link="base_link"/>
     <child link="wheel_right_link"/>
@@ -191,6 +199,7 @@
     </inertial>
   </link>
 
+  <!-- IMU 固定安装在 base_link 上；robot_state_publisher 会把 imu_link 纳入 TF 树。 -->
   <joint name="imu_joint" type="fixed">
     <parent link="base_link"/>
     <child link="imu_link"/>
@@ -199,6 +208,7 @@
 
   <link name="imu_link"/>
 
+  <!-- 激光坐标系 base_scan 的安装高度和偏移必须与 Gazebo 激光插件的 frame_name 一致。 -->
   <joint name="scan_joint" type="fixed">
     <parent link="base_link"/>
     <child link="base_scan"/>
@@ -230,6 +240,7 @@
     </inertial>
   </link>
 
+  <!-- 相机及 optical frame 使用固定关节连接；optical frame 遵循传感器常用的轴方向约定。 -->
   <joint name="camera_joint" type="fixed">
     <origin xyz="0.064 -0.065 0.094" rpy="0 0 0"/>
     <parent link="base_link"/>

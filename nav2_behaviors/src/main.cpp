@@ -20,10 +20,14 @@
 
 int main(int argc, char ** argv)
 {
+  // 初始化 ROS 2 通信层，解析命令行参数并准备默认上下文。
   rclcpp::init(argc, argv);
+  // 创建生命周期行为服务端；具体插件和通信实体在生命周期 configure 阶段初始化。
   auto recoveries_node = std::make_shared<behavior_server::BehaviorServer>();
 
+  // 进入 ROS 2 executor，持续处理生命周期、Action 和 topic 回调，直到进程退出。
   rclcpp::spin(recoveries_node->get_node_base_interface());
+  // 停止 executor 后释放 ROS 2 全局资源。
   rclcpp::shutdown();
 
   return 0;

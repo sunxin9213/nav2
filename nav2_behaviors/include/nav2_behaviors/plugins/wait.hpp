@@ -36,7 +36,9 @@ public:
   /**
    * @brief A constructor for nav2_behaviors::Wait
    */
+  // 初始化 Wait 的 Action 反馈和基类控制状态。
   Wait();
+  // 释放 Wait 对象的专属资源；通用通信实体由基类清理。
   ~Wait();
 
   /**
@@ -44,12 +46,14 @@ public:
    * @param command Goal to execute
    * @return Status of behavior
    */
+  // 读取等待时长并计算结束时间点；time 为 ROS 2 Duration，通常以秒/纳秒表达。
   Status onRun(const std::shared_ptr<const WaitAction::Goal> command) override;
 
   /**
    * @brief Loop function to run behavior
    * @return Status of behavior
    */
+  // 周期发布剩余等待时间，时间到达后返回成功。
   Status onCycleUpdate() override;
 
 protected:

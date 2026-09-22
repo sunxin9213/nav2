@@ -37,6 +37,8 @@ void WaitAtWaypoint::initialize(
   const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
   const std::string & plugin_name)
 {
+  // 初始化阶段只读取插件自己的参数；WaypointFollower 会在导航成功后调用 processAtWaypoint()。
+  // pause duration 的单位是毫秒，设为 0 时自动禁用等待任务，避免每个 waypoint 无意义地阻塞。
   auto node = parent.lock();
   if (!node) {
     throw std::runtime_error{"Failed to lock node in wait at waypoint plugin!"};
@@ -71,6 +73,8 @@ void WaitAtWaypoint::initialize(
 bool WaitAtWaypoint::processAtWaypoint(
   const geometry_msgs::msg::PoseStamped & /*curr_pose*/, const int & curr_waypoint_index)
 {
+  // 该插件不关心位姿，只把“到达 waypoint”转换为一个同步等待动作。
+  // 返回 true 表示等待任务完成，WaypointFollower 可以继续处理下一个 waypoint。
   if (!is_enabled_) {
     return true;
   }

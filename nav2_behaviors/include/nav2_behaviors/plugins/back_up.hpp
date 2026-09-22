@@ -28,6 +28,7 @@ namespace nav2_behaviors
 class BackUp : public DriveOnHeading<nav2_msgs::action::BackUp>
 {
 public:
+  // 将 BackUp goal 转换为负向 X 轴运动，再复用 DriveOnHeading 的控制和碰撞检查。
   Status onRun(const std::shared_ptr<const BackUpAction::Goal> command) override;
 };
 }

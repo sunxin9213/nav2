@@ -43,10 +43,12 @@ public:
    * @brief A constructor for nav2_bt_navigator::BtNavigator class
    * @param options Additional options to control creation of the node.
    */
+  // 创建负责导航 Action 和行为树调度的生命周期节点。
   explicit BtNavigator(rclcpp::NodeOptions options = rclcpp::NodeOptions());
   /**
    * @brief A destructor for nav2_bt_navigator::BtNavigator class
    */
+  // 释放两个 Navigator、TF listener 和行为树运行资源。
   ~BtNavigator();
 
 protected:

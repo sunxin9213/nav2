@@ -22,6 +22,10 @@
 namespace nav2_mppi_controller
 {
 
+// MPPI（Model Predictive Path Integral）控制器的思想是：
+// 不直接求一个确定最优控制，而是从当前状态采样大量候选控制序列，
+// 再用成本函数对这些序列打分，最后用加权平均得到最优控制量。
+// 这使其能够在复杂动态约束与避障任务中表现出更好的鲁棒性，尤其适合局部避障与非线性系统。
 void MPPIController::configure(
   const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
   std::string name, const std::shared_ptr<tf2_ros::Buffer> tf,
@@ -77,6 +81,11 @@ void MPPIController::reset()
   optimizer_.reset();
 }
 
+// 每次控制循环的主流程：
+// 1) 若距离上次重置时间过长，则执行 reset，避免历史采样结果污染当前控制决策；
+// 2) 将全局路径转换到机器人当前坐标系，消除全局/局部坐标偏差；
+// 3) 获取当前 costmap 锁，以保证避障评估使用的是一致的地图快照；
+// 4) 让 optimizer_.evalControl() 评估大量候选控制序列并返回最优控制。
 geometry_msgs::msg::TwistStamped MPPIController::computeVelocityCommands(
   const geometry_msgs::msg::PoseStamped & robot_pose,
   const geometry_msgs::msg::Twist & robot_speed,
@@ -113,6 +122,8 @@ geometry_msgs::msg::TwistStamped MPPIController::computeVelocityCommands(
   return cmd;
 }
 
+// 可视化阶段用于观察本轮采样中的候选轨迹和最终优化后的最优轨迹，
+// 这在参数调试中非常有价值，因为它能直观看出控制器是否在“正确地绕避障碍”。
 void MPPIController::visualize(nav_msgs::msg::Path transformed_plan)
 {
   trajectory_visualizer_.add(optimizer_.getGeneratedTrajectories(), "Candidate Trajectories");

@@ -38,6 +38,7 @@ public:
 
   virtual ~ProgressChecker() {}
 
+  // 初始化进展半径、允许时间等参数；这些参数通常由 Controller Server 的插件配置块提供。
   /**
    * @brief Initialize parameters for ProgressChecker
    * @param parent Node pointer

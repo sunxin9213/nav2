@@ -27,6 +27,7 @@ from nav2_common.launch import HasNodeParams, RewrittenYaml
 
 
 def generate_launch_description():
+    # 启动 map_saver_server 和 SLAM Toolbox；SLAM 模式不启动 AMCL，而是在线构建地图。
     # Input parameters declaration
     namespace = LaunchConfiguration('namespace')
     params_file = LaunchConfiguration('params_file')
@@ -36,6 +37,7 @@ def generate_launch_description():
     log_level = LaunchConfiguration('log_level')
 
     # Variables
+    # map_saver 由生命周期管理器自动激活，用于在运行中保存当前栅格地图。
     lifecycle_nodes = ['map_saver']
 
     # Getting directories and launch-files
@@ -44,6 +46,7 @@ def generate_launch_description():
     slam_launch_file = os.path.join(slam_toolbox_dir, 'launch', 'online_sync_launch.py')
 
     # Create our own temporary YAML files that include substitutions
+    # 只重写 use_sim_time；SLAM Toolbox 是否读取 params_file 由 HasNodeParams 条件决定。
     param_substitutions = {
         'use_sim_time': use_sim_time}
 
@@ -104,6 +107,7 @@ def generate_launch_description():
                         {'autostart': autostart},
                         {'node_names': lifecycle_nodes}])
 
+    # 如果参数文件没有 slam_toolbox 节点配置，就不要把该文件传给外部 launch，避免覆盖其默认参数。
     # If the provided param file doesn't have slam_toolbox params, we must remove the 'params_file'
     # LaunchConfiguration, or it will be passed automatically to slam_toolbox and will not load
     # the default file
@@ -135,6 +139,7 @@ def generate_launch_description():
     ld.add_action(start_map_saver_server_cmd)
     ld.add_action(start_lifecycle_manager_cmd)
 
+    # 两个 IncludeLaunchDescription 互斥，确保 SLAM Toolbox 只启动一次。
     # Running SLAM Toolbox (Only one of them will be run)
     ld.add_action(start_slam_toolbox_cmd)
     ld.add_action(start_slam_toolbox_cmd_with_params)

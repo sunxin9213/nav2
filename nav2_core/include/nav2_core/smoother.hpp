@@ -45,6 +45,7 @@ public:
    */
   virtual ~Smoother() {}
 
+  // 注入生命周期节点、TF 和 Costmap 订阅，准备路径平滑所需的运行时依赖。
   virtual void configure(
     const rclcpp_lifecycle::LifecycleNode::WeakPtr &,
     std::string name, std::shared_ptr<tf2_ros::Buffer>,

@@ -23,6 +23,7 @@ namespace nav2_bt_navigator
 {
 
 bool
+// 配置单目标导航的黑板键、Action Client、goal_pose 订阅和里程计平滑器。
 NavigateToPoseNavigator::configure(
   rclcpp_lifecycle::LifecycleNode::WeakPtr parent_node,
   std::shared_ptr<nav2_util::OdomSmoother> odom_smoother)
@@ -55,6 +56,7 @@ NavigateToPoseNavigator::configure(
 }
 
 std::string
+// 读取 default_nav_to_pose_bt_xml；未显式配置时使用包内默认的重规划/恢复行为树 XML。
 NavigateToPoseNavigator::getDefaultBTFilepath(
   rclcpp_lifecycle::LifecycleNode::WeakPtr parent_node)
 {
@@ -84,6 +86,7 @@ NavigateToPoseNavigator::cleanup()
 }
 
 bool
+// 加载 goal 指定的行为树 XML，并把单个目标位姿写入行为树黑板。
 NavigateToPoseNavigator::goalReceived(ActionT::Goal::ConstSharedPtr goal)
 {
   auto bt_xml_filename = goal->behavior_tree;
@@ -108,6 +111,7 @@ NavigateToPoseNavigator::goalCompleted(
 }
 
 void
+// 每个行为树循环发布当前位置、剩余路径距离、预计剩余时间和恢复次数反馈。
 NavigateToPoseNavigator::onLoop()
 {
   // action server feedback (pose, duration of task,
@@ -177,6 +181,7 @@ NavigateToPoseNavigator::onLoop()
 }
 
 void
+// 只有使用同一行为树 XML 的 pending goal 才允许抢占；不同 XML 必须取消旧目标后重新发送。
 NavigateToPoseNavigator::onPreempt(ActionT::Goal::ConstSharedPtr goal)
 {
   RCLCPP_INFO(logger_, "Received goal preemption request");
@@ -202,6 +207,7 @@ NavigateToPoseNavigator::onPreempt(ActionT::Goal::ConstSharedPtr goal)
 }
 
 void
+// 重置导航计时和恢复次数，并把新的目标位姿写入共享黑板。
 NavigateToPoseNavigator::initializeGoalPose(ActionT::Goal::ConstSharedPtr goal)
 {
   geometry_msgs::msg::PoseStamped current_pose;

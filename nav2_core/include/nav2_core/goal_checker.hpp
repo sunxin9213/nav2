@@ -65,6 +65,7 @@ public:
 
   virtual ~GoalChecker() {}
 
+  // 在 Controller Server 配置阶段读取容差参数；plugin_name 用于区分同类插件的参数前缀。
   /**
    * @brief Initialize any parameters from the NodeHandle
    * @param parent Node pointer for grabbing parameters

@@ -1,7 +1,9 @@
 <?xml version="1.0"?>
 <sdf version="1.6">
+  <!-- SDF 根元素描述 Gazebo 世界；version 1.6 决定可用的 XML 标签和物理接口。 -->
   <world name="default">
 
+    <!-- ground_plane 和 sun 通过 model:// URI 引用 Gazebo 模型库中的地面和光源。 -->
     <include>
       <uri>model://ground_plane</uri>
     </include>
@@ -10,6 +12,7 @@
       <uri>model://sun</uri>
     </include>
 
+    <!-- 关闭阴影可降低渲染开销，适合 headless 或性能受限的导航仿真。 -->
     <scene>
       <shadows>false</shadows>
     </scene>
@@ -22,6 +25,7 @@
       </camera>
     </gui>
 
+    <!-- ODE 物理引擎；real_time_update_rate=1000 Hz、max_step_size=1 ms 决定仿真积分精度。 -->
     <physics type="ode">
       <real_time_update_rate>1000.0</real_time_update_rate>
       <max_step_size>0.001</max_step_size>
@@ -43,6 +47,7 @@
       </ode>
     </physics>
 
+    <!-- 将 TurtleBot3 世界作为静态模型加载；static=1 表示环境本身不参与动态运动。 -->
     <model name="turtlebot3_world">
       <static>1</static>
       <include>

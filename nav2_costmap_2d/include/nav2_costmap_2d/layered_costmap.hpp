@@ -54,6 +54,10 @@ class Layer;
  * @class LayeredCostmap
  * @brief Instantiates different layer plugins and aggregates them into one score
  */
+// LayeredCostmap 是整个导航成本地图的核心汇总结构：
+// 它不是单一一张二维栅格，而是“多层插件叠加后的最终成本图”。
+// 每个 layer 负责一个特定职责，例如静态地图、膨胀层、障碍层、过滤层等；
+// 最终 combined_costmap_ 会把这些成本按规则合并，供全局规划和局部规划使用。
 class LayeredCostmap
 {
 public:
@@ -70,6 +74,9 @@ public:
   /**
    * @brief  Update the underlying costmap with new data.
    * If you want to update the map outside of the update loop that runs, you can call this.
+   *
+   * 该过程会让每个 layer 根据当前机器人位姿更新它们自己覆盖区域的代价，
+   * 之后再将各层的结果合并到 combined_costmap_，保证规划器看到的是最新障碍环境。
    */
   void updateMap(double robot_x, double robot_y, double robot_yaw);
 
@@ -80,6 +87,9 @@ public:
 
   /**
    * @brief Resize the map to a new size, resolution, or origin
+   *
+   * 负责重设主代价地图的尺寸和分辨率；
+   * 这通常在启动、地图切换或滚动地图模式中发生，确保全局/局部规划器使用同一坐标系。
    */
   void resizeMap(
     unsigned int size_x, unsigned int size_y, double resolution, double origin_x,

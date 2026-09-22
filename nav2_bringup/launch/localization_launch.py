@@ -27,6 +27,7 @@ from nav2_common.launch import RewrittenYaml
 
 
 def generate_launch_description():
+    # 启动 map_server、AMCL 和生命周期管理器，完成基于已有地图的定位流程。
     # Get the launch directory
     bringup_dir = get_package_share_directory('nav2_bringup')
 
@@ -41,6 +42,7 @@ def generate_launch_description():
     use_respawn = LaunchConfiguration('use_respawn')
     log_level = LaunchConfiguration('log_level')
 
+    # lifecycle_manager_localization 会按此列表 configure/activate 两个定位节点。
     lifecycle_nodes = ['map_server', 'amcl']
 
     # Map fully qualified names to relative ones so the node's namespace can be prepended.
@@ -53,6 +55,7 @@ def generate_launch_description():
                   ('/tf_static', 'tf_static')]
 
     # Create our own temporary YAML files that include substitutions
+    # 将 map launch 参数重写到 map_server 的 yaml_filename，并统一注入仿真时钟。
     param_substitutions = {
         'use_sim_time': use_sim_time,
         'yaml_filename': map_yaml_file}
@@ -75,12 +78,12 @@ def generate_launch_description():
 
     declare_map_yaml_cmd = DeclareLaunchArgument(
         'map',
-        description='Full path to map yaml file to load')
+        description='Full path to map yaml file to load')  # 地图 YAML 内的 image 路径可为相对地图文件的路径。
 
     declare_use_sim_time_cmd = DeclareLaunchArgument(
         'use_sim_time',
         default_value='false',
-        description='Use simulation (Gazebo) clock if true')
+        description='Use simulation (Gazebo) clock if true')  # 仿真定位必须使用 /clock 时间。
 
     declare_params_file_cmd = DeclareLaunchArgument(
         'params_file',
@@ -107,6 +110,7 @@ def generate_launch_description():
         'log_level', default_value='info',
         description='log level')
 
+    # 独立进程定位分支：map_server 发布地图，AMCL 根据 LaserScan 和 TF 估计 map->odom。
     load_nodes = GroupAction(
         condition=IfCondition(PythonExpression(['not ', use_composition])),
         actions=[
@@ -142,6 +146,7 @@ def generate_launch_description():
         ]
     )
 
+    # 组合节点定位分支：与 navigation_launch 的容器复用机制保持一致。
     load_composable_nodes = LoadComposableNodes(
         condition=IfCondition(use_composition),
         target_container=container_name_full,

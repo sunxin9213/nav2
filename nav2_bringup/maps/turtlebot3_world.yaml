@@ -1,6 +1,10 @@
+# 地图图像路径；相对路径相对于本 YAML 文件所在目录解析。
 image: turtlebot3_world.pgm
+# resolution 单位为米/像素；0.05 表示每个栅格边长 5 cm。
 resolution: 0.050000
+# origin 是地图左下角在 map 坐标系中的 [x, y, yaw]，位置单位米、yaw 单位弧度。
 origin: [-10.000000, -10.000000, 0.000000]
+# negate=0 表示按常规灰度解释图像；occupied/free 阈值把像素概率分类为障碍或自由。
 negate: 0
 occupied_thresh: 0.65
 free_thresh: 0.196

@@ -19,6 +19,7 @@
 
 int main(int argc, char ** argv)
 {
+  // 初始化 ROS 2，创建生命周期管理器并进入 executor 处理服务、定时器和 bond 回调。
   rclcpp::init(argc, argv);
   auto node = std::make_shared<nav2_lifecycle_manager::LifecycleManager>();
   rclcpp::spin(node);

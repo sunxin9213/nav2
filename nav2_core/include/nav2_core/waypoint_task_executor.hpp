@@ -32,6 +32,8 @@ namespace nav2_core
 class WaypointTaskExecutor
 {
 public:
+  // 这是 waypoint 到点任务插件的最小接口：WaypointFollower 负责导航调度，
+  // 插件只负责机器人到达某个点之后的附加动作，因此两者职责彼此独立。
   /**
    * @brief Construct a new Simple Task Execution At Waypoint Base object
    *
@@ -44,6 +46,7 @@ public:
    */
   virtual ~WaypointTaskExecutor() {}
 
+  // 初始化到达 waypoint 后任务所需的 publisher、subscriber 或 service client。
   /**
    * @brief Override this to setup your pub, sub or any ros services that you will use in the plugin.
    *
@@ -54,6 +57,9 @@ public:
     const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
     const std::string & plugin_name) = 0;
 
+  // WaypointFollower 在 navigate_to_pose 成功后同步调用该函数。
+  // 返回值会参与 stop_on_failure 判断：false 可以让整个 waypoint Action 失败，
+  // 也可以在允许继续时被记录为 missed waypoint。
   /**
    * @brief Override this to define the body of your task that you would like to execute once the robot arrived to waypoint
    *

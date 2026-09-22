@@ -41,6 +41,7 @@ public:
    */
   virtual ~GlobalPlanner() {}
 
+  // 注入生命周期节点、TF 和 Costmap，准备规划器参数与内部地图访问接口。
   /**
    * @param  parent pointer to user's node
    * @param  name The name of this planner
@@ -52,16 +53,19 @@ public:
     std::string name, std::shared_ptr<tf2_ros::Buffer> tf,
     std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros) = 0;
 
+  // 清理规划器内部缓存和通信资源。
   /**
    * @brief Method to cleanup resources used on shutdown.
    */
   virtual void cleanup() = 0;
 
+  // 激活规划器，使其可以响应规划请求。
   /**
    * @brief Method to active planner and any threads involved in execution.
    */
   virtual void activate() = 0;
 
+  // 停用规划器，停止处理新的规划工作。
   /**
    * @brief Method to deactive planner and any threads involved in execution.
    */

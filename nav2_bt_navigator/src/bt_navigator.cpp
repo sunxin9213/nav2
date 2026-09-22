@@ -28,6 +28,7 @@
 namespace nav2_bt_navigator
 {
 
+// 创建生命周期 BT Navigator，并预置可加载的行为树插件动态库列表和基础 TF 参数。
 BtNavigator::BtNavigator(rclcpp::NodeOptions options)
 : nav2_util::LifecycleNode("bt_navigator", "",
     options.automatically_declare_parameters_from_overrides(true))
@@ -103,6 +104,7 @@ BtNavigator::~BtNavigator()
 }
 
 nav2_util::CallbackReturn
+// 配置 TF、里程计平滑器和两个导航 Action Navigator；任一 navigator 配置失败都会阻止激活。
 BtNavigator::on_configure(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Configuring");
@@ -119,6 +121,7 @@ BtNavigator::on_configure(const rclcpp_lifecycle::State & /*state*/)
   transform_tolerance_ = get_parameter("transform_tolerance").as_double();
   odom_topic_ = get_parameter("odom_topic").as_string();
 
+  // 根据参数读取 BT 节点动态库；XML 中出现的自定义节点必须由这些库注册。
   // Libraries to pull plugins (BT Nodes) from
   auto plugin_lib_names = get_parameter("plugin_lib_names").as_string_array();
 
@@ -131,6 +134,7 @@ BtNavigator::on_configure(const rclcpp_lifecycle::State & /*state*/)
   feedback_utils.robot_frame = robot_frame_;
   feedback_utils.transform_tolerance = transform_tolerance_;
 
+  // OdomSmoother 以 0.3 秒窗口平滑 odom 速度，供导航反馈和行为树节点读取当前速度。
   // Odometry smoother object for getting current speed
   odom_smoother_ = std::make_shared<nav2_util::OdomSmoother>(shared_from_this(), 0.3, odom_topic_);
 
@@ -150,6 +154,7 @@ BtNavigator::on_configure(const rclcpp_lifecycle::State & /*state*/)
 }
 
 nav2_util::CallbackReturn
+// 激活两个导航 Action Server，并建立 Lifecycle Manager 的 bond 存活连接。
 BtNavigator::on_activate(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Activating");
@@ -165,6 +170,7 @@ BtNavigator::on_activate(const rclcpp_lifecycle::State & /*state*/)
 }
 
 nav2_util::CallbackReturn
+// 停用导航 Action Server，阻止新的导航目标和行为树执行。
 BtNavigator::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Deactivating");
@@ -180,6 +186,7 @@ BtNavigator::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
 }
 
 nav2_util::CallbackReturn
+// 先销毁 TF listener 再销毁 Buffer，然后清理两个 Navigator 的 Action/行为树资源。
 BtNavigator::on_cleanup(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Cleaning up");
@@ -200,6 +207,7 @@ BtNavigator::on_cleanup(const rclcpp_lifecycle::State & /*state*/)
 }
 
 nav2_util::CallbackReturn
+// 响应关闭事件；正常资源释放由 cleanup 生命周期阶段完成。
 BtNavigator::on_shutdown(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Shutting down");

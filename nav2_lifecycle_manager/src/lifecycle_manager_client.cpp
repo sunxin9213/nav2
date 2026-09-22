@@ -30,6 +30,7 @@ LifecycleManagerClient::LifecycleManagerClient(
   const std::string & name,
   std::shared_ptr<rclcpp::Node> parent_node)
 {
+  // 根据管理器名称构造两个服务名，并复用父节点的 ROS 2 context、日志和 executor。
   manage_service_name_ = name + std::string("/manage_nodes");
   active_service_name_ = name + std::string("/is_active");
 
@@ -44,12 +45,14 @@ LifecycleManagerClient::LifecycleManagerClient(
 }
 
 bool
+// 发送 STARTUP 命令，请求管理器配置并激活全部受管节点。
 LifecycleManagerClient::startup(const std::chrono::nanoseconds timeout)
 {
   return callService(ManageLifecycleNodes::Request::STARTUP, timeout);
 }
 
 bool
+// 发送 SHUTDOWN 命令，请求管理器逆序停用、清理并关闭节点。
 LifecycleManagerClient::shutdown(const std::chrono::nanoseconds timeout)
 {
   return callService(ManageLifecycleNodes::Request::SHUTDOWN, timeout);
@@ -74,6 +77,7 @@ LifecycleManagerClient::reset(const std::chrono::nanoseconds timeout)
 }
 
 SystemStatus
+// 调用 /is_active 服务并把 Trigger 响应映射为 ACTIVE、INACTIVE 或 TIMEOUT。
 LifecycleManagerClient::is_active(const std::chrono::nanoseconds timeout)
 {
   auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
@@ -105,6 +109,7 @@ LifecycleManagerClient::is_active(const std::chrono::nanoseconds timeout)
 }
 
 bool
+// 等待 /manage_nodes 服务可用，在给定 timeout 内发送生命周期命令并返回 success。
 LifecycleManagerClient::callService(uint8_t command, const std::chrono::nanoseconds timeout)
 {
   auto request = std::make_shared<ManageLifecycleNodes::Request>();
