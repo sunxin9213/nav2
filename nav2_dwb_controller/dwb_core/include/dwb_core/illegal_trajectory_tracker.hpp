@@ -43,27 +43,35 @@
 
 namespace dwb_core
 {
+// 非法轨迹统计器：在每轮评分循环中统计合法/非法轨迹数量，
+// 并按 (评价器名, 失败原因) 分类计数。当所有轨迹都非法时，
+// 用其数据构造 NoLegalTrajectoriesException 上抛，帮助诊断
+// 速度采样空间为何全军覆没
 class IllegalTrajectoryTracker
 {
 public:
   IllegalTrajectoryTracker()
   : legal_count_(0), illegal_count_(0) {}
 
-  void addIllegalTrajectory(const IllegalTrajectoryException & e);
-  void addLegalTrajectory();
+  void addIllegalTrajectory(const IllegalTrajectoryException & e);  // 记录一条非法轨迹
+  void addLegalTrajectory();  // 记录一条合法轨迹
 
+  // 各失败原因占全部轨迹的百分比映射
   std::map<std::pair<std::string, std::string>, double> getPercentages() const;
 
-  std::string getMessage() const;
+  std::string getMessage() const;  // 汇总消息（合法占比或全失败警告）
 
 protected:
+  // (评价器名, 异常信息) -> 出现次数
   std::map<std::pair<std::string, std::string>, unsigned int> counts_;
-  unsigned int legal_count_, illegal_count_;
+  unsigned int legal_count_, illegal_count_;  // 合法/非法轨迹总数
 };
 
 /**
  * @class NoLegalTrajectoriesException
  * @brief Thrown when all the trajectories explored are illegal
+ * （所有候选轨迹均非法时抛出，携带统计器用于输出诊断信息。
+ *  继承 PlannerException，上层 Nav2 会将其归为规划/控制失败。）
  */
 class NoLegalTrajectoriesException
   : public nav2_core::PlannerException
@@ -72,7 +80,7 @@ public:
   explicit NoLegalTrajectoriesException(const IllegalTrajectoryTracker & tracker)
   : PlannerException(tracker.getMessage()),
     tracker_(tracker) {}
-  IllegalTrajectoryTracker tracker_;
+  IllegalTrajectoryTracker tracker_;  // 失败统计快照
 };
 
 }  // namespace dwb_core

@@ -29,6 +29,9 @@
 
 namespace nav2_util
 {
+// ==================== 机器人位姿与 TF 工具函数 ====================
+// 以下函数封装了 tf2_ros::Buffer 的常用操作，统一了异常处理与日志输出。
+
 /**
 * @brief get the current pose of the robot
 * @param global_pose Pose to transform
@@ -38,6 +41,8 @@ namespace nav2_util
 * @param transform_timeout TF Timeout to use for transformation
 * @return bool Whether it could be transformed successfully
 */
+// 获取机器人当前位姿：把 robot_frame(默认 base_link) 中的单位位姿
+// 变换到 global_frame(默认 map) 中，超时默认 0.1s
 bool getCurrentPose(
   geometry_msgs::msg::PoseStamped & global_pose,
   tf2_ros::Buffer & tf_buffer, const std::string global_frame = "map",
@@ -53,6 +58,7 @@ bool getCurrentPose(
 * @param transform_timeout TF Timeout to use for transformation
 * @return bool Whether it could be transformed successfully
 */
+// 把任意位姿从其自身坐标系变换到目标坐标系，失败时返回 false
 bool transformPoseInTargetFrame(
   const geometry_msgs::msg::PoseStamped & input_pose,
   geometry_msgs::msg::PoseStamped & transformed_pose,
@@ -80,6 +86,7 @@ bool transformPoseInTargetFrame(
  * @param tf_transform Output source->target transform
  * @return True if got correct transform, otherwise false
  */
+// 获取 source->target 的最新 TF 变换（简单版本，不带时间参数）
 bool getTransform(
   const std::string & source_frame_id,
   const std::string & target_frame_id,
@@ -100,6 +107,7 @@ bool getTransform(
  * @param tf_transform Output source->target transform
  * @return True if got correct transform, otherwise false
  */
+// 高级版本：源/目标可指定不同时间戳，经 fixed_frame 桥接完成跨时刻变换
 bool getTransform(
   const std::string & source_frame_id,
   const rclcpp::Time & source_time,
@@ -115,6 +123,7 @@ bool getTransform(
  * @param msg Twist message to validate
  * @return True if valid, false if contains unactionable values
  */
+// 校验 Twist 速度消息六个分量均无 NaN/Inf
 bool validateTwist(const geometry_msgs::msg::Twist & msg);
 
 }  // end namespace nav2_util

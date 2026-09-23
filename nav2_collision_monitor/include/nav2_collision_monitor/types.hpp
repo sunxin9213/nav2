@@ -15,6 +15,16 @@
 #ifndef NAV2_COLLISION_MONITOR__TYPES_HPP_
 #define NAV2_COLLISION_MONITOR__TYPES_HPP_
 
+// ============================================================================
+// 文件说明（中文）：
+// nav2_collision_monitor 的基础数据类型定义：
+//   Velocity  2D 运动模型速度（x/y 线速度 + tw 角速度，支持比较）
+//   Pose      2D 位姿（x, y, theta）
+//   Point     2D 障碍物点
+//   ActionType 动作类型枚举（DO_NOTHING/STOP/SLOWDOWN/APPROACH）
+//   Action    碰撞处理动作（动作类型 + 期望速度）
+// ============================================================================
+
 namespace nav2_collision_monitor
 {
 

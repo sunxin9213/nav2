@@ -21,6 +21,21 @@
 #include <limits>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 
+// ============================================================================
+// 文件说明（中文）：
+// nav2_route 的核心数据类型定义（路图数据结构）。
+// 模块定位：定义路图（Graph）、节点（Node）、有向边（DirectionalEdge）、
+// 路线（Route）、重路由状态（ReroutingState）等贯穿整个模块的类型，
+// 以及搜索用的优先队列与元数据（Metadata）容器。
+//
+// 数据结构总览：
+//   Graph = vector<Node>；Node 通过 neighbors（EdgeVector）邻接表
+//   存放出边；DirectionalEdge 记录起点/终点节点指针、代价（EdgeCost，
+//   可被评分插件覆盖）、元数据与触发操作（Operations）；
+//   SearchState 保存 Dijkstra 搜索的父边与累计代价；
+//   Route 为起节点 + 有序边序列 + 总代价。
+// ============================================================================
+
 #ifndef NAV2_ROUTE__TYPES_HPP_
 #define NAV2_ROUTE__TYPES_HPP_
 
@@ -57,14 +72,14 @@ struct Metadata
 };
 
 struct Node;
-typedef Node * NodePtr;
-typedef std::vector<Node> NodeVector;
-typedef NodeVector Graph;
-typedef std::unordered_map<unsigned int, unsigned int> GraphToIDMap;
-typedef std::unordered_map<unsigned int, std::vector<unsigned int>> GraphToIncomingEdgesMap;
-typedef std::vector<NodePtr> NodePtrVector;
-typedef std::pair<float, NodePtr> NodeElement;
-typedef std::pair<unsigned int, unsigned int> NodeExtents;
+typedef Node * NodePtr;                 // 节点裸指针
+typedef std::vector<Node> NodeVector;   // 节点数组
+typedef NodeVector Graph;               // 路图 = 节点数组（邻接表存于各节点）
+typedef std::unordered_map<unsigned int, unsigned int> GraphToIDMap;  // nodeid -> 图下标
+typedef std::unordered_map<unsigned int, std::vector<unsigned int>> GraphToIncomingEdgesMap;  // nodeid -> 入边列表
+typedef std::vector<NodePtr> NodePtrVector;      // 节点指针数组
+typedef std::pair<float, NodePtr> NodeElement;   // 优先队列元素（累计代价, 节点）
+typedef std::pair<unsigned int, unsigned int> NodeExtents;  // 节点下标范围
 
 /**
  * @struct nav2_route::NodeComparator
@@ -72,6 +87,7 @@ typedef std::pair<unsigned int, unsigned int> NodeExtents;
  */
 struct NodeComparator
 {
+  // 代价小的优先（priority_queue 默认取最大值，故用 > 反转）
   bool operator()(const NodeElement & a, const NodeElement & b) const
   {
     return a.first > b.first;
@@ -88,6 +104,7 @@ struct EdgeCost
 {
   float cost{0.0};
   bool overridable{true};  // If overridable, may use plugin edge cost scorers
+                           // 为 true 时可被边代价评分插件的计算结果覆盖
 };
 
 /**

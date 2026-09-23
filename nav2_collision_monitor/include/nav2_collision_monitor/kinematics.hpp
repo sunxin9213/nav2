@@ -15,6 +15,14 @@
 #ifndef NAV2_COLLISION_MONITOR__KINEMATICS_HPP_
 #define NAV2_COLLISION_MONITOR__KINEMATICS_HPP_
 
+// ============================================================================
+// 文件说明（中文）：
+// 碰撞监视器的运动学工具声明：
+//   transformPoints —— 点集坐标系变换（供碰撞预测使用）；
+//   projectState    —— 按速度前推位姿与速度（运动仿真步进）。
+// 详细中文注释的实现见 src/kinematics.cpp。
+// ============================================================================
+
 #include <vector>
 
 #include "nav2_collision_monitor/types.hpp"

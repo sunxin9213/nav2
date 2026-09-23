@@ -37,6 +37,11 @@
 
 namespace dwb_critics
 {
+// 中文说明（文件级）：
+// 旋转（Twirling）critic：惩罚轨迹的角速度，
+// 防止全向机器人在平移过程中原地打转（与 MPPI 的 TwirlingCritic 同名同义）。
+// 得分 = |轨迹速度角速度|，越小的自旋越优。
+
 void TwirlingCritic::onInit()
 {
   auto node = node_.lock();
@@ -44,9 +49,11 @@ void TwirlingCritic::onInit()
     throw std::runtime_error{"Failed to lock node"};
   }
   // Scale is set to 0 by default, so if it was not set otherwise, set to 0
+  //（默认权重为 0：若用户未显式配置 scale，则本 critic 实际不生效）
   node->get_parameter(dwb_plugin_name_ + "." + name_ + ".scale", scale_);
 }
 
+// 轨迹评分：返回角速度绝对值（惩罚自旋）
 double TwirlingCritic::scoreTrajectory(const dwb_msgs::msg::Trajectory2D & traj)
 {
   return fabs(traj.velocity.theta);  // add cost for making the robot spin

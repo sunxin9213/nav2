@@ -23,6 +23,11 @@
 
 namespace nav2_util
 {
+// 本文件实现机器人位姿与 TF 变换相关的工具函数：
+// - getCurrentPose: 获取机器人当前位姿（默认 base_link -> map）
+// - transformPoseInTargetFrame: 把任意位姿变换到目标坐标系
+// - getTransform(两个重载): 获取坐标系间的 TF 变换
+// - validateTwist: 校验速度消息中无 NaN/Inf
 
 bool getCurrentPose(
   geometry_msgs::msg::PoseStamped & global_pose,
@@ -30,10 +35,13 @@ bool getCurrentPose(
   const std::string robot_frame, const double transform_timeout,
   const rclcpp::Time stamp)
 {
+  // 技巧：先在机器人坐标系里构造"单位位姿"（原点、无旋转），
+  // 再把它变换到全局坐标系，变换结果恰好就是机器人在全局系下的位姿
   tf2::toMsg(tf2::Transform::getIdentity(), global_pose.pose);
   global_pose.header.frame_id = robot_frame;
   global_pose.header.stamp = stamp;
 
+  // 输入输出复用同一个变量，原地完成坐标变换
   return transformPoseInTargetFrame(
     global_pose, global_pose, tf_buffer, global_frame, transform_timeout);
 }
@@ -44,30 +52,37 @@ bool transformPoseInTargetFrame(
   tf2_ros::Buffer & tf_buffer, const std::string target_frame,
   const double transform_timeout)
 {
+  // 静态 logger：避免每次调用都重新构造日志对象
   static rclcpp::Logger logger = rclcpp::get_logger("transformPoseInTargetFrame");
 
   try {
+    // tf_buffer.transform 内部完成查询与坐标变换，超时由 transform_timeout 决定
     transformed_pose = tf_buffer.transform(
       input_pose, target_frame,
       tf2::durationFromSec(transform_timeout));
     return true;
   } catch (tf2::LookupException & ex) {
+    // 目标坐标系不存在（尚未注册到 TF 树）
     RCLCPP_ERROR(
       logger,
       "No Transform available Error looking up target frame: %s\n", ex.what());
   } catch (tf2::ConnectivityException & ex) {
+    // 两个坐标系之间在 TF 树上不连通
     RCLCPP_ERROR(
       logger,
       "Connectivity Error looking up target frame: %s\n", ex.what());
   } catch (tf2::ExtrapolationException & ex) {
+    // 请求的时间点超出 TF 缓冲可插值范围
     RCLCPP_ERROR(
       logger,
       "Extrapolation Error looking up target frame: %s\n", ex.what());
   } catch (tf2::TimeoutException & ex) {
+    // 等待变换超时
     RCLCPP_ERROR(
       logger,
       "Transform timeout with tolerance: %.4f", transform_timeout);
   } catch (tf2::TransformException & ex) {
+    // 其他 TF 异常的兜底捕获
     RCLCPP_ERROR(
       logger, "Failed to transform from %s to %s",
       input_pose.header.frame_id.c_str(), target_frame.c_str());
@@ -88,11 +103,13 @@ bool getTransform(
 
   if (source_frame_id == target_frame_id) {
     // We are already in required frame
+    // 源与目标坐标系相同：无需变换，直接返回单位变换
     return true;
   }
 
   try {
     // Obtaining the transform to get data from source to target frame
+    // 查询最新可用的变换（TimePointZero 表示最新），target 在前表示求 target<-source
     transform = tf_buffer->lookupTransform(
       target_frame_id, source_frame_id,
       tf2::TimePointZero, transform_tolerance);
@@ -105,6 +122,7 @@ bool getTransform(
   }
 
   // Convert TransformStamped to TF2 transform
+  // 把 ROS 消息类型转换为 tf2 内部数学类型，便于后续直接做矩阵运算
   tf2::fromMsg(transform.transform, tf2_transform);
   return true;
 }
@@ -125,6 +143,8 @@ bool getTransform(
   try {
     // Obtaining the transform to get data from source to target frame.
     // This also considers the time shift between source and target.
+    // 高级重载：源和目标可以处于不同时刻，
+    // 通过 fixed_frame（变换在此系内假设时不变）桥接两段时间戳的变换
     transform = tf_buffer->lookupTransform(
       target_frame_id, target_time,
       source_frame_id, source_time,
@@ -144,6 +164,8 @@ bool getTransform(
 
 bool validateTwist(const geometry_msgs::msg::Twist & msg)
 {
+  // 逐个分量检查线速度与角速度是否为 Inf 或 NaN，
+  // 任何一个分量非法都判定消息不可用（避免速度控制器输出失控值）
   if (std::isinf(msg.linear.x) || std::isnan(msg.linear.x)) {
     return false;
   }

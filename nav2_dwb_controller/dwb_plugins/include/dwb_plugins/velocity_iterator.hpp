@@ -45,17 +45,24 @@
 
 namespace dwb_plugins
 {
+// 速度迭代器抽象接口：定义速度采样器的统一协议。
+// DWB 轨迹生成器通过它枚举速度候选（vx/vy/wz 组合），
+// 具体实现（如 XYThetaIterator）决定采样策略
 class VelocityIterator
 {
 public:
   virtual ~VelocityIterator() {}
+
+  // 初始化：绑定运动学参数处理器与插件命名空间
   virtual void initialize(
     const nav2_util::LifecycleNode::SharedPtr & nh,
     KinematicsHandler::Ptr kinematics,
     const std::string & plugin_name) = 0;
+
+  // 开始新一轮采样：以当前速度为中心，dt 为时间窗
   virtual void startNewIteration(const nav_2d_msgs::msg::Twist2D & current_velocity, double dt) = 0;
-  virtual bool hasMoreTwists() = 0;
-  virtual nav_2d_msgs::msg::Twist2D nextTwist() = 0;
+  virtual bool hasMoreTwists() = 0;          // 是否还有未枚举的速度组合
+  virtual nav_2d_msgs::msg::Twist2D nextTwist() = 0;  // 取下一个候选速度
 };
 }  // namespace dwb_plugins
 

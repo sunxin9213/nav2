@@ -74,6 +74,9 @@ namespace dwb_core
  *  addCriticVisualization method. If the score for a trajectory depends on its relationship to
  *  the costmap, addCriticVisualization can provide that information to the dwb_core
  *  which will publish the grid scores as a PointCloud2.
+ * （轨迹评价器插件接口：DWB 的打分核心。分数越小越好，
+ *  负分视为非法（如碰撞）。总分为各评价器 scale × 原始分之和。
+ *  生命周期：initialize ->（每周期）prepare -> 多次 scoreTrajectory -> debrief。）
  */
 class TrajectoryCritic
 {
@@ -92,6 +95,8 @@ public:
    * @param parent_namespace The namespace of the planner
    * @param costmap_ros Pointer to the costmap
    */
+  // 一次性初始化：保存节点/名称/代价地图，声明并读取 scale 权重参数，
+  // 最后调用子类的 onInit() 完成插件自定义初始化
   void initialize(
     const nav2_util::LifecycleNode::SharedPtr & nh,
     const std::string & name,
@@ -102,6 +107,7 @@ public:
     name_ = name;
     costmap_ros_ = costmap_ros;
     dwb_plugin_name_ = ns;
+    // 声明 <plugin>.<critic>.scale 权重参数（默认 1.0）
     if (!nh->has_parameter(dwb_plugin_name_ + "." + name_ + ".scale")) {
       nh->declare_parameter(
         dwb_plugin_name_ + "." + name_ + ".scale",
@@ -118,6 +124,7 @@ public:
    * Reset is called when the planner receives a new global plan.
    * This can be used to discard information specific to one plan.
    */
+  // 收到新全局路径时复位（有状态评价器可清理上一条路径的缓存）
   virtual void reset() {}
 
   /**
@@ -130,6 +137,8 @@ public:
    * @param goal The final goal (costmap frame)
    * @param global_plan Transformed global plan in costmap frame, possibly cropped to nearby points
    */
+  // 每轮评分前的预处理：所有轨迹共享的公共计算（如路径预积分）
+  // 在此一次完成，避免逐轨迹重复计算。返回 false 表示本轮无法评分
   virtual bool prepare(
     const geometry_msgs::msg::Pose2D &, const nav_2d_msgs::msg::Twist2D &,
     const geometry_msgs::msg::Pose2D &,
@@ -144,11 +153,14 @@ public:
    * scores < 0 are considered invalid/errors, such as collisions
    * This is the raw score in that the scale should not be applied to it.
    */
+  // 纯虚接口：对单条轨迹打原始分（不含 scale）。
+  // 负分表示非法，应抛出 IllegalTrajectoryException
   virtual double scoreTrajectory(const dwb_msgs::msg::Trajectory2D & traj) = 0;
 
   /**
    * @brief debrief informs the critic what the chosen cmd_vel was (if it cares)
    */
+  // 每轮评分结束后告知被选中的速度（有状态评价器记录历史用，如振荡检测）
   virtual void debrief(const nav_2d_msgs::msg::Twist2D &) {}
 
   /**
@@ -167,22 +179,24 @@ public:
    *
    * @param pc PointCloud to add channels to
    */
+  // 可选调试接口：把逐格评分附加到 PointCloud 通道上，
+  // 供 RViz 可视化评价器在代价地图上的评分分布
   virtual void addCriticVisualization(std::vector<std::pair<std::string, std::vector<float>>> &) {}
 
   std::string getName()
   {
-    return name_;
+    return name_;  // 评价器名称
   }
 
-  virtual double getScale() const {return scale_;}
-  void setScale(const double scale) {scale_ = scale;}
+  virtual double getScale() const {return scale_;}  // 权重查询（支持动态调参）
+  void setScale(const double scale) {scale_ = scale;}  // 运行期修改权重
 
 protected:
-  std::string name_;
-  std::string dwb_plugin_name_;
-  std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros_;
-  double scale_;
-  rclcpp_lifecycle::LifecycleNode::WeakPtr node_;
+  std::string name_;        // 评价器名称（参数命名空间的一部分）
+  std::string dwb_plugin_name_;  // 所属 DWB 插件名
+  std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros_;  // 代价地图
+  double scale_;            // 本评价器的权重（scale）
+  rclcpp_lifecycle::LifecycleNode::WeakPtr node_;  // 生命周期节点弱引用
 };
 
 }  // namespace dwb_core

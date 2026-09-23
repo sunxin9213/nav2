@@ -44,6 +44,12 @@ using nav2_util::declare_parameter_if_not_declared;
 namespace dwb_critics
 {
 
+// 中文说明（文件级）：
+// 前进偏好（Prefer Forward）critic：惩罚倒车与横漂运动，
+// 并惩罚大角速度（旋转越多前进越少）。
+// 适用于无后向传感器、不宜倒车的机器人。
+
+// 初始化：读取罚分与横漂/旋转阈值参数
 void PreferForwardCritic::onInit()
 {
   auto node = node_.lock();
@@ -51,15 +57,18 @@ void PreferForwardCritic::onInit()
     throw std::runtime_error{"Failed to lock node"};
   }
 
+  // penalty：倒车/横漂时的固定罚分
   declare_parameter_if_not_declared(
     node,
     dwb_plugin_name_ + "." + name_ + ".penalty", rclcpp::ParameterValue(1.0));
+  // strafe_x / strafe_theta：判定“横漂”的线速度/角速度阈值
   declare_parameter_if_not_declared(
     node,
     dwb_plugin_name_ + "." + name_ + ".strafe_x", rclcpp::ParameterValue(0.1));
   declare_parameter_if_not_declared(
     node, dwb_plugin_name_ + "." + name_ + ".strafe_theta",
     rclcpp::ParameterValue(0.2));
+  // theta_scale：角速度惩罚的缩放系数
   declare_parameter_if_not_declared(
     node, dwb_plugin_name_ + "." + name_ + ".theta_scale",
     rclcpp::ParameterValue(10.0));
@@ -70,18 +79,22 @@ void PreferForwardCritic::onInit()
   node->get_parameter(dwb_plugin_name_ + "." + name_ + ".theta_scale", theta_scale_);
 }
 
+// 轨迹评分：倒车/横漂记罚分，否则按角速度惩罚
 double PreferForwardCritic::scoreTrajectory(const dwb_msgs::msg::Trajectory2D & traj)
 {
   // backward motions bad on a robot without backward sensors
+  //（倒车：直接返回罚分）
   if (traj.velocity.x < 0.0) {
     return penalty_;
   }
   // strafing motions also bad on such a robot
+  //（低速前进 + 低速旋转 ≈ 原地横漂：同样返回罚分）
   if (traj.velocity.x < strafe_x_ && fabs(traj.velocity.theta) < strafe_theta_) {
     return penalty_;
   }
 
   // the more we rotate, the less we progress forward
+  //（正常前进：按角速度绝对值 * 缩放系数惩罚大转弯）
   return fabs(traj.velocity.theta) * theta_scale_;
 }
 

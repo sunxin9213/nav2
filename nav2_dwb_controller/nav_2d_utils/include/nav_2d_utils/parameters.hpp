@@ -59,17 +59,30 @@ namespace nav_2d_utils
  * @param default_value Value to return if not found
  * @return Value of parameter if found, otherwise the default_value
  */
+
+// ---------------------------------------------------------------------------
+// 参数获取工具（ROS2 参数 API 学习素材）：
+// ROS2（rclcpp）与 ROS1 不同：参数必须先"声明"（declare_parameter）才能
+// 读取，且重复声明会抛异常。常见样板是：
+//   1. 若参数未声明，用默认值声明之；
+//   2. 读取参数值（此时若 YAML 中提供了覆盖值，读到的是覆盖值，
+//      否则是刚声明的默认值）。
+// 本模板函数把这两步打包成一行调用，模板参数 param_t 决定参数类型
+// （double/int/string/bool 等）。
+// ---------------------------------------------------------------------------
 template<class param_t>
 param_t searchAndGetParam(
   const nav2_util::LifecycleNode::SharedPtr & nh, const std::string & param_name,
   const param_t & default_value)
 {
   param_t value;
+  // 第一步：若未声明则用默认值声明（已声明则跳过，不抛异常）
   nav2_util::declare_parameter_if_not_declared(
     nh, param_name,
     rclcpp::ParameterValue(default_value));
+  // 第二步：读取参数值（YAML 覆盖值或默认值），写入 value
   nh->get_parameter(param_name, value);
-  return value;
+  return value;  // 返回读取到的值
 }
 
 }  // namespace nav_2d_utils

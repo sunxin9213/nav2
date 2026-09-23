@@ -40,6 +40,11 @@ using std::sin;
 
 namespace dwb_critics
 {
+// 中文说明（文件级）：
+// 对齐工具函数：计算位姿沿其朝向方向前伸 distance 的“前探点”，
+// 供 PathAlign / GoalAlign 等 critic 把朝向信息引入距离评分。
+
+// 前探位姿：位置沿朝向平移，朝向保持不变
 geometry_msgs::msg::Pose2D getForwardPose(const geometry_msgs::msg::Pose2D & pose, double distance)
 {
   geometry_msgs::msg::Pose2D forward_pose;

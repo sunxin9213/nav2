@@ -20,6 +20,7 @@
 namespace nav2_rviz_plugins
 {
 
+// ROS Action 的两态状态（面板按钮状态机用）：激活 / 未激活
 enum class QActionState
 {
   ACTIVE,
@@ -27,6 +28,8 @@ enum class QActionState
 };
 
 /// Custom Event to track state of ROS Action
+// 自定义 Qt 事件：携带 ROS Action 的新状态，
+// 事件类型号取 QEvent::User+1，避免与内建事件类型冲突
 struct ROSActionQEvent : public QEvent
 {
   explicit ROSActionQEvent(QActionState state)
@@ -37,6 +40,8 @@ struct ROSActionQEvent : public QEvent
 };
 
 /// Custom Transition to check whether ROS Action state has changed
+// 自定义状态机迁移：仅当收到 ROSActionQEvent 且其携带的状态
+// 与本转换记录的状态不同时才允许迁移（即"状态确实发生变化"）
 class ROSActionQTransition : public QAbstractTransition
 {
 public:
@@ -47,6 +52,7 @@ public:
   ~ROSActionQTransition() {}
 
 protected:
+  // 事件测试：非本类型事件直接拒绝；状态未变化也拒绝
   virtual bool eventTest(QEvent * e)
   {
     if (e->type() != QEvent::Type(QEvent::User + 1)) {  // ROSActionEvent
@@ -56,7 +62,9 @@ protected:
     return status_ != action_event->state_;
   }
 
+  // 迁移发生时的动作（这里不需要额外处理，留空）
   virtual void onTransition(QEvent *) {}
+  // 本转换所记录的上一次 Action 状态
   QActionState status_;
 };
 

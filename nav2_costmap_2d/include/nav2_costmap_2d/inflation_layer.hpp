@@ -37,6 +37,27 @@
  *********************************************************************/
 #ifndef NAV2_COSTMAP_2D__INFLATION_LAYER_HPP_
 #define NAV2_COSTMAP_2D__INFLATION_LAYER_HPP_
+// ============================================================================
+// 中文注释：膨胀层（InflationLayer）头文件（实现见 inflation_layer.cpp）
+//
+// 【类功能】
+// 读取主地图中的致命障碍并向外"膨胀"出按距离衰减的代价，使规划器
+// 天然远离障碍。核心参数：
+//   - inflation_radius：膨胀半径（米），超过此距离不膨胀；
+//   - cost_scaling_factor：指数衰减因子，越大衰减越快；
+//   - inscribed_radius：足迹内切半径，距障碍小于它的区域为
+//     INSCRIBED_INFLATED_OBSTACLE(253)（中心进入必碰）。
+//
+// 【关键成员】
+//   - cached_costs_/cached_distances_：预计算查找表（避免膨胀主循环
+//     中反复调 exp/hypot）；
+//   - inflation_cells_：map<距离等级, CellData 链表> 的多级桶队列，
+//     实现"按距离有序"的 BFS 扩散；
+//   - seen_：与主地图等大的访问标记表；
+//   - need_reinflation_：参数变化后触发全图重新膨胀。
+//
+// 【继承体系】Layer → InflationLayer（无独立缓存，直接读写主地图）
+// ============================================================================
 
 #include <map>
 #include <vector>

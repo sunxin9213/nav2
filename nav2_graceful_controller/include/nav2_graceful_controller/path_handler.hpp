@@ -27,6 +27,11 @@ namespace nav2_graceful_controller
 /**
  * @class nav2_graceful_controller::PathHandler
  * @brief Handles input paths to transform them to local frames required
+ *（路径处理器：负责全局路径的剪枝与向机器人坐标系的变换）
+ *
+ * 中文说明：
+ * 将全局路径截断到局部代价地图范围内的近段，变换到 base 坐标系
+ * 供控制律使用，并对已走过的部分做剪枝。实现见 src/path_handler.cpp。
  */
 class PathHandler
 {

@@ -34,20 +34,27 @@ namespace mppi
  * @struct mppi::CriticData
  * @brief Data to pass to critics for scoring, including state, trajectories, path, costs, and
  * important parameters to share
+ *（critic 共享数据包：优化器每周期填充，供所有 critic 评分使用）
+ *
+ * 中文说明：
+ * 该结构体由 Optimizer 持有并预填充引用，避免每周期重新构造，
+ * 所有 critic 通过同一份只读数据并行评分，代价统一累加到 costs。
  */
 struct CriticData
 {
-  const models::State & state;
-  const models::Trajectories & trajectories;
-  const models::Path & path;
+  const models::State & state;              // 批量状态（含噪声控制）
+  const models::Trajectories & trajectories;  // 候选轨迹
+  const models::Path & path;                // 全局路径（张量形式）
 
-  xt::xtensor<float, 1> & costs;
-  float & model_dt;
+  xt::xtensor<float, 1> & costs;  // 每条轨迹的累计代价（各 critic 依次累加）
+  float & model_dt;              // 轨迹推演时间步长
 
-  bool fail_flag;
-  nav2_core::GoalChecker * goal_checker;
-  std::shared_ptr<MotionModel> motion_model;
+  bool fail_flag;               // 失败标志（如所有轨迹碰撞时置位，触发优化器回退）
+  nav2_core::GoalChecker * goal_checker;        // 目标检查器（判断是否到达终点）
+  std::shared_ptr<MotionModel> motion_model;     // 运动模型（部分 critic 需要）
+  // 路径点是否有效（未被障碍物占据等），供 PathFollow/PathAlign 等 critic 复用
   std::optional<std::vector<bool>> path_pts_valid;
+  // 机器人已到达的最远路径点索引（首个 critic 计算后供后续 critic 复用，避免重复搜索）
   std::optional<size_t> furthest_reached_path_point;
 };
 

@@ -38,6 +38,24 @@
 #include <string>
 #include "dwb_core/trajectory_critic.hpp"
 
+// ============================================================================
+// 模块说明：偏好前进评价器（PreferForwardCritic）
+// ----------------------------------------------------------------------------
+// 惩罚"倒车"与"原地大转向"的轨迹，鼓励机器人优先向前行驶。
+// 适用场景：差速/前轮转向机器人倒车控制性差、传感器（如激光雷达）通常
+// 朝前安装，倒车既不安全也缺乏感知。
+// 三种打分情形（scoreTrajectory 实现）：
+//   1) 轨迹 x 速度为负（倒车）              → 返回固定罚分 penalty_；
+//   2) x 速度低且角速度也低（近原地蹭动）    → 返回固定罚分 penalty_；
+//   3) 其他（正常前进，可能有转向）           → 返回 |theta| * theta_scale_，
+//      即按角速度大小惩罚"过度旋转"的轨迹。
+// 参数（均在 onInit 中读取）：
+//   penalty_      倒车/蹭动的固定罚分（默认 1.0）；
+//   strafe_x_     "低速 x"的判断阈值（默认 0.1 m/s）；
+//   strafe_theta_ "低速角速度"的判断阈值（默认 0.2 rad/s）；
+//   theta_scale_  正常轨迹下角速度的缩放系数（默认 10.0）。
+// ============================================================================
+
 namespace dwb_critics
 {
 
@@ -50,16 +68,20 @@ namespace dwb_critics
  * 2) If the trajectory's x is low and the theta is also low, return the penalty.
  * 3) Otherwise, return a scaled version of the trajectory's theta.
  */
+// 偏好前进评价器：惩罚倒车和原地蹭动，抑制过度旋转
 class PreferForwardCritic : public dwb_core::TrajectoryCritic
 {
 public:
+  // 构造：penalty=1.0、strafe_x=0.1、strafe_theta=0.2、theta_scale=10.0
   PreferForwardCritic()
   : penalty_(1.0), strafe_x_(0.1), strafe_theta_(0.2), theta_scale_(10.0) {}
+  // 初始化：从参数服务器读取上述四个参数
   void onInit() override;
+  // 打分：倒车或低速蹭动返回 penalty_，正常前进返回 |theta|*theta_scale_
   double scoreTrajectory(const dwb_msgs::msg::Trajectory2D & traj) override;
 
 private:
-  double penalty_, strafe_x_, strafe_theta_, theta_scale_;
+  double penalty_, strafe_x_, strafe_theta_, theta_scale_;  // 罚分/低速阈值/角速度缩放
 };
 
 }  // namespace dwb_critics

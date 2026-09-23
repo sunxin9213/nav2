@@ -22,6 +22,11 @@
 
 namespace nav2_util
 {
+// 本文件实现 Nav2 统一封装的生命周期节点 LifecycleNode。
+// 它继承自 rclcpp_lifecycle::LifecycleNode，在标准生命周期节点之上增加了：
+// 1. Bond 心跳机制（createBond/destroyBond）：与 Lifecycle Manager 建立存活监测
+// 2. 兜底清理（runCleanups）：析构或进程退出时自动 deactivate/cleanup
+// 3. rcl 预关闭回调：保证 rclcpp 关闭前先完成节点清理
 
 LifecycleNode::LifecycleNode(
   const std::string & node_name,
@@ -30,13 +35,18 @@ LifecycleNode::LifecycleNode(
 : rclcpp_lifecycle::LifecycleNode(node_name, ns, options)
 {
   // server side never times out from lifecycle manager
+  // 声明并设置 "disable_heartbeat_timeout" 参数为 true：
+  // 服务端（本节点）永不因心跳超时断开 bond，超时判断完全交由
+  // Lifecycle Manager 侧执行（单向存活监测）
   this->declare_parameter(bond::msg::Constants::DISABLE_HEARTBEAT_TIMEOUT_PARAM, true);
   this->set_parameter(
     rclcpp::Parameter(
       bond::msg::Constants::DISABLE_HEARTBEAT_TIMEOUT_PARAM, true));
 
+  // 打印生命周期节点启动提示（告知需要外部触发状态迁移才会激活）
   printLifecycleNodeNotification();
 
+  // 注册 rcl 关闭前的回调，确保进程退出时也能执行清理
   register_rcl_preshutdown_callback();
 }
 
@@ -44,8 +54,10 @@ LifecycleNode::~LifecycleNode()
 {
   RCLCPP_INFO(get_logger(), "Destroying");
 
+  // 析构时先做兜底清理（deactivate/cleanup），保证资源释放顺序正确
   runCleanups();
 
+  // 从 context 中注销预关闭回调并释放句柄，防止悬空回调
   if (rcl_preshutdown_cb_handle_) {
     rclcpp::Context::SharedPtr context = get_node_base_interface()->get_context();
     context->remove_pre_shutdown_callback(*(rcl_preshutdown_cb_handle_.get()));
@@ -57,11 +69,14 @@ void LifecycleNode::createBond()
 {
   RCLCPP_INFO(get_logger(), "Creating bond (%s) to lifecycle manager.", this->get_name());
 
+  // 在 "bond" 话题上创建 bond 对象，节点名作为 bond 的 id，
+  // shared_from_this() 使 bond 持有节点的共享指针，保证节点生命周期覆盖 bond
   bond_ = std::make_unique<bond::Bond>(
     std::string("bond"),
     this->get_name(),
     shared_from_this());
 
+  // 心跳周期 100ms、超时 4s：连续约 40 次心跳丢失才判定节点失联
   bond_->setHeartbeatPeriod(0.10);
   bond_->setHeartbeatTimeout(4.0);
   bond_->start();
@@ -74,12 +89,14 @@ void LifecycleNode::runCleanups()
    * We will give the user some ability to clean up properly here, but it's
    * best effort; i.e. we aren't trying to account for all possible states.
    */
+  // 若节点仍处于 ACTIVE 态，先触发 deactivate 回调（停止传感器/执行器等）
   if (get_current_state().id() ==
     lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE)
   {
     this->deactivate();
   }
 
+  // deactivate 后处于 INACTIVE 态，再触发 cleanup 释放状态资源
   if (get_current_state().id() ==
     lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE)
   {
@@ -93,6 +110,7 @@ void LifecycleNode::on_rcl_preshutdown()
     get_logger(), "Running Nav2 LifecycleNode rcl preshutdown (%s)",
     this->get_name());
 
+  // rcl 即将关闭：执行生命周期清理并断开 bond 连接
   runCleanups();
 
   destroyBond();
@@ -100,6 +118,8 @@ void LifecycleNode::on_rcl_preshutdown()
 
 void LifecycleNode::register_rcl_preshutdown_callback()
 {
+  // 取节点所属 context，把成员函数 on_rcl_preshutdown 注册为
+  // 预关闭回调；返回的句柄需长期持有，否则回调会被立即注销
   rclcpp::Context::SharedPtr context = get_node_base_interface()->get_context();
 
   rcl_preshutdown_cb_handle_ = std::make_unique<rclcpp::PreShutdownCallbackHandle>(
@@ -112,6 +132,7 @@ void LifecycleNode::destroyBond()
 {
   RCLCPP_INFO(get_logger(), "Destroying bond (%s) to lifecycle manager.", this->get_name());
 
+  // unique_ptr 的 reset() 会触发 bond 析构，停止心跳并断开连接
   if (bond_) {
     bond_.reset();
   }
@@ -119,6 +140,8 @@ void LifecycleNode::destroyBond()
 
 void LifecycleNode::printLifecycleNodeNotification()
 {
+  // 提示用户：节点已启动但处于 UNCONFIGURED 状态，
+  // 需要外部（Lifecycle Manager）依次触发 configure/activate 迁移
   RCLCPP_INFO(
     get_logger(),
     "\n\t%s lifecycle node launched. \n"

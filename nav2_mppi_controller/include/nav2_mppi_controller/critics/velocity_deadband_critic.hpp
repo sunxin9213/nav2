@@ -27,6 +27,8 @@ namespace mppi::critics
 /**
  * @class mppi::critics::VelocityDeadbandCritic
  * @brief Critic objective function for enforcing feasible constraints
+ * （速度死区评价器：电机存在死区——|v| 小于某阈值时实际不会转动，
+ *  该评价器惩罚落在死区内的速度指令，避免输出无效的微小速度。）
  */
 class VelocityDeadbandCritic : public CriticFunction
 {
@@ -34,19 +36,19 @@ public:
   /**
    * @brief Initialize critic
    */
-  void initialize() override;
+  void initialize() override;  // 读取权重/幂次/死区速度数组参数
 
   /**
    * @brief Evaluate cost related to goal following
    *
    * @param costs [out] add reference cost values to this tensor
    */
-  void score(CriticData & data) override;
+  void score(CriticData & data) override;  // 惩罚落在 [vx, vy, wz] 死区内的控制量
 
 protected:
-  unsigned int power_{0};
-  float weight_{0};
-  std::vector<float> deadband_velocities_{0.0f, 0.0f, 0.0f};
+  unsigned int power_{0};   // 代价幂次
+  float weight_{0};         // 评价器权重
+  std::vector<float> deadband_velocities_{0.0f, 0.0f, 0.0f};  // 三轴死区阈值 {vx, vy, wz}
 };
 
 }  // namespace mppi::critics

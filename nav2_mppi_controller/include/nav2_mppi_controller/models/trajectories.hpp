@@ -24,15 +24,23 @@ namespace mppi::models
 /**
  * @class mppi::models::Trajectories
  * @brief Candidate Trajectories
+ *（候选轨迹模型：rollout 推演得到的批量轨迹位姿）
+ *
+ * 中文说明：
+ * 由噪声控制序列经运动模型（运动学/运动动力学）前向积分得到，
+ * 每行对应一条候选轨迹，每列为一个预测时间步的位姿。
+ * 这些轨迹随后被各 critic（代价函数）评分，再经 softmax 加权平均
+ * 得到最终更新的控制序列。
  */
 struct Trajectories
 {
-  xt::xtensor<float, 2> x;
-  xt::xtensor<float, 2> y;
-  xt::xtensor<float, 2> yaws;
+  xt::xtensor<float, 2> x;     // 各轨迹各时间步的 x 坐标 [batch_size, time_steps]
+  xt::xtensor<float, 2> y;     // 各轨迹各时间步的 y 坐标
+  xt::xtensor<float, 2> yaws;  // 各轨迹各时间步的朝向角（rad）
 
   /**
     * @brief Reset state data
+    *（重置轨迹数据：按批次大小与时间步数分配并清零）
     */
   void reset(unsigned int batch_size, unsigned int time_steps)
   {

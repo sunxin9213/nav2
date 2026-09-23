@@ -37,6 +37,18 @@
 
 #ifndef NAV2_COSTMAP_2D__COSTMAP_FILTERS__FILTER_VALUES_HPP_
 #define NAV2_COSTMAP_2D__COSTMAP_FILTERS__FILTER_VALUES_HPP_
+// ============================================================================
+// 中文注释：过滤器公共常量头文件
+//
+// 【文件功能】
+// 定义代价地图过滤器体系的公共常量：
+//   - BASE_DEFAULT / MULTIPLIER_DEFAULT：CostmapFilterInfo 中
+//     base/multiplier 的默认值（Keepout 等不使用换算的过滤器必须保持默认）；
+//   - SPEED_FILTER_PERCENT / SPEED_FILTER_ABSOLUTE：限速模式
+//     （百分比 / 绝对 m/s）；
+//   - BINARY_FILTER：二值过滤器类型标识；
+//   - NO_SPEED_LIMIT：无限速标记值。
+// ============================================================================
 
 /** Provides constants used in costmap filters */
 

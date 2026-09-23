@@ -15,6 +15,15 @@
 #ifndef NAV2_COLLISION_MONITOR__SOURCE_HPP_
 #define NAV2_COLLISION_MONITOR__SOURCE_HPP_
 
+// ============================================================================
+// 文件说明（中文）：
+// Source（观测数据源基类）的头文件声明。
+// 模块定位：碰撞监视器传感器数据的抽象基类，统一管理话题订阅、
+// 数据有效性与使能开关；子类 Scan（激光）/ PointCloud（点云）/
+// Range（测距）实现各自的回调与点提取。
+// 详细中文注释的实现见 src/source.cpp。
+// ============================================================================
+
 #include <memory>
 #include <vector>
 #include <string>

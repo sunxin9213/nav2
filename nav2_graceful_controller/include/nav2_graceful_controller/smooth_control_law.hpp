@@ -28,6 +28,12 @@ namespace nav2_graceful_controller
  * @class nav2_graceful_controller::SmoothControlLaw
  * @brief Smooth control law for graceful motion based on "A smooth control law for graceful motion"
  * (Jong Jin Park and Benjamin Kuipers).
+ *（平滑控制律：Graceful Controller 的核心速度计算组件）
+ *
+ * 中文说明：
+ * 基于 Park & Kuipers 的平滑控制律理论，在自极坐标 (r, φ, δ) 中
+ * 用双时间尺度（慢子系统 r-φ、快子系统 δ）反馈控制计算曲率，
+ * 实现位姿（位置+朝向）的渐近收敛。实现见 src/smooth_control_law.cpp。
  */
 class SmoothControlLaw
 {
@@ -124,64 +130,72 @@ protected:
   /**
    * @brief Calculate the path curvature using a Lyapunov-based feedback control law from
    * "A smooth control law for graceful motion" (Jong Jin Park and Benjamin Kuipers).
+   *（核心曲率计算：κ = -1/r * [k_delta*(δ - atan(-k_phi*φ)) + 反馈项]）
    *
-   * @param r Distance between the robot and the target.
-   * @param phi Orientation of target with respect to the line of sight from the robot to the target.
-   * @param delta Steering angle of the robot.
-   * @return The curvature
+   * @param r Distance between the robot and the target.（到目标距离）
+   * @param phi Orientation of target with respect to the line of sight from the robot to the target.（目标朝向相对视线角）
+   * @param delta Steering angle of the robot.（机器人朝向相对视线角）
+   * @return The curvature（路径曲率）
    */
   double calculateCurvature(double r, double phi, double delta);
 
   /**
    * @brief Ratio of the rate of change in phi to the rate of change in r. Controls the convergence
    * of the slow subsystem.
+   *（慢子系统增益：φ 与 r 变化率之比）
    *
    * If this value is equal to zero, the controller will behave as a pure waypoint follower.
    * A high value offers extreme scenario of pose-following where theta is reduced much faster than r.
+   *（为 0 时退化为纯航点跟随；过大时朝向收敛远快于距离收敛）
    *
-   * Note: This variable is called k1 in earlier versions of the paper.
+   * Note: This variable is called k1 in earlier versions of the paper.（论文旧版记作 k1）
    */
   double k_phi_;
 
   /**
    * @brief Constant factor applied to the heading error feedback. Controls the convergence of the
    * fast subsystem.
+   *（快子系统增益：朝向误差反馈系数）
    *
    * The bigger the value, the robot converge faster to the reference heading.
+   *（值越大朝向收敛越快）
    *
-   * Note: This variable is called k2 in earlier versions of the paper.
+   * Note: This variable is called k2 in earlier versions of the paper.（论文旧版记作 k2）
    */
   double k_delta_;
 
   /**
    * @brief Constant factor applied to the path curvature. This value must be positive.
    * Determines how fast the velocity drops when the curvature increases.
+   *（速度-曲率衰减系数：曲率增大时速度下降的快慢，必须为正）
    */
   double beta_;
 
   /**
    * @brief Constant factor applied to the path curvature. This value must be greater or equal to 1.
    * Determines the sharpness of the curve: higher lambda implies sharper curves.
+   *（速度-曲率衰减指数：越大曲线越锐利，必须 ≥ 1）
    */
   double lambda_;
 
   /**
    * @brief Radial threshold applied to the slowdown rule.
+   *（减速半径：接近目标开始线性减速的距离）
    */
   double slowdown_radius_;
 
   /**
-   * @brief Minimum linear velocity.
+   * @brief Minimum linear velocity.（最小线速度）
    */
   double v_linear_min_;
 
   /**
-   * @brief Maximum linear velocity.
+   * @brief Maximum linear velocity.（最大线速度）
    */
   double v_linear_max_;
 
   /**
-   * @brief Maximum angular velocity.
+   * @brief Maximum angular velocity.（最大角速度）
    */
   double v_angular_max_;
 };

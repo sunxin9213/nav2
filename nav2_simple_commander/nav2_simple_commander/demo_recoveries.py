@@ -13,6 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# ============================================================================
+# 文件说明（中文）：
+# nav2_simple_commander 的"恢复行为"演示程序。
+# 模块定位：演示手动调用 Nav2 恢复动作（behavior_server）：
+# 机器人导航进入死胡同后，先 backup（倒车）退出，
+# 再 spin（原地旋转）调整朝向，最后导航前往新目标。
+# 展示 BasicNavigator 的 backup/spin/goToPose 接口用法。
+# ============================================================================
+
 from geometry_msgs.msg import PoseStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 import rclpy
@@ -23,6 +32,7 @@ from rclpy.duration import Duration
 Basic recoveries demo. In this demonstration, the robot navigates
 to a dead-end where recoveries such as backup and spin are used
 to get out of it.
+基础恢复行为演示：机器人驶入死胡同后，用倒车与原地旋转脱困。
 """
 
 

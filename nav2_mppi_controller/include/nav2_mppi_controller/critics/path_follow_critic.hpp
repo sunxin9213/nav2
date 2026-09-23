@@ -30,6 +30,9 @@ namespace mppi::critics
  * is what aligns the trajectories to the path more or less precisely, if desireable.
  * A higher weight here with an offset > 1 will accelerate the samples to full speed
  * faster and push the follow point further ahead, creating some shortcutting.
+ * （路径跟随评价器：惩罚轨迹到"前瞻路径点"的距离（而非逐点贴齐），
+ *  允许为躲避动态障碍物而偏离路径。offset 越大前瞻点越远，
+ *  会加快提速并产生适当"抄近路"行为。）
  */
 class PathFollowCritic : public CriticFunction
 {
@@ -37,7 +40,7 @@ public:
   /**
     * @brief Initialize critic
     */
-  void initialize() override;
+  void initialize() override;  // 读取权重/生效阈值/前瞻偏移参数
 
   /**
    * @brief Evaluate cost related to robot orientation at goal pose
@@ -45,14 +48,14 @@ public:
    *
    * @param costs [out] add goal angle cost values to this tensor
    */
-  void score(CriticData & data) override;
+  void score(CriticData & data) override;  // 计算轨迹到前瞻目标的距离代价
 
 protected:
-  float threshold_to_consider_{0};
-  size_t offset_from_furthest_{0};
+  float threshold_to_consider_{0};    // 与路径横向偏差小于该值时不惩罚
+  size_t offset_from_furthest_{0};    // 前瞻偏移：在可达最远点之上再前进的点数
 
-  unsigned int power_{0};
-  float weight_{0};
+  unsigned int power_{0};             // 代价幂次
+  float weight_{0};                   // 评价器权重
 };
 
 }  // namespace mppi::critics

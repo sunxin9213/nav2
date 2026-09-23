@@ -37,6 +37,21 @@
  *********************************************************************/
 #ifndef NAV2_COSTMAP_2D__OBSTACLE_LAYER_HPP_
 #define NAV2_COSTMAP_2D__OBSTACLE_LAYER_HPP_
+// ============================================================================
+// 中文注释：障碍层（ObstacleLayer）头文件（实现见 obstacle_layer.cpp）
+//
+// 【类功能】
+// 2D 实时感知层：订阅 LaserScan / PointCloud2，通过
+// marking（写障碍）与 clearing（射线清障）维护内部缓存地图，
+// 再以 updateWithMax（默认）合并进主地图。
+// 关键成员：
+//   - observation_buffers_：每个传感器源一个观测缓冲（TF 变换+过滤）；
+//   - marking_buffers_ / clearing_buffers_：按用途分组的缓冲列表；
+//   - observation_notifiers_：tf2_ros::MessageFilter（TF 可用才回调）；
+//   - combination_method_：与主地图合并方式（0覆盖/1最大值）。
+// 【继承体系】Layer + Costmap2D → CostmapLayer → ObstacleLayer
+//                    → VoxelLayer（3D 体素扩展）
+// ============================================================================
 
 #include <memory>
 #include <string>

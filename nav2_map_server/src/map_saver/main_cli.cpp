@@ -13,6 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 文件说明（中文）：
+// map_saver_cli 命令行工具入口：一次性保存地图的独立可执行程序。
+// 用法：map_saver_cli -t <地图话题> -f <文件名> --occ <阈值> --free <阈值>
+//                 --fmt <图像格式> --mode trinary|scale|raw [--ros-args ...]
+// 功能：解析命令行参数 -> 构造 MapSaver 节点 -> 手动触发 on_configure
+// -> 调用 saveMapTopicToFile 订阅一帧地图并写盘 -> 退出。
+// 与 main_server.cpp 的区别：CLI 版本不提供常驻服务，保存完即退出。
+// ============================================================================
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -24,6 +34,8 @@
 #include "rclcpp/rclcpp.hpp"
 
 using namespace nav2_map_server;  // NOLINT
+
+// 命令行帮助文本
 
 const char * USAGE_STRING{
   "Usage:\n"
@@ -42,25 +54,26 @@ const char * USAGE_STRING{
 
 typedef enum
 {
-  COMMAND_MAP_TOPIC,
-  COMMAND_MAP_FILE_NAME,
-  COMMAND_IMAGE_FORMAT,
-  COMMAND_OCCUPIED_THRESH,
-  COMMAND_FREE_THRESH,
-  COMMAND_MODE
+  COMMAND_MAP_TOPIC,      // -t：地图话题名
+  COMMAND_MAP_FILE_NAME,  // -f：保存文件名
+  COMMAND_IMAGE_FORMAT,   // --fmt：图像格式
+  COMMAND_OCCUPIED_THRESH,// --occ：占据阈值
+  COMMAND_FREE_THRESH,    // --free：空闲阈值
+  COMMAND_MODE            // --mode：地图模式
 } COMMAND_TYPE;
 
 struct cmd_struct
 {
-  const char * cmd;
-  COMMAND_TYPE command_type;
+  const char * cmd;             // 命令行选项字符串
+  COMMAND_TYPE command_type;    // 对应的选项类型
 };
 
+// 参数解析结果状态
 typedef enum
 {
-  ARGUMENTS_INVALID,
-  ARGUMENTS_VALID,
-  HELP_MESSAGE
+  ARGUMENTS_INVALID,  // 参数非法
+  ARGUMENTS_VALID,    // 参数合法
+  HELP_MESSAGE        // 请求帮助（-h/--help）
 } ARGUMENTS_STATUS;
 
 // Arguments parser
@@ -143,17 +156,21 @@ ARGUMENTS_STATUS parse_arguments(
 int main(int argc, char ** argv)
 {
   // ROS2 init
+  // 初始化 ROS2（必须先于任何节点/日志操作）
   rclcpp::init(argc, argv);
   auto logger = rclcpp::get_logger("map_saver_cli");
 
   // Parse CLI-arguments
+  // 解析命令行参数；默认地图话题为 "map"
   SaveParameters save_parameters;
   std::string map_topic = "map";
   switch (parse_arguments(logger, argc, argv, map_topic, save_parameters)) {
     case ARGUMENTS_INVALID:
+      // 参数错误：退出码 -1
       rclcpp::shutdown();
       return -1;
     case HELP_MESSAGE:
+      // 帮助信息已打印：正常退出
       rclcpp::shutdown();
       return 0;
     case ARGUMENTS_VALID:
@@ -161,18 +178,21 @@ int main(int argc, char ** argv)
   }
 
   // Call saveMapTopicToFile()
+  // 直接复用 MapSaver 节点类执行一次性保存：
+  // 手动调用 on_configure 完成参数初始化（不走完整生命周期管理器），
+  // 然后订阅地图话题并写盘
   int retcode;
   try {
     auto map_saver = std::make_shared<nav2_map_server::MapSaver>();
     map_saver->on_configure(rclcpp_lifecycle::State());
     if (map_saver->saveMapTopicToFile(map_topic, save_parameters)) {
-      retcode = 0;
+      retcode = 0;   // 保存成功
     } else {
-      retcode = 1;
+      retcode = 1;   // 保存失败（如超时未收到地图）
     }
   } catch (std::exception & e) {
     RCLCPP_ERROR(logger, "Unexpected problem appear: %s", e.what());
-    retcode = -1;
+    retcode = -1;    // 异常：退出码 -1
   }
 
   // Exit

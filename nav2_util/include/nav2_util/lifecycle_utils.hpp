@@ -33,6 +33,7 @@ namespace nav2_util
  *            service call.
  * \param[in] retries The number of times to try a state transition service call
  */
+// 按顺序把一组生命周期节点迁移到 ACTIVE 态（configure + activate）
 void startup_lifecycle_nodes(
   const std::vector<std::string> & node_names,
   const std::chrono::seconds service_call_timeout = std::chrono::seconds::max(),
@@ -42,6 +43,8 @@ void startup_lifecycle_nodes(
 /**
  * \param[in] nodes A ':' seperated list of node names. eg. "/node1:/node2"
  */
+// 便捷内联重载：接受 "node1:node2" 形式的冒号分隔字符串，
+// 用 split() 切分后委托给 vector 版本
 void startup_lifecycle_nodes(
   const std::string & nodes,
   const std::chrono::seconds service_call_timeout = std::chrono::seconds::max(),
@@ -60,6 +63,7 @@ void startup_lifecycle_nodes(
  *            service call.
  * \param[in] retries The number of times to try a state transition service call
  */
+// 按顺序把一组生命周期节点复位到 UNCONFIGURED 态（deactivate + cleanup）
 void reset_lifecycle_nodes(
   const std::vector<std::string> & node_names,
   const std::chrono::seconds service_call_timeout = std::chrono::seconds::max(),
@@ -69,6 +73,7 @@ void reset_lifecycle_nodes(
 /**
  * \param[in] nodes A ':' seperated list of node names. eg. "/node1:/node2"
  */
+// 冒号分隔字符串版本的便捷重载
 void reset_lifecycle_nodes(
   const std::string & nodes,
   const std::chrono::seconds service_call_timeout = std::chrono::seconds::max(),

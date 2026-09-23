@@ -40,38 +40,50 @@
 
 namespace dwb_critics
 {
+// 中文说明（文件级）：
+// 目标距离（Goal Dist）critic：以“局部地图内的最后一个路径点”
+//（即局部目标）为唯一种子构建曼哈顿距离场，惩罚轨迹终点离
+// 局部目标的距离，驱动机器人沿全局路径向目标推进。
+
+// 周期准备：把局部目标设为 0 距离种子并扩散
 bool GoalDistCritic::prepare(
   const geometry_msgs::msg::Pose2D &, const nav_2d_msgs::msg::Twist2D &,
   const geometry_msgs::msg::Pose2D &,
   const nav_2d_msgs::msg::Path2D & global_plan)
 {
-  reset();
+  reset();  // 清零距离场
 
+  // 找到局部代价地图内的最后一个路径点
   unsigned int local_goal_x, local_goal_y;
   if (!getLastPoseOnCostmap(global_plan, local_goal_x, local_goal_y)) {
     return false;
   }
 
   // Enqueue just the last pose
+  //（只把该点作为种子：距离 0 并入队）
   int index = costmap_->getIndex(local_goal_x, local_goal_y);
   cell_values_[index] = 0.0;
   queue_->enqueueCell(local_goal_x, local_goal_y);
 
+  // 从局部目标扩散曼哈顿距离场
   propogateManhattanDistances();
 
   return true;
 }
 
+// 查找全局路径在局部代价地图内的最后一个点
 bool GoalDistCritic::getLastPoseOnCostmap(
   const nav_2d_msgs::msg::Path2D & global_plan,
   unsigned int & x, unsigned int & y)
 {
+  // 先把路径重采样到地图分辨率
   nav_2d_msgs::msg::Path2D adjusted_global_plan = nav_2d_utils::adjustPlanResolution(
     global_plan,
     costmap_->getResolution());
   bool started_path = false;
 
   // skip global path points until we reach the border of the local map
+  //（遍历路径，持续更新“最近一次落在地图内”的点）
   for (unsigned int i = 0; i < adjusted_global_plan.poses.size(); ++i) {
     double g_x = adjusted_global_plan.poses[i].x;
     double g_y = adjusted_global_plan.poses[i].y;
@@ -81,19 +93,23 @@ bool GoalDistCritic::getLastPoseOnCostmap(
         map_y) && costmap_->getCost(map_x, map_y) != nav2_costmap_2d::NO_INFORMATION)
     {
       // Still on the costmap. Continue.
+      //（仍在地图内：记录该点，继续向后找）
       x = map_x;
       y = map_y;
       started_path = true;
     } else if (started_path) {
       // Off the costmap after being on the costmap. Return the last saved indices.
+      //（路径已离开局部地图：返回最后记录的点）
       return true;
     }
     // else, we have not yet found a point on the costmap, so we just continue
+    //（尚未进入地图：继续向后扫描）
   }
 
   if (started_path) {
-    return true;
+    return true;  // 整条路径都在地图内：返回其最后一点
   } else {
+    // 路径完全不在局部地图内：无法评分
     RCLCPP_ERROR(
       rclcpp::get_logger(
         "GoalDistCritic"), "None of the points of the global plan were in the local costmap.");

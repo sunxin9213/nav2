@@ -37,6 +37,20 @@
  *********************************************************************/
 #ifndef NAV2_COSTMAP_2D__FOOTPRINT_HPP_
 #define NAV2_COSTMAP_2D__FOOTPRINT_HPP_
+// ============================================================================
+// 中文注释：机器人足迹（footprint）工具头文件（实现见 footprint.cpp）
+//
+// 【文件功能】
+// 提供足迹多边形的几何工具：
+//   - calculateMinAndMaxDistances：内切半径（中心到边最短距离）与
+//     外接半径（中心到顶点最远距离）——膨胀层与碰撞检测的关键参数；
+//   - transformFootprint：足迹按位姿 (x,y,theta) 旋转平移到世界坐标
+//     （二维旋转矩阵）；
+//   - padFootprint：足迹向外加安全衬垫；
+//   - makeFootprintFromRadius：robot_radius 圆形配置 → 正 16 边形；
+//   - makeFootprintFromString：解析 YAML 字符串 "[[x,y],[x,y],...]"。
+// 足迹两种配置方式：footprint 多边形 或 robot_radius 圆（取其大者生效）。
+// ============================================================================
 
 #include <string>
 #include <vector>

@@ -15,6 +15,16 @@
 #ifndef NAV2_WAYPOINT_FOLLOWER__WAYPOINT_FOLLOWER_HPP_
 #define NAV2_WAYPOINT_FOLLOWER__WAYPOINT_FOLLOWER_HPP_
 
+// ============================================================================
+// 文件说明（中文）：
+// WaypointFollower（航点跟随器）节点的头文件声明。
+// 模块定位：Nav2 的航点导航服务器。对外提供 follow_waypoints 动作：
+// 依次把每个航点作为 NavigateToPose 目标发送给 bt_navigator，
+// 每个航点停靠后可调用 WaypointTaskExecutor 插件执行附加任务
+//（默认 wait_at_waypoint 等待插件）。
+// 详细中文注释的实现见 src/waypoint_follower.cpp。
+// ============================================================================
+
 #include <memory>
 #include <string>
 #include <vector>

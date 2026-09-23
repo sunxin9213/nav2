@@ -32,18 +32,26 @@ namespace mppi
 /**
  * @class Parameter Type enum
  */
+// 参数类型：Dynamic 运行期可通过 ros2 param set 动态修改；
+// Static 仅启动时读取，修改需重启节点
 enum class ParameterType { Dynamic, Static };
 
 /**
  * @class mppi::ParametersHandler
  * @brief Handles getting parameters and dynamic parmaeter changes
+ * （MPPI 参数处理器：统一封装参数声明/读取/动态更新。
+ *  典型用法：auto getParam = parameters_handler_->getParamGetter(name_);
+ *  getParam(var_, "param_name", default); 命名空间自动拼接为 name_.param_name。
+ *  动态参数通过 ROS2 add_on_set_parameters_callback 机制分发，
+ *  配合 pre/post 回调保证优化器内部状态的一致性。）
  */
 class ParametersHandler
 {
 public:
+  // 参数更新回调签名：接收 rclcpp::Parameter（含名称与新值）
   using get_param_func_t = void (const rclcpp::Parameter & param);
-  using post_callback_t = void ();
-  using pre_callback_t = void ();
+  using post_callback_t = void ();   // 参数变更后的收尾回调签名
+  using pre_callback_t = void ();   // 参数变更前的准备回调签名
 
   /**
     * @brief Constructor for mppi::ParametersHandler
@@ -60,13 +68,14 @@ public:
   /**
     * @brief Starts processing dynamic parameter changes
     */
-  void start();
+  void start();  // 注册 ROS2 on_set_parameters 回调，启用动态调参
 
   /**
     * @brief Dynamic parameter callback
     * @param parameter Parameter changes to process
     * @return Set Parameter Result
     */
+  // ROS2 参数变更回调实现（见 parameters_handler.cpp）
   rcl_interfaces::msg::SetParametersResult dynamicParamsCallback(
     std::vector<rclcpp::Parameter> parameters);
 
@@ -75,6 +84,7 @@ public:
     * @param ns Namespace to get parameters within
     * @return Parameter getter object
     */
+  // 返回绑定命名空间的读取器 lambda：后续调用自动加 "ns." 前缀
   inline auto getParamGetter(const std::string & ns);
 
   /**
@@ -96,13 +106,15 @@ public:
     * @param setting Parameter
     * @param name Name of parameter
     */
+  // 为成员变量 setting 注册动态更新回调（改动实时写入该变量）
   template<typename T>
   void setDynamicParamCallback(T & setting, const std::string & name);
 
   /**
-    * @brief Get mutex lock for changing parameters
-    * @return Pointer to mutex
-    */
+   * @brief Get mutex lock for changing parameters
+   * @return Pointer to mutex
+   */
+  // 暴露互斥锁给外部（如优化器在打分循环中持锁，防止改参竞态）
   std::mutex * getLock()
   {
     return &parameters_change_mutex_;
@@ -124,6 +136,7 @@ protected:
     * @param default_value Default parameter value
     * @param param_type Type of parameter (dynamic or static)
     */
+  // 声明（若未声明）并读取参数；Dynamic 类型额外注册更新回调
   template<typename SettingT, typename ParamT>
   void getParam(
     SettingT & setting, const std::string & name, ParamT default_value,
@@ -135,6 +148,7 @@ protected:
     * @param name Parameter name
     * @param node Node to set parameter via
     */
+  // 从节点读取参数值并做类型转换后写入 setting
   template<typename ParamT, typename SettingT, typename NodeT>
   void setParam(SettingT & setting, const std::string & name, NodeT node) const;
 
@@ -143,25 +157,28 @@ protected:
     * @param parameter Parameter to convert into real type
     * @return parameter as a functional type
     */
+  // 编译期按 T 的类型选择 rclcpp::Parameter 的 as_xxx() 取值接口
   template<typename T>
   static auto as(const rclcpp::Parameter & parameter);
 
-  std::mutex parameters_change_mutex_;
+  std::mutex parameters_change_mutex_;  // 保护回调表与参数变更的互斥锁
   rclcpp::Logger logger_{rclcpp::get_logger("MPPIController")};
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr
-    on_set_param_handler_;
-  rclcpp_lifecycle::LifecycleNode::WeakPtr node_;
-  std::string node_name_;
+    on_set_param_handler_;               // ROS2 参数回调句柄（cleanup 时注销）
+  rclcpp_lifecycle::LifecycleNode::WeakPtr node_;  // 生命周期节点弱引用
+  std::string node_name_;               // 节点名（顶层命名空间）
 
-  bool verbose_{false};
+  bool verbose_{false};                 // 是否打印参数日志
 
+  // 参数名 -> 更新回调 的映射表，动态变更时按名分发
   std::unordered_map<std::string, std::function<get_param_func_t>>
-  get_param_callbacks_;
+    get_param_callbacks_;
 
-  std::vector<std::function<pre_callback_t>> pre_callbacks_;
-  std::vector<std::function<post_callback_t>> post_callbacks_;
+  std::vector<std::function<pre_callback_t>> pre_callbacks_;   // 变更前回调列表
+  std::vector<std::function<post_callback_t>> post_callbacks_;  // 变更后回调列表
 };
 
+// 生成绑定命名空间的参数读取 lambda：把 "param" 补全为 "ns.param"
 inline auto ParametersHandler::getParamGetter(const std::string & ns)
 {
   return [this, ns](
@@ -176,19 +193,19 @@ inline auto ParametersHandler::getParamGetter(const std::string & ns)
 template<typename T>
 void ParametersHandler::addDynamicParamCallback(const std::string & name, T && callback)
 {
-  get_param_callbacks_[name] = callback;
+  get_param_callbacks_[name] = callback;  // 注册/覆盖某参数的更新回调
 }
 
 template<typename T>
 void ParametersHandler::addPostCallback(T && callback)
 {
-  post_callbacks_.push_back(callback);
+  post_callbacks_.push_back(callback);  // 追加变更后回调
 }
 
 template<typename T>
 void ParametersHandler::addPreCallback(T && callback)
 {
-  pre_callbacks_.push_back(callback);
+  pre_callbacks_.push_back(callback);  // 追加变更前回调
 }
 
 template<typename SettingT, typename ParamT>
@@ -199,11 +216,14 @@ void ParametersHandler::getParam(
 {
   auto node = node_.lock();
 
+  // 若节点尚未声明该参数则用默认值声明（幂等，避免重复声明报错）
   nav2_util::declare_parameter_if_not_declared(
     node, name, rclcpp::ParameterValue(default_value));
 
+  // 读取当前值写入 setting
   setParam<ParamT>(setting, name, node);
 
+  // 动态参数：注册运行期更新回调
   if (param_type == ParameterType::Dynamic) {
     setDynamicParamCallback(setting, name);
   }
@@ -214,17 +234,19 @@ void ParametersHandler::setParam(
   SettingT & setting, const std::string & name, NodeT node) const
 {
   ParamT param_in{};
-  node->get_parameter(name, param_in);
-  setting = static_cast<SettingT>(param_in);
+  node->get_parameter(name, param_in);          // 按 ROS 参数类型读取
+  setting = static_cast<SettingT>(param_in);    // 转换为成员变量类型
 }
 
 template<typename T>
 void ParametersHandler::setDynamicParamCallback(T & setting, const std::string & name)
 {
+  // 幂等：已注册过同名参数则跳过
   if (get_param_callbacks_.find(name) != get_param_callbacks_.end()) {
     return;
   }
 
+  // lambda 捕获成员变量引用：参数变更时直接写入 setting（原地更新）
   auto callback = [this, &setting, name](const rclcpp::Parameter & param) {
       setting = as<T>(param);
 
@@ -243,6 +265,8 @@ void ParametersHandler::setDynamicParamCallback(T & setting, const std::string &
 template<typename T>
 auto ParametersHandler::as(const rclcpp::Parameter & parameter)
 {
+  // 编译期分支（if constexpr）：按目标类型 T 选择正确的取值接口。
+  // ROS2 参数只能存储有限几种类型，这里一一映射
   if constexpr (std::is_same_v<T, bool>) {
     return parameter.as_bool();
   } else if constexpr (std::is_integral_v<T>) {

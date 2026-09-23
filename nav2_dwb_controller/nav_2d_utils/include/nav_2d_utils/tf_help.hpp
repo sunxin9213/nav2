@@ -55,6 +55,20 @@ namespace nav_2d_utils
  * @param out_pose Place to store the resulting transformed pose
  * @return True if successful transform
  */
+// ---------------------------------------------------------------------------
+// TF2 坐标变换辅助函数（ROS2 TF API 学习素材）：
+// 对 tf2_ros::Buffer::transform 的安全封装，解决两个痛点：
+//   1. 免变换优化：目标坐标系与位姿坐标系相同时直接拷贝返回；
+//   2. 异常处理：tf2 变换可能抛出多种异常（外推/超时/不存在），
+//      这里统一捕获：
+//      - ExtrapolationException（变换数据时间不匹配）：改用最新可用
+//        变换（TimePointZero）并检查数据时延是否在容忍范围内；
+//      - 其他 TransformException：打印错误返回 false。
+// 成功返回 true 并写 out_pose；失败返回 false。
+// 提供两个重载：PoseStamped（3D 带戳位姿）与 Pose2DStamped（2D 版本，
+// 内部先转 3D 变换再转回 2D）。
+// ---------------------------------------------------------------------------
+// 将 PoseStamped 从其自身坐标系变换到目标 frame（带异常捕获与时延检查）
 bool transformPose(
   const std::shared_ptr<tf2_ros::Buffer> tf,
   const std::string frame,
@@ -73,6 +87,7 @@ bool transformPose(
  * @param out_pose Place to store the resulting transformed pose
  * @return True if successful transform
  */
+// 2D 版本：先转成 PoseStamped 完成 TF 变换，再转回 Pose2DStamped
 bool transformPose(
   const std::shared_ptr<tf2_ros::Buffer> tf,
   const std::string frame,

@@ -51,9 +51,14 @@ using std::max;
 using std::string;
 using nav2_util::declare_parameter_if_not_declared;
 
+// 本文件实现 DWBPublisher（DWB 调试信息发布器）：
+// 集中发布全局/局部路径、评分评价消息、候选轨迹 Marker 与
+// 评价器逐格评分点云。所有发布都遵循"无订阅者不发布"的惰性策略，
+// 避免无谓的消息序列化开销。
 namespace dwb_core
 {
 
+// 构造：保存节点弱引用与插件名，获取时钟
 DWBPublisher::DWBPublisher(
   const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
   const std::string & plugin_name)
@@ -64,6 +69,7 @@ DWBPublisher::DWBPublisher(
   clock_ = node->get_clock();
 }
 
+// 生命周期配置：声明/读取各发布开关参数，创建全部发布器
 nav2_util::CallbackReturn
 DWBPublisher::on_configure()
 {
@@ -72,6 +78,7 @@ DWBPublisher::on_configure()
     throw std::runtime_error{"Failed to lock node"};
   }
 
+  // 声明各调试话题的发布开关（路径类默认开启，点云默认关闭）
   declare_parameter_if_not_declared(
     node, plugin_name_ + ".publish_evaluation",
     rclcpp::ParameterValue(true));
@@ -101,6 +108,7 @@ DWBPublisher::on_configure()
   node->get_parameter(plugin_name_ + ".publish_trajectories", publish_trajectories_);
   node->get_parameter(plugin_name_ + ".publish_cost_grid_pc", publish_cost_grid_pc_);
 
+  // 创建六个发布器（话题名固定，队列深度 1）
   eval_pub_ = node->create_publisher<dwb_msgs::msg::LocalPlanEvaluation>("evaluation", 1);
   global_pub_ = node->create_publisher<nav_msgs::msg::Path>("received_global_plan", 1);
   transformed_pub_ = node->create_publisher<nav_msgs::msg::Path>("transformed_global_plan", 1);
@@ -115,6 +123,7 @@ DWBPublisher::on_configure()
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
+// 激活：逐个激活生命周期发布器（激活后才能真正发出消息）
 nav2_util::CallbackReturn
 DWBPublisher::on_activate()
 {
@@ -141,6 +150,7 @@ DWBPublisher::on_deactivate()
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
+// 清理：释放全部发布器对象
 nav2_util::CallbackReturn
 DWBPublisher::on_cleanup()
 {
@@ -154,6 +164,7 @@ DWBPublisher::on_cleanup()
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
+// 发布评分评价：先发评价消息（有订阅且开启时），再发轨迹 Marker
 void
 DWBPublisher::publishEvaluation(std::shared_ptr<dwb_msgs::msg::LocalPlanEvaluation> results)
 {
@@ -166,6 +177,8 @@ DWBPublisher::publishEvaluation(std::shared_ptr<dwb_msgs::msg::LocalPlanEvaluati
   }
 }
 
+// 将全部候选轨迹绘制为 LINE_STRIP Marker：
+// 合法轨迹按分数好坏红绿渐变（最优偏绿），非法轨迹（负分）为黑色
 void
 DWBPublisher::publishTrajectories(const dwb_msgs::msg::LocalPlanEvaluation & results)
 {
@@ -179,6 +192,7 @@ DWBPublisher::publishTrajectories(const dwb_msgs::msg::LocalPlanEvaluation & res
 
   geometry_msgs::msg::Point pt;
 
+  // 基础 Marker 属性：线带、线宽 2mm、存活 marker_lifetime_ 秒
   m.header = results.header;
   m.type = m.LINE_STRIP;
   m.pose.orientation.w = 1;
@@ -186,22 +200,24 @@ DWBPublisher::publishTrajectories(const dwb_msgs::msg::LocalPlanEvaluation & res
   m.color.a = 1.0;
   m.lifetime = marker_lifetime_;
 
+  // 最优/最差分数用于把分数归一化到 [0,1] 的显示色阶
   double best_cost = results.twists[results.best_index].total;
   double worst_cost = results.twists[results.worst_index].total;
   double denominator = worst_cost - best_cost;
 
   if (std::fabs(denominator) < 1e-9) {
-    denominator = 1.0;
+    denominator = 1.0;  // 所有分数相同，避免除零
   }
 
   unsigned currentValidId = 0;
   unsigned currentInvalidId = 0;
-  string validNamespace("ValidTrajectories");
-  string invalidNamespace("InvalidTrajectories");
+  string validNamespace("ValidTrajectories");      // 合法轨迹命名空间
+  string invalidNamespace("InvalidTrajectories");  // 非法轨迹命名空间
   for (unsigned int i = 0; i < results.twists.size(); i++) {
     const dwb_msgs::msg::TrajectoryScore & twist = results.twists[i];
-    double displayLevel = (twist.total - best_cost) / denominator;
+    double displayLevel = (twist.total - best_cost) / denominator;  // 归一化色阶
     if (twist.total >= 0) {
+      // 合法轨迹：红绿渐变（displayLevel=0 最优偏绿）
       m.color.r = displayLevel;
       m.color.g = 1.0 - displayLevel;
       m.color.b = 0;
@@ -210,6 +226,7 @@ DWBPublisher::publishTrajectories(const dwb_msgs::msg::LocalPlanEvaluation & res
       m.id = currentValidId;
       ++currentValidId;
     } else {
+      // 非法轨迹（负分）：黑色
       m.color.r = 0;
       m.color.g = 0;
       m.color.b = 0;
@@ -219,6 +236,7 @@ DWBPublisher::publishTrajectories(const dwb_msgs::msg::LocalPlanEvaluation & res
       ++currentInvalidId;
     }
     m.points.clear();
+    // 轨迹位姿转为 3D 点序列（z=0 平面）
     for (unsigned int j = 0; j < twist.traj.poses.size(); ++j) {
       pt.x = twist.traj.poses[j].x;
       pt.y = twist.traj.poses[j].y;
@@ -230,6 +248,7 @@ DWBPublisher::publishTrajectories(const dwb_msgs::msg::LocalPlanEvaluation & res
   marker_pub_->publish(std::move(ma));
 }
 
+// 发布局部轨迹（选中轨迹的位姿序列转为 Path 消息）
 void
 DWBPublisher::publishLocalPlan(
   const std_msgs::msg::Header & header,
@@ -248,6 +267,9 @@ DWBPublisher::publishLocalPlan(
   }
 }
 
+// 发布评价器逐格评分点云：把每个评价器对代价地图每个格子的评分
+// （通过 addCriticVisualization 获取）编码为 PointCloud2 的附加通道，
+// 并加权累加出 total_cost 总分通道，便于 RViz 按通道着色调试
 void
 DWBPublisher::publishCostGrid(
   const std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros,
@@ -266,6 +288,7 @@ DWBPublisher::publishCostGrid(
   unsigned int size_x = costmap->getSizeInCellsX();
   unsigned int size_y = costmap->getSizeInCellsY();
 
+  // 收集各评价器的逐格评分通道，并按 scale 加权累加总成本
   std::vector<std::pair<std::string, std::vector<float>>> cost_channels;
   std::vector<float> total_cost(size_x * size_y, 0.0);
 
@@ -274,7 +297,7 @@ DWBPublisher::publishCostGrid(
     critic->addCriticVisualization(cost_channels);
     if (channel_index == cost_channels.size()) {
       // No channels were added, so skip to next critic
-      continue;
+      continue;  // 该评价器不提供可视化数据
     }
     double scale = critic->getScale();
     for (unsigned int i = 0; i < size_x * size_y; i++) {
@@ -282,8 +305,10 @@ DWBPublisher::publishCostGrid(
     }
   }
 
+  // 附加总成本通道
   cost_channels.push_back(std::make_pair("total_cost", total_cost));
 
+  // 填充点云元数据：字段 = x,y,z + 各评分通道，均为 FLOAT32（4 字节）
   cost_grid_pc->width = size_x * size_y;
   cost_grid_pc->height = 1;
   cost_grid_pc->fields.resize(3 + cost_channels.size());  // x,y,z, + cost channels
@@ -296,7 +321,7 @@ DWBPublisher::publishCostGrid(
     cost_grid_pc->fields[i].count = 1;
     cost_grid_pc->fields[i].datatype = sensor_msgs::msg::PointField::FLOAT32;
     if (i >= 3) {
-      cost_grid_pc->fields[i].name = cost_channels[i - 3].first;
+      cost_grid_pc->fields[i].name = cost_channels[i - 3].first;  // 评分通道名
     }
   }
 
@@ -304,10 +329,11 @@ DWBPublisher::publishCostGrid(
   cost_grid_pc->fields[1].name = "y";
   cost_grid_pc->fields[2].name = "z";
 
-  cost_grid_pc->point_step = offset;
+  cost_grid_pc->point_step = offset;  // 每点字节数
   cost_grid_pc->row_step = cost_grid_pc->point_step * cost_grid_pc->width;
   cost_grid_pc->data.resize(cost_grid_pc->row_step * cost_grid_pc->height);
 
+  // 为每个字段创建写迭代器
   std::vector<sensor_msgs::PointCloud2Iterator<float>> cost_grid_pc_iter;
 
   for (size_t i = 0; i < cost_grid_pc->fields.size(); ++i) {
@@ -315,6 +341,7 @@ DWBPublisher::publishCostGrid(
     cost_grid_pc_iter.push_back(iter);
   }
 
+  // 逐格填充：格子索引转世界坐标写入 (x,y,z)，评分写入对应通道
   unsigned int j = 0;
   for (unsigned int cy = 0; cy < size_y; cy++) {
     for (unsigned int cx = 0; cx < size_x; cx++) {
@@ -337,6 +364,7 @@ DWBPublisher::publishCostGrid(
   cost_grid_pc_pub_->publish(std::move(cost_grid_pc));
 }
 
+// 以下三个函数分别发布全局/变换后/局部路径（转发到通用实现）
 void
 DWBPublisher::publishGlobalPlan(const nav_2d_msgs::msg::Path2D plan)
 {
@@ -355,6 +383,7 @@ DWBPublisher::publishLocalPlan(const nav_2d_msgs::msg::Path2D plan)
   publishGenericPlan(plan, *local_pub_, publish_local_plan_);
 }
 
+// 通用路径发布：无订阅者或开关关闭时直接返回，避免无效序列化
 void
 DWBPublisher::publishGenericPlan(
   const nav_2d_msgs::msg::Path2D plan,

@@ -37,6 +37,20 @@
  *********************************************************************/
 #ifndef NAV2_COSTMAP_2D__STATIC_LAYER_HPP_
 #define NAV2_COSTMAP_2D__STATIC_LAYER_HPP_
+// ============================================================================
+// 中文注释：静态层（StaticLayer）头文件（实现见 static_layer.cpp）
+//
+// 【类功能】
+// 订阅 map 话题的 OccupancyGrid（由 map_server 发布的静态地图），
+// 把占据值 [-1,100] 翻译为代价 [0,255]，作为全局代价地图的权威底图。
+// 默认用 updateWithTrueOverwrite 直接覆盖主地图（静态地图优先）。
+// 关键成员：
+//   - map_sub_：地图话题订阅（transient_local QoS，晚启动也能收到）；
+//   - map_buffer_：新地图的暂存指针（延迟到更新周期再切换）；
+//   - map_update_sub_：可选的增量地图更新订阅；
+//   - lethal_threshold_：占据概率判为致命障碍的阈值。
+// 【继承体系】Layer + Costmap2D → CostmapLayer → StaticLayer
+// ============================================================================
 
 #include <mutex>
 #include <string>

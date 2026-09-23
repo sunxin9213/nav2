@@ -34,6 +34,15 @@ namespace mppi
 /**
  * @class mppi::TrajectoryVisualizer
  * @brief Visualizes trajectories for debugging
+ *（轨迹可视化器：将候选轨迹/最优轨迹/变换后路径发布为 RViz 消息）
+ *
+ * 中文说明：
+ * 发布两类调试话题：
+ * 1. MarkerArray —— 以散点形式显示全部候选轨迹与最优轨迹
+ *    （通过 visualize_footprint 参数还可叠加 Footprint 足迹多边形）；
+ * 2. Path —— 机器人坐标系下变换后的全局路径。
+ * 遵循 ROS2 生命周期（on_configure/on_activate/on_deactivate/on_cleanup），
+ * 发布器为 LifecyclePublisher，仅在激活状态下发布。
  */
 class TrajectoryVisualizer
 {
@@ -93,20 +102,23 @@ public:
   void reset();
 
 protected:
-  std::string frame_id_;
+  std::string frame_id_;  // 发布轨迹所用的坐标系（通常为局部代价地图坐标系）
+  // 轨迹散点标记发布器（MarkerArray，含全部候选轨迹与最优轨迹）
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<visualization_msgs::msg::MarkerArray>>
   trajectories_publisher_;
+  // 变换后全局路径发布器（机器人坐标系下的路径，用于调试）
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>> transformed_path_pub_;
 
+  // 累积的轨迹点标记（每次 add() 追加，visualize() 时统一发布）
   std::unique_ptr<visualization_msgs::msg::MarkerArray> points_;
-  int marker_id_ = 0;
+  int marker_id_ = 0;  // 标记 id 计数器（RViz 用 id 区分不同 marker）
 
-  ParametersHandler * parameters_handler_;
+  ParametersHandler * parameters_handler_;  // 参数处理器（读取可视化步长等）
 
-  size_t trajectory_step_{0};
-  size_t time_step_{0};
+  size_t trajectory_step_{0};  // 轨迹发布间隔：每隔多少条候选轨迹发布一条（降采样）
+  size_t time_step_{0};       // 时间步发布间隔：每条轨迹每隔多少步取一个点（降采样）
 
-  rclcpp::Logger logger_{rclcpp::get_logger("MPPIController")};
+  rclcpp::Logger logger_{rclcpp::get_logger("MPPIController")};  // 日志器
 };
 
 }  // namespace mppi

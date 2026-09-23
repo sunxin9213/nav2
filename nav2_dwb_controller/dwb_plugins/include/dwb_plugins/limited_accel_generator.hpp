@@ -46,14 +46,20 @@ namespace dwb_plugins
 /**
  * @class LimitedAccelGenerator
  * @brief Limits the acceleration in the generated trajectories to a fraction of the simulated time.
+ * （受限加速度轨迹生成器：继承标准生成器，但把速度采样窗口限制在
+ *  "当前速度 ± 加速度上限 × acceleration_time_" 内，即速度指令
+ *  在一个控制周期内物理可达。与标准生成器的区别：
+ *  标准：先取可达速度，再在轨迹推演中继续加速；
+ *  受限：采样窗口本身就受限，轨迹内速度保持恒定。）
  */
 class LimitedAccelGenerator : public StandardTrajectoryGenerator
 {
 public:
   void initialize(
     const nav2_util::LifecycleNode::SharedPtr & nh,
-    const std::string & plugin_name) override;
+    const std::string & plugin_name) override;  // 初始化基类并读取 sim_period
   void startNewIteration(const nav_2d_msgs::msg::Twist2D & current_velocity) override;
+  // 以当前速度为中心、加速度限制为半径开始采样（时间窗=acceleration_time_）
 
 protected:
   /**
@@ -66,12 +72,13 @@ protected:
    * @param dt amount of time in seconds
    * @return cmd_vel
    */
+  // 直接返回 cmd_vel：速度可行性已由受限采样窗口保证
   nav_2d_msgs::msg::Twist2D computeNewVelocity(
     const nav_2d_msgs::msg::Twist2D & cmd_vel,
     const nav_2d_msgs::msg::Twist2D & start_vel,
     const double dt) override;
-  double acceleration_time_;
-  std::string plugin_name_;
+  double acceleration_time_;   // 加速时间窗（默认为控制周期 1/controller_frequency）
+  std::string plugin_name_;    // 插件名（参数命名空间）
 };
 }  // namespace dwb_plugins
 

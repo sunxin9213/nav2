@@ -15,6 +15,17 @@
 #ifndef NAV2_MAP_SERVER__COSTMAP_FILTER_INFO_SERVER_HPP_
 #define NAV2_MAP_SERVER__COSTMAP_FILTER_INFO_SERVER_HPP_
 
+// ============================================================================
+// 文件说明（中文）：
+// CostmapFilterInfoServer 节点的头文件声明。
+// 模块定位：代价地图过滤器（keepout 禁行区 / 限速区等）的元信息发布节点。
+// 激活时以 transient_local QoS 发布一帧 nav2_msgs::msg::CostmapFilterInfo
+// （过滤器类型、掩码话题名、base/multiplier 线性变换参数），
+// 供 nav2_costmap_2d 的各 costmap filter 插件订阅使用。
+// 实现（.cpp，含详细中文注释）见
+// src/costmap_filter_info/costmap_filter_info_server.cpp。
+// ============================================================================
+
 #include <memory>
 
 #include "rclcpp/rclcpp.hpp"
@@ -71,8 +82,10 @@ protected:
   nav2_util::CallbackReturn on_shutdown(const rclcpp_lifecycle::State & state) override;
 
 private:
+  // CostmapFilterInfo 消息发布器（transient_local，latched 语义）
   rclcpp_lifecycle::LifecyclePublisher<nav2_msgs::msg::CostmapFilterInfo>::SharedPtr publisher_;
 
+  // 待发布的过滤器信息消息（configure 阶段填充，activate 阶段发布）
   nav2_msgs::msg::CostmapFilterInfo msg_;
 };  // CostmapFilterInfoServer
 

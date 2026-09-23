@@ -13,6 +13,13 @@
 // limitations under the License.
 
 /* OccupancyGrid map input-output library */
+/* 地图输入输出库（中文说明）：
+   本头文件声明 nav2_map_server 的地图读写接口：
+   - 输入（加载）：loadMapYaml（解析 YAML 元数据）、loadMapFromFile
+     （图像 -> OccupancyGrid）、loadMapFromYaml（二者组合的顶层接口）；
+   - 输出（保存）：saveMapToFile（OccupancyGrid -> 图像 + YAML）；
+   - 辅助：expand_user_home_dir_if_needed（~/ 路径展开）。
+   具体实现见 src/map_io.cpp。 */
 
 #ifndef NAV2_MAP_SERVER__MAP_IO_HPP_
 #define NAV2_MAP_SERVER__MAP_IO_HPP_
@@ -24,27 +31,30 @@
 #include "nav_msgs/msg/occupancy_grid.hpp"
 
 /* Map input part */
+/* ======================= 地图输入部分 ======================= */
 
 namespace nav2_map_server
 {
 
+// 地图加载参数：从 YAML 元数据解析得到
 struct LoadParameters
 {
-  std::string image_file_name;
-  double resolution{0};
-  std::vector<double> origin{0, 0, 0};
-  double free_thresh;
-  double occupied_thresh;
-  MapMode mode;
-  bool negate;
+  std::string image_file_name;          // 栅格图像文件名（绝对路径）
+  double resolution{0};                 // 地图分辨率（米/像素）
+  std::vector<double> origin{0, 0, 0};  // 地图原点 [x, y, yaw]（左下角世界坐标）
+  double free_thresh;                   // 空闲判定灰度阈值
+  double occupied_thresh;               // 占据判定灰度阈值
+  MapMode mode;                         // 像素解释模式（trinary/scale/raw）
+  bool negate;                          // 是否黑白反转
 };
 
+// 地图加载结果状态码
 typedef enum
 {
-  LOAD_MAP_SUCCESS,
-  MAP_DOES_NOT_EXIST,
-  INVALID_MAP_METADATA,
-  INVALID_MAP_DATA
+  LOAD_MAP_SUCCESS,       // 加载成功
+  MAP_DOES_NOT_EXIST,     // 文件名为空 / 地图不存在
+  INVALID_MAP_METADATA,   // YAML 元数据解析失败
+  INVALID_MAP_DATA        // 图像数据读取失败
 } LOAD_MAP_STATUS;
 
 /**
@@ -78,14 +88,16 @@ LOAD_MAP_STATUS loadMapFromYaml(
 
 
 /* Map output part */
+/* ======================= 地图输出部分 ======================= */
 
+// 地图保存参数
 struct SaveParameters
 {
-  std::string map_file_name{""};
-  std::string image_format{""};
-  double free_thresh{0.0};
-  double occupied_thresh{0.0};
-  MapMode mode{MapMode::Trinary};
+  std::string map_file_name{""};    // 保存文件基础名（不含扩展名）
+  std::string image_format{""};     // 图像格式（pgm/png/bmp...）
+  double free_thresh{0.0};          // 空闲阈值（0 表示未指定，用默认值）
+  double occupied_thresh{0.0};      // 占据阈值（0 表示未指定，用默认值）
+  MapMode mode{MapMode::Trinary};   // 保存模式（默认三值模式）
 };
 
 /**

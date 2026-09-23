@@ -35,6 +35,15 @@ namespace mppi
 /**
  * @class mppi::NoiseGenerator
  * @brief Generates noise trajectories from optimal trajectory
+ *（噪声生成器：在上周期最优控制序列基础上叠加高斯噪声，批量采样候选控制）
+ *
+ * 中文说明：
+ * MPPI 的"探索"来自随机采样：以当前最优控制序列为均值、以
+ * sampling_std 为标准差生成 [batch_size, time_steps] 的高斯噪声矩阵。
+ * 为不阻塞控制循环，噪声的生成放在独立线程（noiseThread）中异步进行：
+ * 主线程在计算本周期控制量的同时，噪声线程已在为下一周期准备新噪声，
+ * 二者通过条件变量同步。注意：若在 x 轴正方向噪声生成速度过慢导致
+ * ready_ 未置位，主线程会复用上一次的噪声（详见 setNoisedControls）。
  */
 class NoiseGenerator
 {
@@ -94,17 +103,19 @@ protected:
    */
   void generateNoisedControls();
 
-  xt::xtensor<float, 2> noises_vx_;
-  xt::xtensor<float, 2> noises_vy_;
-  xt::xtensor<float, 2> noises_wz_;
+  // 各控制分量的噪声张量 [batch_size, time_steps]：noised = control + noise
+  xt::xtensor<float, 2> noises_vx_;  // x 方向线速度噪声
+  xt::xtensor<float, 2> noises_vy_;  // y 方向线速度噪声（仅全向底盘使用）
+  xt::xtensor<float, 2> noises_wz_;  // 角速度噪声
 
-  mppi::models::OptimizerSettings settings_;
-  bool is_holonomic_;
+  mppi::models::OptimizerSettings settings_;  // 优化器设置（含采样标准差）
+  bool is_holonomic_;                         // 底盘是否全向（决定是否生成 vy 噪声）
 
-  std::thread noise_thread_;
-  std::condition_variable noise_cond_;
-  std::mutex noise_lock_;
+  std::thread noise_thread_;            // 异步噪声生成线程
+  std::condition_variable noise_cond_;  // 与主线程同步的条件变量
+  std::mutex noise_lock_;               // 保护噪声数据的互斥锁
   bool active_{false}, ready_{false}, regenerate_noises_{false};
+  // active：线程是否存活；ready：新噪声是否就绪；regenerate_noises：是否需要重新生成噪声的标志
 };
 
 }  // namespace mppi

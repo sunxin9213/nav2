@@ -40,6 +40,17 @@ namespace nav2_rotation_shim_controller
 /**
  * @class nav2_rotation_shim_controller::RotationShimController
  * @brief Rotate to rough path heading controller shim plugin
+ *（旋转垫片控制器：在主控制器外层包装“先原地旋转对准路径朝向”的行为）
+ *
+ * 中文说明：
+ * “垫片（shim）”控制器：不实现路径跟踪本身，而是在将工作转交给
+ * 内部加载的主控制器（primary_controller_，如 Pure Pursuit/DWB/MPPI）
+ * 之前，先处理大角度偏差场景——当机器人朝向与路径方向夹角超过
+ * angular_dist_threshold 时，先原地旋转到大致对准路径（computeRotateToHeadingCommand，
+ * 带角速度加减速与碰撞检查 isCollisionFree），再交给主控制器跟踪。
+ * 适用于差速底盘在路径起点朝向偏差大、或换路径时需要先转向的情况。
+ * 在 Nav2 中由 controller_server 通过 pluginlib 加载，自身再通过
+ * lp_loader_ 动态加载真正的主控制器插件。
  */
 class RotationShimController : public nav2_core::Controller
 {
@@ -161,29 +172,36 @@ protected:
   rcl_interfaces::msg::SetParametersResult
   dynamicParametersCallback(std::vector<rclcpp::Parameter> parameters);
 
-  rclcpp_lifecycle::LifecycleNode::WeakPtr node_;
-  std::shared_ptr<tf2_ros::Buffer> tf_;
-  std::string plugin_name_;
-  rclcpp::Logger logger_ {rclcpp::get_logger("RotationShimController")};
-  rclcpp::Clock::SharedPtr clock_;
-  std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros_;
+  rclcpp_lifecycle::LifecycleNode::WeakPtr node_;   // 父生命周期节点（controller_server）
+  std::shared_ptr<tf2_ros::Buffer> tf_;            // TF2 缓冲区（采样点转机器人坐标系）
+  std::string plugin_name_;                        // 本插件名称
+  rclcpp::Logger logger_ {rclcpp::get_logger("RotationShimController")};  // 日志器
+  rclcpp::Clock::SharedPtr clock_;                 // 节点时钟
+  std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros_;  // 局部代价地图
+  // 足迹碰撞检查器（旋转安全性检查用）
   std::unique_ptr<nav2_costmap_2d::FootprintCollisionChecker<nav2_costmap_2d::Costmap2D *>>
   collision_checker_;
 
+  // pluginlib 加载器：动态加载主控制器（如 RPP/DWB/MPPI）
   pluginlib::ClassLoader<nav2_core::Controller> lp_loader_;
-  nav2_core::Controller::Ptr primary_controller_;
-  bool path_updated_;
-  nav_msgs::msg::Path current_path_;
+  nav2_core::Controller::Ptr primary_controller_;  // 被包装的主控制器实例
+  bool path_updated_;                              // 新路径是否已下发标志
+  nav_msgs::msg::Path current_path_;                // 当前全局路径
+  // forward_sampling_distance：在路径上取采样点的距离（估计路径方向用）
+  // angular_dist_threshold：触发旋转的角度阈值
+  // angular_disengage_threshold：退出旋转状态的角度阈值（通常更小）
   double forward_sampling_distance_, angular_dist_threshold_, angular_disengage_threshold_;
-  double rotate_to_heading_angular_vel_, max_angular_accel_;
-  double control_duration_, simulate_ahead_time_;
+  double rotate_to_heading_angular_vel_, max_angular_accel_;  // 旋转角速度与最大角加速度
+  double control_duration_, simulate_ahead_time_;  // 控制周期 / 前向碰撞仿真时长
+  // rotate_to_goal_heading：接近目标时是否旋转到目标朝向；in_rotation：当前是否处于旋转状态
   bool rotate_to_goal_heading_, in_rotation_;
-  bool closed_loop_;
-  double last_angular_vel_ = std::numeric_limits<double>::max();
+  bool closed_loop_;  // 旋转是否采用闭环（按剩余角度实时计算）控制
+  double last_angular_vel_ = std::numeric_limits<double>::max();  // 上一周期角速度（开环模式用）
 
-  // Dynamic parameters handler
-  std::mutex mutex_;
+  // Dynamic parameters handler（动态参数回调）
+  std::mutex mutex_;  // 保护动态参数的互斥锁
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr dyn_params_handler_;
+  // 位置目标检查器（判断是否到达目标位置、仅旋转到朝向阶段使用）
   std::unique_ptr<nav2_controller::PositionGoalChecker> position_goal_checker_;
 };
 

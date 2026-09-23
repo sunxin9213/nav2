@@ -19,6 +19,8 @@
 
 namespace nav2_rviz_plugins
 {
+// 全局唯一的 GoalPoseUpdater 实例（定义在 nav2_panel.cpp 中）：
+// GoalTool 与 Nav2 面板分属不同插件，通过这个全局对象 + Qt 信号槽解耦通信
 extern GoalPoseUpdater GoalUpdater;
 }  // nav2_rviz_plugins
 

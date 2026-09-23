@@ -16,6 +16,18 @@
 
 #ifndef NAV2_COSTMAP_2D__COSTMAP_TOPIC_COLLISION_CHECKER_HPP_
 #define NAV2_COSTMAP_2D__COSTMAP_TOPIC_COLLISION_CHECKER_HPP_
+// ============================================================================
+// 中文注释：基于话题的碰撞检测器头文件（实现见 costmap_topic_collision_checker.cpp）
+//
+// 【类功能】
+// 组合 CostmapSubscriber（地图来源）+ FootprintSubscriber（动态足迹）+
+// FootprintCollisionChecker（碰撞计算），提供：
+//   - isCollisionFree(pose)：位姿是否无碰撞
+//     （异常一律视为碰撞——安全优先策略）；
+//   - scorePose()：位姿的足迹碰撞代价；
+//   - getFootprint()：拉取最新足迹并变换到世界坐标。
+// 被 CollisionMonitor（碰撞监控器）使用。
+// ============================================================================
 
 #include <string>
 #include <vector>

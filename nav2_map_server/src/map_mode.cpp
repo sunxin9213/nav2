@@ -12,6 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 文件说明（中文）：
+// MapMode 枚举与字符串的相互转换工具（YAML/服务请求中的 "mode" 字段）。
+// 三种模式的语义见 map_mode.hpp：
+//   trinary —— 三值模式（占据 100 / 空闲 0 / 未知 -1）
+//   scale   —— 比例模式（连续占据度 + 透明像素表示未知）
+//   raw     —— 原始模式（灰度直接映射占据值）
+// ============================================================================
+
 #include "nav2_map_server/map_mode.hpp"
 
 #include <stdexcept>
@@ -19,6 +28,7 @@
 
 namespace nav2_map_server
 {
+// 枚举 -> 字符串（用于写 YAML 元数据与日志）
 const char * map_mode_to_string(MapMode map_mode)
 {
   switch (map_mode) {
@@ -33,8 +43,10 @@ const char * map_mode_to_string(MapMode map_mode)
   }
 }
 
+// 字符串 -> 枚举（用于解析 YAML / SaveMap 服务请求；非法值抛异常）
 MapMode map_mode_from_string(std::string map_mode_name)
 {
+  // 大小写不敏感：先统一转小写
   for (auto & c : map_mode_name) {
     c = tolower(c);
   }

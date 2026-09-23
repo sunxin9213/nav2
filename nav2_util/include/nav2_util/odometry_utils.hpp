@@ -37,6 +37,8 @@ namespace nav2_util
  * @class OdomSmoother
  * Wrapper for getting smooth odometry readings using a simple moving avergae.
  * Subscribes to the topic with a mutex.
+ * 里程计平滑器：通过滑动时间窗口内的简单移动平均(SMA)输出平滑速度。
+ * 内部以互斥锁保护订阅回调与用户查询之间的数据竞争。
  */
 class OdomSmoother
 {
@@ -81,19 +83,27 @@ protected:
    * @brief Callback of odometry subscriber to process
    * @param msg Odometry msg to smooth
    */
+  // 里程计订阅回调：维护时间窗口并更新平滑结果
   void odomCallback(nav_msgs::msg::Odometry::SharedPtr msg);
 
   /**
    * @brief Update internal state of the smoother after getting new data
    */
+  // 新数据入队后重算累加和与平均速度
   void updateState();
 
+  // 里程计订阅句柄
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
+  // 窗口内速度的累加和（不含 header 信息，只用到 twist 部分）
   nav_msgs::msg::Odometry odom_cumulate_;
+  // 最近一次计算得到的平滑速度（含时间戳/坐标系头）
   geometry_msgs::msg::TwistStamped vel_smooth_;
+  // 保护上述共享状态的互斥锁（回调与查询接口跨线程）
   std::mutex odom_mutex_;
 
+  // 滑动窗口的时间长度（秒）
   rclcpp::Duration odom_history_duration_;
+  // 里程计消息的历史队列（双端队列，头出尾进）
   std::deque<nav_msgs::msg::Odometry> odom_history_;
 };
 

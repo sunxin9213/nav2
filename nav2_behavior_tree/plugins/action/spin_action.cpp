@@ -12,6 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// =============================================================================
+// 【文件说明】spin_action.cpp
+// 【所属模块】nav2_behavior_tree/plugins/action —— Nav2 行为树的动作节点插件
+//
+// 实现 Spin 行为树节点：调用 nav2_behaviors 服务器的 "spin" ROS2 Action
+// （nav2_msgs::action::Spin），让机器人原地旋转指定的角度（弧度）。
+// 主要用于导航失败的恢复行为（旋转寻找新方向）或搜索定位。
+//
+// 【在 Nav2 导航流程中的位置】
+// 常出现在默认导航树的 RecoveryBranch（恢复分支）中，与 BackUp、Wait 等
+// 一起作为重试策略。
+//
+// 【行为树核心概念】
+// - 输入端口：spin_dist（旋转角度，弧度）、time_allowance（允许的最长
+//   执行时间，秒）、is_recovery（是否为恢复行为，决定是否递增黑板上的
+//   恢复计数器 number_recoveries）。
+// - 构造函数中一次性读取端口填充 goal_（参数在树运行期间不变）；
+//   on_tick 中按 is_recovery 决定是否计数。
+// - XML 使用示例（恢复分支中的用法）：
+//   <Spin spin_dist="1.57" time_allowance="10" is_recovery="true"/>
+// =============================================================================
+
 #include <string>
 #include <memory>
 
@@ -20,30 +42,31 @@
 namespace nav2_behavior_tree
 {
 
+// 构造函数：委托基类创建 "spin" action 客户端，并读取端口填充 goal。
 SpinAction::SpinAction(
   const std::string & xml_tag_name,
   const std::string & action_name,
   const BT::NodeConfiguration & conf)
-// 实现该逻辑，并处理相关状态转换。
 : BtActionNode<nav2_msgs::action::Spin>(xml_tag_name, action_name, conf)
 {
+  // 读取旋转角度（弧度），填入 goal 的 target_yaw 字段。
   double dist;
-// 实现该逻辑，并处理相关状态转换。
   getInput("spin_dist", dist);
+  // 读取允许的最长执行时间（秒），转换为 ROS Duration 填入 goal。
   double time_allowance;
-// 实现该逻辑，并处理相关状态转换。
   getInput("time_allowance", time_allowance);
   goal_.target_yaw = dist;
   goal_.time_allowance = rclcpp::Duration::from_seconds(time_allowance);
-// 实现该逻辑，并处理相关状态转换。
+  // 读取"是否为恢复行为"标志：影响 on_tick 中是否递增恢复计数。
   getInput("is_recovery", is_recovery_);
 }
 
-// 在每次 tick 时读取输入并准备下一步执行状态。
+// on_tick 钩子：每次动作开始时调用。
 void SpinAction::on_tick()
 {
+  // 若本节点作为恢复行为使用：递增黑板上的 number_recoveries 计数器，
+  // 供 RecoveryNode/监控端统计本任务已执行的恢复次数。
   if (is_recovery_) {
-// 实现该逻辑，并处理相关状态转换。
     increment_recovery_count();
   }
 }
@@ -51,7 +74,7 @@ void SpinAction::on_tick()
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
-// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
+// 节点注册：动态库加载时把 "Spin" 标签绑定到本类构建器。
 BT_REGISTER_NODES(factory)
 {
   BT::NodeBuilder builder =

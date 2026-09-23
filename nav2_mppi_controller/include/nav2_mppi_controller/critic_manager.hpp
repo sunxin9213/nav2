@@ -38,6 +38,13 @@ namespace mppi
 /**
  * @class mppi::CriticManager
  * @brief Manager of objective function plugins for scoring trajectories
+ *（critic 管理器：负责加载并调度所有代价函数插件）
+ *
+ * 中文说明：
+ * 从参数 critics（字符串数组）读取要加载的 critic 列表，
+ * 通过 pluginlib ClassLoader 动态实例化（如 "mppi::critics::ConstraintCritic"），
+ * 评分时按加载顺序依次调用每个 critic 的 score()，各 critic 的代价
+ * 累加到同一 costs 张量上，实现多个目标项的线性组合。
  */
 class CriticManager
 {
@@ -86,16 +93,17 @@ protected:
   std::string getFullName(const std::string & name);
 
 protected:
-  rclcpp_lifecycle::LifecycleNode::WeakPtr parent_;
-  std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros_;
-  std::string name_;
+  rclcpp_lifecycle::LifecycleNode::WeakPtr parent_;  // 父节点弱引用
+  std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros_;  // 代价地图封装
+  std::string name_;  // 控制器插件名
 
-  ParametersHandler * parameters_handler_;
-  std::vector<std::string> critic_names_;
+  ParametersHandler * parameters_handler_;  // 参数处理器
+  std::vector<std::string> critic_names_;   // 待加载的 critic 名称列表（来自参数）
+  // pluginlib 类加载器：负责动态加载 CriticFunction 派生类
   std::unique_ptr<pluginlib::ClassLoader<critics::CriticFunction>> loader_;
-  std::vector<std::unique_ptr<critics::CriticFunction>> critics_;
+  std::vector<std::unique_ptr<critics::CriticFunction>> critics_;  // 已加载的 critic 实例
 
-  rclcpp::Logger logger_{rclcpp::get_logger("MPPIController")};
+  rclcpp::Logger logger_{rclcpp::get_logger("MPPIController")};  // 日志器
 };
 
 }  // namespace mppi

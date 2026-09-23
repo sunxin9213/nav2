@@ -36,6 +36,20 @@
  *********************************************************************/
 #ifndef NAV2_COSTMAP_2D__OBSERVATION_BUFFER_HPP_
 #define NAV2_COSTMAP_2D__OBSERVATION_BUFFER_HPP_
+// ============================================================================
+// 中文注释：观测缓冲区（ObservationBuffer）头文件（实现见 observation_buffer.cpp）
+//
+// 【类功能】
+// 每个传感器源的"预处理 + 时间窗缓存"组件：
+//   1. 把点云与传感器原点用 TF2 变换到全局坐标系；
+//   2. 高度区间过滤（剔除地面/天花板点）；
+//   3. 按保留时长缓存多条历史观测（observation_list_，新→旧排列）；
+//   4. isCurrent()：按 expected_update_rate_ 检测传感器失联。
+// 关键成员：
+//   - observation_list_：std::list<Observation>，新观测 push_front；
+//   - tf2_buffer_：TF 缓冲引用（transform 用 tf_tolerance_ 容差）；
+//   - observation_keep_time_：观测保留时长（0=只留最新一条）。
+// ============================================================================
 
 #include <vector>
 #include <list>

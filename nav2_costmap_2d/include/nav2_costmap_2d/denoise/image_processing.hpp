@@ -14,6 +14,18 @@
 
 #ifndef NAV2_COSTMAP_2D__DENOISE__IMAGE_PROCESSING_HPP_
 #define NAV2_COSTMAP_2D__DENOISE__IMAGE_PROCESSING_HPP_
+// ============================================================================
+// 中文注释：图像形态学算法头文件——去噪层的算法库
+//
+// 【文件功能】
+// 提供去噪所需的图像处理原语（模板函数，作用于 Image 视图）：
+//   - dilate()：形态学膨胀——每个像素取邻域（4/8 连通）的聚合值，
+//     配合自定义 max 仿函数使用（removeSinglePixels 的核心）；
+//   - GroupsRemover 类：连通域分割——按 4/8 连通把前景分成组，
+//     移除小于阈值的组（removeGroups 的核心）；
+//   - ConnectivityType：Way4（上下左右）/Way8（含对角线）。
+// 前景判定由调用方以谓词传入（如 DenoiseLayer::isBackground）。
+// ============================================================================
 
 #include "image.hpp"
 #include <algorithm>

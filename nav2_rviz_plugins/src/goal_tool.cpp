@@ -24,9 +24,12 @@
 namespace nav2_rviz_plugins
 {
 
+// GoalTool：RViz 的 "Nav2 Goal" 工具（工具栏上的 2D Goal Pose 按钮），
+// 继承自默认插件的 PoseTool，用户在 3D 视图中点选并拖出方向即设置导航目标点
 GoalTool::GoalTool()
 : rviz_default_plugins::tools::PoseTool()
 {
+  // 快捷键设为 'g'：在 RViz 中按 g 直接激活该工具
   shortcut_key_ = 'g';
 }
 
@@ -36,6 +39,7 @@ GoalTool::~GoalTool()
 
 void GoalTool::onInitialize()
 {
+  // 先完成基类初始化，再设置工具显示名与图标
   PoseTool::onInitialize();
   setName("Nav2 Goal");
   setIcon(rviz_common::loadPixmap("package://rviz_default_plugins/icons/classes/SetGoal.png"));
@@ -45,10 +49,13 @@ void
 GoalTool::onPoseSet(double x, double y, double theta)
 {
   // Set goal pose on global object GoalUpdater to update nav2 Panel
+  // 用户完成选点后触发：通过全局 GoalUpdater 对象发出 Qt 信号，
+  // 通知 Nav2 Panel 更新目标点位姿（坐标系取 RViz 当前固定坐标系）
   GoalUpdater.setGoal(x, y, theta, context_->getFixedFrame());
 }
 
 }  // namespace nav2_rviz_plugins
 
+// pluginlib 导出宏：把 GoalTool 注册为 RViz 工具插件
 #include <pluginlib/class_list_macros.hpp>  // NOLINT
 PLUGINLIB_EXPORT_CLASS(nav2_rviz_plugins::GoalTool, rviz_common::Tool)

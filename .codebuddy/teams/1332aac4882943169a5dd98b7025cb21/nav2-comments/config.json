@@ -1,0 +1,43 @@
+{
+  "name": "nav2-comments",
+  "mainConversationId": "1332aac4882943169a5dd98b7025cb21",
+  "workspacePath": "f:/nav2",
+  "createdAt": "2026-09-22T22:25:12.205Z",
+  "options": {
+    "workspacePath": "f:/nav2",
+    "isAutoTeam": false
+  },
+  "isAutoTeam": false,
+  "members": [
+    {
+      "memberId": "bt-commenter@nav2-comments",
+      "name": "bt-commenter",
+      "role": "注释 nav2_behavior_tree 模块",
+      "sessionId": "d351910e89724a2c9870edbab249ffea"
+    },
+    {
+      "memberId": "server-commenter@nav2-comments",
+      "name": "server-commenter",
+      "role": "注释 planner/controller/lifecycle 服务器",
+      "sessionId": "3afa977b434b4bca8421fc192136b4d3"
+    },
+    {
+      "memberId": "planner-commenter@nav2-comments",
+      "name": "planner-commenter",
+      "role": "注释全局规划器模块",
+      "sessionId": "dfe18ed4c53c408fbb37f10692856d93"
+    },
+    {
+      "memberId": "util-commenter@nav2-comments",
+      "name": "util-commenter",
+      "role": "注释 util/core/voxel/rviz 模块",
+      "sessionId": "131c227bbac04851b280ffee295295dd"
+    },
+    {
+      "memberId": "misc-commenter@nav2-comments",
+      "name": "misc-commenter",
+      "role": "注释 smoother/map_server/route 等模块",
+      "sessionId": "a05b35b9745b4e78800d0a85eed6daef"
+    }
+  ]
+}

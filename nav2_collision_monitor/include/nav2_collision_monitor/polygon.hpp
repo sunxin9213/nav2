@@ -15,6 +15,16 @@
 #ifndef NAV2_COLLISION_MONITOR__POLYGON_HPP_
 #define NAV2_COLLISION_MONITOR__POLYGON_HPP_
 
+// ============================================================================
+// 文件说明（中文）：
+// Polygon（多边形安全区）类的头文件声明。
+// 模块定位：碰撞监视器的安全区基类，定义围绕机器人的保护区域。
+// 支持 STOP（停障）/ SLOWDOWN（减速）/ APPROACH（预测逼近）三种动作，
+// 包含点在多边形内的射线法判定与基于运动仿真的碰撞时间预测。
+// 子类：Circle（圆形近似，更快）。
+// 详细中文注释的实现见 src/polygon.cpp。
+// ============================================================================
+
 #include <memory>
 #include <string>
 #include <vector>

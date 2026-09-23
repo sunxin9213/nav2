@@ -48,22 +48,46 @@
 
 namespace nav_2d_utils
 {
+// ----------------------------------------------------------------------------
+// 本头文件集中提供 Nav2 内部 2D 消息类型与标准 ROS 3D 消息类型之间的
+// 转换函数族：
+//   Twist2D <-> geometry_msgs::msg::Twist        速度（2D 平面 vs 3D 空间）
+//   PoseStamped <-> Pose2DStamped                带时间戳的位姿
+//   Pose <-> Pose2D                               位姿（四元数 vs 单一偏航角）
+//   vector<PoseStamped> <-> nav_msgs::msg::Path  路径
+//   Path <-> Path2D                               2D 路径 vs 标准路径
+// Nav2 的 DWB 控制器族在内部使用轻量的 nav_2d_msgs 类型（只有 x/y/theta
+// 三个分量），而与外部（TF、可视化、话题）交互必须用标准 3D 消息，
+// 这些转换函数消除两者之间的样板代码。
+// ----------------------------------------------------------------------------
+
+// 2D 速度转 3D 速度：x/y 线速度与 theta 角速度分别映射到 linear.x/y 与 angular.z
 geometry_msgs::msg::Twist twist2Dto3D(const nav_2d_msgs::msg::Twist2D & cmd_vel_2d);
+// 3D 速度转 2D 速度：反向映射（丢弃 z 线速度与 x/y 角速度分量）
 nav_2d_msgs::msg::Twist2D twist3Dto2D(const geometry_msgs::msg::Twist & cmd_vel);
 // nav_2d_msgs::msg::Pose2DStamped stampedPoseToPose2D(const tf2::Stamped<tf2::Pose>& pose);
+// 带戳位姿转 2D：位姿四元数通过 tf2::getYaw 提取为单一偏航角
 nav_2d_msgs::msg::Pose2DStamped poseStampedToPose2D(const geometry_msgs::msg::PoseStamped & pose);
+// 3D 位姿转 2D 位姿：位置取 x/y，姿态取 yaw（四元数 -> 单角度）
 geometry_msgs::msg::Pose2D poseToPose2D(const geometry_msgs::msg::Pose & pose);
+// 2D 位姿转 3D 位姿：yaw 通过 orientationAroundZAxis 构造绕 Z 轴四元数
 geometry_msgs::msg::Pose pose2DToPose(const geometry_msgs::msg::Pose2D & pose2d);
+// 2D 带戳位姿转 3D 带戳位姿：复用 pose2DToPose，header 原样拷贝
 geometry_msgs::msg::PoseStamped pose2DToPoseStamped(
   const nav_2d_msgs::msg::Pose2DStamped & pose2d);
+// 2D 位姿 + 指定坐标系/时间戳 转 3D 带戳位姿（header 由参数显式给出）
 geometry_msgs::msg::PoseStamped pose2DToPoseStamped(
   const geometry_msgs::msg::Pose2D & pose2d,
   const std::string & frame, const rclcpp::Time & stamp);
+// 位姿数组转标准路径消息：header 取第一个位姿的 header（空数组返回空路径）
 nav_msgs::msg::Path posesToPath(const std::vector<geometry_msgs::msg::PoseStamped> & poses);
+// 标准路径转 2D 路径：逐点位姿调用 poseToPose2D 压平为 (x,y,theta)
 nav_2d_msgs::msg::Path2D pathToPath2D(const nav_msgs::msg::Path & path);
+// 2D 位姿数组转标准路径：所有位姿共享同一个 frame 与时间戳
 nav_msgs::msg::Path poses2DToPath(
   const std::vector<geometry_msgs::msg::Pose2D> & poses,
   const std::string & frame, const rclcpp::Time & stamp);
+// 2D 路径转标准路径：逐点调用 pose2DToPose，所有点共享路径 header
 nav_msgs::msg::Path pathToPath(const nav_2d_msgs::msg::Path2D & path2d);
 
 }  // namespace nav_2d_utils

@@ -46,6 +46,13 @@ PLUGINLIB_EXPORT_CLASS(dwb_critics::BaseObstacleCritic, dwb_core::TrajectoryCrit
 namespace dwb_critics
 {
 
+// 中文说明（文件级）：
+// 基础障碍物 critic：检查轨迹上每个位姿点的代价地图代价值。
+// 任一点处于致命障碍/内切障碍/未知区域则抛 IllegalTrajectoryException
+// 将该轨迹直接判为非法（不参与排序）；合法轨迹的得分为各点代价值
+//（可配置取总和或最大/末值）。是 ObstacleFootprintCritic 的圆形基类。
+
+// 初始化：获取代价地图并读取评分模式参数
 void BaseObstacleCritic::onInit()
 {
   costmap_ = costmap_ros_->getCostmap();
@@ -55,12 +62,14 @@ void BaseObstacleCritic::onInit()
     throw std::runtime_error{"Failed to lock node"};
   }
 
+  // sum_scores：true 时轨迹得分=各点代价之和；false 时=最后一点的代价
   nav2_util::declare_parameter_if_not_declared(
     node,
     dwb_plugin_name_ + "." + name_ + ".sum_scores", rclcpp::ParameterValue(false));
   node->get_parameter(dwb_plugin_name_ + "." + name_ + ".sum_scores", sum_scores_);
 }
 
+// 轨迹评分：逐点查询代价值并按模式聚合
 double BaseObstacleCritic::scoreTrajectory(const dwb_msgs::msg::Trajectory2D & traj)
 {
   double score = 0.0;
@@ -68,26 +77,31 @@ double BaseObstacleCritic::scoreTrajectory(const dwb_msgs::msg::Trajectory2D & t
     double pose_score = scorePose(traj.poses[i]);
     // Optimized/branchless version of if (sum_scores_) score += pose_score,
     // else score = pose_score;
+    //（无分支优化：sum_scores_ 为 0/1，等价于“求和或只取当前点”两种模式）
     score = static_cast<double>(sum_scores_) * score + pose_score;
   }
   return score;
 }
 
+// 单点位姿评分：查询代价地图，非法则抛异常使整条轨迹被剔除
 double BaseObstacleCritic::scorePose(const geometry_msgs::msg::Pose2D & pose)
 {
   unsigned int cell_x, cell_y;
+  // 世界坐标转栅格坐标；越界（出地图）视为非法轨迹
   if (!costmap_->worldToMap(pose.x, pose.y, cell_x, cell_y)) {
     throw dwb_core::
           IllegalTrajectoryException(name_, "Trajectory Goes Off Grid.");
   }
   unsigned char cost = costmap_->getCost(cell_x, cell_y);
+  // 碰到障碍物同样抛非法轨迹异常
   if (!isValidCost(cost)) {
     throw dwb_core::
           IllegalTrajectoryException(name_, "Trajectory Hits Obstacle.");
   }
-  return cost;
+  return cost;  // 返回该点的代价值
 }
 
+// 判断代价值是否合法（非致命障碍、非内切障碍、非未知）
 bool BaseObstacleCritic::isValidCost(const unsigned char cost)
 {
   return cost != nav2_costmap_2d::LETHAL_OBSTACLE &&
@@ -95,12 +109,14 @@ bool BaseObstacleCritic::isValidCost(const unsigned char cost)
          cost != nav2_costmap_2d::NO_INFORMATION;
 }
 
+// 生成 critic 的可视化通道：把整幅代价地图作为浮点网格导出
 void BaseObstacleCritic::addCriticVisualization(
   std::vector<std::pair<std::string, std::vector<float>>> & cost_channels)
 {
   std::pair<std::string, std::vector<float>> grid_scores;
-  grid_scores.first = name_;
+  grid_scores.first = name_;  // 通道名 = critic 名
 
+  // 逐行展开代价地图为长度 size_x*size_y 的数组
   unsigned int size_x = costmap_->getSizeInCellsX();
   unsigned int size_y = costmap_->getSizeInCellsY();
   grid_scores.second.resize(size_x * size_y);

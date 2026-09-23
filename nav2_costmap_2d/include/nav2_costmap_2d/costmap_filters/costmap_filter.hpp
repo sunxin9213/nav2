@@ -40,6 +40,20 @@
 
 #ifndef NAV2_COSTMAP_2D__COSTMAP_FILTERS__COSTMAP_FILTER_HPP_
 #define NAV2_COSTMAP_2D__COSTMAP_FILTERS__COSTMAP_FILTER_HPP_
+// ============================================================================
+// 中文注释：代价地图过滤器基类头文件（实现见 costmap_filter.cpp）
+//
+// 【类功能】
+// 所有过滤器（Keepout/Speed/Binary）的公共基类，统一处理：
+//   - 公共参数（enabled / filter_info_topic / transform_tolerance）；
+//   - 启停服务 <层名>/toggle_filter（std_srvs/SetBool）；
+//   - 机器人位姿记录（updateBounds 存 latest_pose_ 供 process 使用）；
+//   - 坐标工具 transformPose（全局系↔掩码系）与 worldToMask
+//     （世界坐标→掩码栅格坐标）。
+// 两步订阅模式：先订阅 filter_info_topic 得到掩码话题名，
+// 再订阅掩码（OccupancyGrid）。子类实现 process() 施加掩码效果。
+// 【继承体系】Layer → CostmapFilter → Keepout/Speed/BinaryFilter
+// ============================================================================
 
 #include <string>
 #include <mutex>

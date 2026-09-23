@@ -15,6 +15,13 @@
 #ifndef NAV2_COLLISION_MONITOR__POINTCLOUD_HPP_
 #define NAV2_COLLISION_MONITOR__POINTCLOUD_HPP_
 
+// ============================================================================
+// 文件说明（中文）：
+// PointCloud（点云数据源）类的头文件声明。
+// 模块定位：处理 sensor_msgs/PointCloud2 的 3D 传感器数据源，
+// 支持高度区间过滤。详细中文注释的实现见 src/pointcloud.cpp。
+// ============================================================================
+
 #include <memory>
 #include <vector>
 #include <string>

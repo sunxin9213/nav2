@@ -12,6 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License. Reserved.
 
+// ============================================================================
+// 文件说明（中文）：
+// SimpleSmoother 插件类的头文件声明。
+// 模块定位：nav2_smoother 的默认平滑算法插件。采用迭代梯度下降式平滑：
+// 每个内部点在"数据保真项 w_data*(x_i-y_i)"与"平滑项
+// w_smooth*(y_{i+1}+y_{i-1}-2*y_i)（离散二阶差分）"的共同作用下更新，
+// 首尾端点固定不动，收敛阈值 tolerance、迭代上限 max_its、
+// 时间预算与代价地图碰撞检查共同保障结果可行。
+// 实现（.cpp）见 src/simple_smoother.cpp。
+// ============================================================================
+
 #ifndef NAV2_SMOOTHER__SIMPLE_SMOOTHER_HPP_
 #define NAV2_SMOOTHER__SIMPLE_SMOOTHER_HPP_
 
@@ -120,11 +131,12 @@ protected:
     geometry_msgs::msg::PoseStamped & msg, const unsigned int dim,
     const double & value);
 
-  double tolerance_, data_w_, smooth_w_;
-  int max_its_, refinement_ctr_;
-  bool do_refinement_;
+  double tolerance_, data_w_, smooth_w_;  // 收敛容差 / 数据保真权重 / 平滑权重
+  int max_its_, refinement_ctr_;          // 最大迭代次数 / 已精炼次数（上限 4）
+  bool do_refinement_;                    // 收敛后是否递归精炼
+  // 全局代价地图订阅器（平滑过程中的碰撞检查）
   std::shared_ptr<nav2_costmap_2d::CostmapSubscriber> costmap_sub_;
-  rclcpp::Logger logger_{rclcpp::get_logger("SimpleSmoother")};
+  rclcpp::Logger logger_{rclcpp::get_logger("SimpleSmoother")};  // 日志器
 };
 
 }  // namespace nav2_smoother

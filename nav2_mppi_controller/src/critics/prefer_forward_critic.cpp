@@ -17,11 +17,18 @@
 namespace mppi::critics
 {
 
+// 中文说明（文件级）：
+// 前进偏好（Prefer Forward）critic：惩罚轨迹中的倒车运动分量，
+// 使机器人在正常行进时优先选择前进轨迹（避免不必要的倒车）。
+// 与 PathAngleCritic 不同：本 critic 直接惩罚负 vx。
+
+// 初始化：读取参数
 void PreferForwardCritic::initialize()
 {
   auto getParam = parameters_handler_->getParamGetter(name_);
-  getParam(power_, "cost_power", 1);
-  getParam(weight_, "cost_weight", 5.0);
+  getParam(power_, "cost_power", 1);  // 代价幂次
+  getParam(weight_, "cost_weight", 5.0);  // 权重
+  // 接近目标时停止评分（终点附近可能需要倒车调整）
   getParam(
     threshold_to_consider_,
     "threshold_to_consider", 0.5);
@@ -30,16 +37,20 @@ void PreferForwardCritic::initialize()
     logger_, "PreferForwardCritic instantiated with %d power and %f weight.", power_, weight_);
 }
 
+// 评分：惩罚倒车速度分量（按时间积分）
 void PreferForwardCritic::score(CriticData & data)
 {
   using xt::evaluation_strategy::immediate;
+  // 未启用或接近目标时跳过
   if (!enabled_ ||
     utils::withinPositionGoalTolerance(threshold_to_consider_, data.state.pose.pose, data.path))
   {
     return;
   }
 
+  // 取负速度部分：max(-vx, 0)，只有倒车（vx<0）时为正
   auto backward_motion = xt::maximum(-data.state.vx, 0);
+  // 倒车分量乘时间步长后沿轨迹累加（时间积分），再加权取幂
   data.costs += xt::pow(
     xt::sum(
       std::move(
@@ -48,6 +59,7 @@ void PreferForwardCritic::score(CriticData & data)
 
 }  // namespace mppi::critics
 
+// pluginlib 导出为 critic 插件
 #include <pluginlib/class_list_macros.hpp>
 
 PLUGINLIB_EXPORT_CLASS(

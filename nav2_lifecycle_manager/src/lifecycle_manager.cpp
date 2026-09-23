@@ -13,6 +13,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/*
+ * =============================================================================
+ * 文件：lifecycle_manager.cpp（nav2_lifecycle_manager 模块）
+ * =============================================================================
+ * 功能概述：
+ *   实现 LifecycleManager——Nav2 的生命周期管理器。
+ *   Nav2 的各个核心服务器（map_server、amcl、planner_server、controller_server、
+ *   bt_navigator 等）都是生命周期节点（LifecycleNode），其状态机为：
+ *     unconfigured --configure--> inactive --activate--> active
+ *     active --deactivate--> inactive --cleanup--> unconfigured --shutdown--> finalized
+ *   本节点（普通 rclcpp::Node，非生命周期节点）负责按正确的顺序驱动上述转换：
+ *     - startup：按 node_names 参数正序 configure + activate 全部受管节点；
+ *     - shutdown/reset：逆序 deactivate + cleanup（+ shutdown），保证依赖反向释放；
+ *   并通过 Bond 心跳机制监控各受管节点存活状态，一旦失联立即硬重置系统。
+ *
+ * 对外接口：
+ *   - <manager>/manage_nodes 服务（nav2_msgs/srv/ManageLifecycleNodes）：
+ *       STARTUP / RESET / SHUTDOWN / PAUSE / RESUME 五种命令；
+ *   - <manager>/is_active 服务（std_srvs/srv/Trigger）：查询系统是否整体激活；
+ *   - diagnostics 话题：发布 Nav2 健康状态。
+ *
+ * 在整个导航流程中的位置：
+ *   本管理器位于所有导航节点"之下"，是 bringup 的基础——它先于
+ *   bt_navigator → planner_server → controller_server → velocity_smoother
+ *   任务链启动，负责把整条链上的节点带入 active 状态并持续守护。
+ * =============================================================================
+ */
+
 #include "nav2_lifecycle_manager/lifecycle_manager.hpp"
 
 #include <chrono>
@@ -90,6 +118,10 @@ LifecycleManager::LifecycleManager(const rclcpp::NodeOptions & options)
   transition_label_map_[Transition::TRANSITION_UNCONFIGURED_SHUTDOWN] =
     std::string("Shutting down ");
 
+  // 延迟初始化定时器（0s 后触发一次即自取消）：
+  // 在 executor 尚未 spin 之前直接创建服务客户端/线程并不安全，
+  // 故用定时器把 createLifecycleServiceClients / autostart 的 startup()
+  // 以及服务回调组的专属执行线程的建立推迟到事件循环启动之后。
   init_timer_ = this->create_wall_timer(
     0s,
     [this]() -> void {
@@ -112,6 +144,7 @@ LifecycleManager::LifecycleManager(const rclcpp::NodeOptions & options)
   diagnostics_updater_.add("Nav2 Health", this, &LifecycleManager::CreateActiveDiagnostic);
 }
 
+// 析构函数：停掉专用的服务回调线程，防止析构期间回调仍访问已销毁成员。
 LifecycleManager::~LifecycleManager()
 {
   RCLCPP_INFO(get_logger(), "Destroying %s", get_name());
@@ -154,6 +187,9 @@ LifecycleManager::isActiveCallback(
   response->success = system_active_;
 }
 
+// diagnostics（诊断）回调：把 system_active_ 映射为诊断消息。
+// system_active_ 为 true 时报告 OK（Nav2 运行中），否则报告 ERROR，
+// 便于 robot_upstart / 监控系统通过 /diagnostics 话题掌握导航健康状态。
 void
 LifecycleManager::CreateActiveDiagnostic(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
@@ -175,6 +211,8 @@ LifecycleManager::createLifecycleServiceClients()
   }
 }
 
+// 销毁所有节点的生命周期服务客户端，释放与各受管节点通信所需的资源。
+// 在 shutdown 流程末尾调用，之后若要重新启动系统需先重建客户端。
 void
 LifecycleManager::destroyLifecycleServiceClients()
 {
@@ -316,6 +354,10 @@ LifecycleManager::shutdown()
   return true;
 }
 
+// 重置系统：先停用（deactivate）再清理（cleanup）所有受管节点，
+// 使它们回到 unconfigured 状态（可再次 configure/activate）。
+// hard_reset=true 时即使个别节点转换失败也继续处理其余节点，
+// 用于异常恢复场景（如 bond 失联后的强制重置）。
 bool
 LifecycleManager::reset(bool hard_reset)
 {
@@ -337,6 +379,9 @@ LifecycleManager::reset(bool hard_reset)
   return true;
 }
 
+// 暂停系统：停用（deactivate）所有受管节点并停止 bond 监控。
+// 与 shutdown 的区别：节点仍保留在 inactive 状态（已配置），
+// 之后可调用 resume() 快速重新激活，无需重新 configure。
 bool
 LifecycleManager::pause()
 {
@@ -353,6 +398,8 @@ LifecycleManager::pause()
   return true;
 }
 
+// 恢复系统：与 pause() 相对，激活（activate）所有受管节点、
+// 重启 bond 心跳监控并标记系统为 active。
 bool
 LifecycleManager::resume()
 {
@@ -368,6 +415,8 @@ LifecycleManager::resume()
   return true;
 }
 
+// 创建 bond 心跳检查定时器（200ms 周期，跑在独立回调组上）。
+// bond_timeout_ <= 0 表示用户禁用了 bond 监控，直接返回不创建。
 void
 LifecycleManager::createBondTimer()
 {
@@ -382,6 +431,7 @@ LifecycleManager::createBondTimer()
     callback_group_);
 }
 
+// 销毁 bond 心跳检查定时器：先 cancel 停止触发，再 reset 释放定时器。
 void
 LifecycleManager::destroyBondTimer()
 {
@@ -392,6 +442,10 @@ LifecycleManager::destroyBondTimer()
   }
 }
 
+// rcl 预关机回调：在 ROS 2 context 正式关闭之前执行。
+// 目的是在 rclcpp 全局 shutdown 时序下抢先清理 bond 与服务线程，
+// 避免 Costmap 等子系统的 preshutdown 回调乱序导致崩溃
+// （rclcpp 的 preshutdown 回调无严格顺序保证，见 rclcpp#2096）。
 void
 LifecycleManager::onRclPreshutdown()
 {
@@ -411,6 +465,8 @@ LifecycleManager::onRclPreshutdown()
   bond_map_.clear();
 }
 
+// 向 ROS 2 context 注册预关机回调（绑定到 onRclPreshutdown）。
+// 在构造函数中调用，确保进程退出时清理动作先于节点/客户端销毁。
 void
 LifecycleManager::registerRclPreshutdownCallback()
 {
@@ -421,6 +477,14 @@ LifecycleManager::registerRclPreshutdownCallback()
   );
 }
 
+// bond 心跳监控回调（200ms 周期）：
+// 1) 系统未激活、context 已关闭或无 bond 连接时直接返回；
+// 2) 遍历所有受管节点的 bond，一旦发现某个心跳中断（isBroken）：
+//    - 判定为"关键失败"，立即硬重置（hard reset）整个系统，
+//      把仍存活的节点全部转入 inactive，避免部分节点带病运行；
+//    - 手动清空 bond 表（崩溃的节点无法通过正常转换清理）；
+//    - 若启用 attempt_respawn_reconnection，则启动 1s 周期的
+//      respawn 定时器，等待崩溃的服务器被重新拉起。
 void
 LifecycleManager::checkBondConnections()
 {
@@ -461,6 +525,13 @@ LifecycleManager::checkBondConnections()
   }
 }
 
+// respawn（复活重连）检查回调（1s 周期，bond 失败后启动）：
+// 用于崩溃的受管节点（如被 Supervisor/systemd 重启的服务器进程）恢复场景：
+// 1) 首次触发时记录起始时间，限制最长重连等待 bond_respawn_max_duration_；
+// 2) 若期间系统被外部重新激活，则取消重连定时器退出；
+// 3) 逐个调用 get_state() 探测各节点是否存活（只有服务在才会正常返回）；
+// 4) 全部节点恢复 → 重新执行 startup() 完成系统启动；
+//    超时仍未恢复 → 放弃重连，记录失败日志并停止定时器。
 void
 LifecycleManager::checkBondRespawnConnection()
 {
@@ -510,6 +581,8 @@ LifecycleManager::checkBondRespawnConnection()
 #define ANSI_COLOR_RESET    "\x1b[0m"
 #define ANSI_COLOR_BLUE     "\x1b[34m"
 
+// 以蓝色加粗的终端样式输出管理器日志，
+// 使生命周期管理器的重要消息在启动日志中易于辨识。
 void
 LifecycleManager::message(const std::string & msg)
 {

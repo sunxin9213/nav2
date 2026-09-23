@@ -46,6 +46,8 @@ namespace dwb_core
 /**
  * @class PlannerTFException
  * @brief Thrown when the planner cannot complete its operation due to TF errors
+ * （TF 变换失败异常：坐标变换不可用/超时时抛出，
+ *  继承 PlannerException 以纳入 Nav2 统一的异常处理体系。）
  */
 class PlannerTFException : public nav2_core::PlannerException
 {
@@ -57,16 +59,18 @@ public:
 /**
  * @class IllegalTrajectoryException
  * @brief Thrown when one of the critics encountered a fatal error
+ * （非法轨迹异常：评价器判定轨迹不可行（如碰撞）时抛出。
+ *  携带评价器名称，便于 IllegalTrajectoryTracker 分类统计。）
  */
 class IllegalTrajectoryException : public nav2_core::PlannerException
 {
 public:
   IllegalTrajectoryException(const std::string critic_name, const std::string description)
   : nav2_core::PlannerException(description), critic_name_(critic_name) {}
-  std::string getCriticName() const {return critic_name_;}
+  std::string getCriticName() const {return critic_name_;}  // 返回判非法的评价器名
 
 protected:
-  std::string critic_name_;
+  std::string critic_name_;  // 判定失败的评价器名称
 };
 
 }  // namespace dwb_core

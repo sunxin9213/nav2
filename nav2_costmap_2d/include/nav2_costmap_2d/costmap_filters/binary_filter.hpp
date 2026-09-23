@@ -37,6 +37,18 @@
 
 #ifndef NAV2_COSTMAP_2D__COSTMAP_FILTERS__BINARY_FILTER_HPP_
 #define NAV2_COSTMAP_2D__COSTMAP_FILTERS__BINARY_FILTER_HPP_
+// ============================================================================
+// 中文注释：二值状态过滤器头文件（实现见 binary_filter.cpp）
+//
+// 【类功能】
+// 订阅掩码地图，按机器人位置与翻转阈值输出布尔状态：
+//   base + mask_data * multiplier > flip_threshold_ → "开"（非默认态）；
+//   否则 → "关"（default_state_）。状态变化时发布 std_msgs/Bool
+//   到 binary_state 话题——用于"进入某区域自动触发功能"的语义开关
+//   （如进入充电区切换任务状态）。
+// 机器人出掩码范围 → 恢复默认态；掩码格未知 → 保持现状。
+// 不修改主地图。 【继承体系】Layer → CostmapFilter → BinaryFilter
+// ============================================================================
 
 #include <memory>
 #include <string>

@@ -12,6 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 文件说明（中文）：
+// MapServer（地图服务器）节点的头文件声明。
+// 模块定位：nav2_map_server 的核心节点，以 ROS2 生命周期节点形式运行。
+// 功能：启动时按 yaml_filename 参数加载地图（YAML + 图像），
+// 并通过三种方式对外提供 OccupancyGrid：
+//   1. "map" 话题（latched / transient_local QoS，迟加入的订阅者
+//      也能收到最后一帧地图）；
+//   2. GetMap 服务（nav_msgs/srv/GetMap，服务名 "map"）；
+//   3. LoadMap 服务（nav2_msgs/srv/LoadMap，服务名 "load_map"，
+//      运行时从文件重新加载地图）。
+// 实现（.cpp，已有中文注释）见 src/map_server/map_server.cpp。
+// ============================================================================
+
 #ifndef NAV2_MAP_SERVER__MAP_SERVER_HPP_
 #define NAV2_MAP_SERVER__MAP_SERVER_HPP_
 
@@ -119,27 +133,35 @@ protected:
     std::shared_ptr<nav2_msgs::srv::LoadMap::Response> response);
 
   // The name of the service for getting a map
+  // 获取地图服务名（GetMap）
   const std::string service_name_{"map"};
 
   // The name of the service for loading a map
+  // 加载地图服务名（LoadMap）
   const std::string load_map_service_name_{"load_map"};
 
   // A service to provide the occupancy grid (GetMap) and the message to return
+  // GetMap 服务句柄（返回当前已加载的地图）
   rclcpp::Service<nav_msgs::srv::GetMap>::SharedPtr occ_service_;
 
   // A service to load the occupancy grid from file at run time (LoadMap)
+  // LoadMap 服务句柄（运行时从 YAML 文件重新加载地图）
   rclcpp::Service<nav2_msgs::srv::LoadMap>::SharedPtr load_map_service_;
 
   // A topic on which the occupancy grid will be published
+  // 地图话题发布器（话题 "map"，transient_local QoS）
   rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::OccupancyGrid>::SharedPtr occ_pub_;
 
   // The frame ID used in the returned OccupancyGrid message
+  // 地图消息使用的坐标系名（默认 "map"）
   std::string frame_id_;
 
   // The message to publish on the occupancy grid topic
+  // 待发布/返回的地图消息
   nav_msgs::msg::OccupancyGrid msg_;
 
   // true if msg_ was initialized
+  // 地图是否已成功加载
   bool map_available_;
 };
 

@@ -24,6 +24,8 @@ namespace mppi::critics
 /**
  * @class mppi::critics::ConstraintCritic
  * @brief Critic objective function for preferring forward motion
+ * （前进偏好评价器：惩罚轨迹中的负向线速度（倒车），
+ *  使机器人在无必要时保持前进。）
  */
 class PreferForwardCritic : public CriticFunction
 {
@@ -31,7 +33,7 @@ public:
   /**
     * @brief Initialize critic
     */
-  void initialize() override;
+  void initialize() override;  // 读取权重/幂次/死区阈值参数
 
   /**
    * @brief Evaluate cost related to robot orientation at goal pose
@@ -39,12 +41,12 @@ public:
    *
    * @param costs [out] add goal angle cost values to this tensor
    */
-  void score(CriticData & data) override;
+  void score(CriticData & data) override;  // 累加 vx < 0 部分的惩罚
 
 protected:
-  unsigned int power_{0};
-  float weight_{0};
-  float threshold_to_consider_{0};
+  unsigned int power_{0};            // 代价幂次
+  float weight_{0};                  // 评价器权重
+  float threshold_to_consider_{0};   // 倒车速度小于该绝对值时不惩罚（死区）
 };
 
 }  // namespace mppi::critics

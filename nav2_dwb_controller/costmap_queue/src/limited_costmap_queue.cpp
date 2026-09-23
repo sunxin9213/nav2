@@ -32,20 +32,35 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
+// ============================================================================
+// 模块说明：LimitedCostmapQueue 的实现（受限 BFS 扩散）
+// ----------------------------------------------------------------------------
+// 两个成员函数：
+//   构造函数：把基类的 max_distance_ 直接设为外部传入的距离限制（格数），
+//     再调用 reset()——reset 里的 computeCache 读到该值后，距离查找表
+//     只需覆盖限制范围（而非整张地图），既省内存又省建表时间；
+//   validCellToQueue：扩散截断的核心——距离超过限制的格子拒绝入队，
+//     BFS 波前到限制边界自动停止。
+// ============================================================================
+
 #include "costmap_queue/limited_costmap_queue.hpp"
 
 namespace costmap_queue
 {
 
+// 构造：cell_distance_limit 即扩散半径上限（格数）
 LimitedCostmapQueue::LimitedCostmapQueue(
   nav2_costmap_2d::Costmap2D & costmap,
   const int distance_limit)
 : CostmapQueue(costmap)
 {
+  // 覆盖基类的 max_distance_（否则基类默认取整张地图的跨度），
+  // 使距离缓存表与扩散范围都限制在该值以内
   max_distance_ = distance_limit;
   reset();
 }
 
+// 扩散截断钩子：只有距离不超过限制的格子才允许入队
 bool LimitedCostmapQueue::validCellToQueue(const CellData & cell)
 {
   return cell.distance_ <= max_distance_;

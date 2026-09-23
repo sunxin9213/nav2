@@ -12,6 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 文件说明（中文）：
+// velocity_smoother 独立可执行入口：
+// 创建 VelocitySmoother 生命周期节点并阻塞自旋。
+// 该节点订阅 cmd_vel 并按加速度/加加速度约束平滑后转发到
+// cmd_vel_smoothed，保护底盘电机并提升运动平顺性。
+// ============================================================================
+
 #include <memory>
 
 #include "nav2_velocity_smoother/velocity_smoother.hpp"
@@ -19,6 +27,7 @@
 
 int main(int argc, char ** argv)
 {
+  // 初始化 ROS2 -> 创建速度平滑节点 -> 阻塞自旋 -> 关闭退出
   rclcpp::init(argc, argv);
   auto node = std::make_shared<nav2_velocity_smoother::VelocitySmoother>();
   rclcpp::spin(node->get_node_base_interface());

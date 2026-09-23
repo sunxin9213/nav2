@@ -14,6 +14,16 @@
 
 #ifndef NAV2_COSTMAP_2D__COSTMAP_SUBSCRIBER_HPP_
 #define NAV2_COSTMAP_2D__COSTMAP_SUBSCRIBER_HPP_
+// ============================================================================
+// 中文注释：代价地图话题订阅器头文件（实现见 costmap_subscriber.cpp）
+//
+// 【类功能】
+// 订阅 nav2_msgs/Costmap 话题（即 <topic>_raw 原始代价地图），
+// 把消息转写为本地 Costmap2D 对象供栅格接口使用。
+// 被 CollisionMonitor 等"消费其他节点代价地图"的组件使用。
+// 线程安全：回调与查询可能并发，用 std::atomic_load/store 原子交换
+// shared_ptr 消息（免锁）。
+// ============================================================================
 
 #include <string>
 #include <memory>

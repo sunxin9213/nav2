@@ -15,6 +15,13 @@
 #ifndef NAV2_COLLISION_MONITOR__CIRCLE_HPP_
 #define NAV2_COLLISION_MONITOR__CIRCLE_HPP_
 
+// ============================================================================
+// 文件说明（中文）：
+// Circle（圆形安全区）类的头文件声明。
+// 模块定位：Polygon 的特化子类，用单一 radius 参数描述圆形安全区，
+// 内点判定用 x^2+y^2<r^2 快速完成。详细中文注释的实现见 src/circle.cpp。
+// ============================================================================
+
 #include <memory>
 #include <vector>
 #include <string>

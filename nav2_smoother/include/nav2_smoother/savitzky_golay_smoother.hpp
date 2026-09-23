@@ -12,6 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License. Reserved.
 
+// ============================================================================
+// 文件说明（中文）：
+// SavitzkyGolaySmoother 插件类的头文件声明。
+// 模块定位：nav2_smoother 的平滑算法插件，基于 Savitzky-Golay 滤波器
+// （7 点卷积平滑）对路径 x/y 坐标做低通平滑，可选多轮精炼。
+// 实现（.cpp）见 src/savitzky_golay_smoother.cpp。
+// 注意：该插件不使用 TF / 代价地图（不做碰撞检查），接口参数仅占位。
+// ============================================================================
+
 #ifndef NAV2_SMOOTHER__SAVITZKY_GOLAY_SMOOTHER_HPP_
 #define NAV2_SMOOTHER__SAVITZKY_GOLAY_SMOOTHER_HPP_
 
@@ -98,9 +107,9 @@ protected:
     nav_msgs::msg::Path & path,
     bool & reversing_segment);
 
-  bool do_refinement_;
-  int refinement_num_;
-  rclcpp::Logger logger_{rclcpp::get_logger("SGSmoother")};
+  bool do_refinement_;   // 是否在平滑后进行多轮精炼
+  int refinement_num_;   // 精炼迭代次数
+  rclcpp::Logger logger_{rclcpp::get_logger("SGSmoother")};  // 日志器
 };
 
 }  // namespace nav2_smoother

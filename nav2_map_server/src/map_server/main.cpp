@@ -12,6 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 文件说明（中文）：
+// map_server 独立可执行入口：
+// 创建 MapServer（地图服务器）生命周期节点并阻塞自旋。
+// 节点的加载/激活由生命周期管理器（nav2_lifecycle_manager）调度，
+// 激活后向 "map" 话题（transient_local QoS）发布地图，
+// 并提供 GetMap / LoadMap 两个服务。
+// ============================================================================
+
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -23,6 +32,7 @@ int main(int argc, char ** argv)
 {
   std::string node_name("map_server");
 
+  // 初始化 ROS2 -> 创建地图服务器节点 -> 阻塞自旋 -> 关闭
   rclcpp::init(argc, argv);
   auto node = std::make_shared<nav2_map_server::MapServer>();
   rclcpp::spin(node->get_node_base_interface());

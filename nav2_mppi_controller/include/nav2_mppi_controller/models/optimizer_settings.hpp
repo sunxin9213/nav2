@@ -24,20 +24,31 @@ namespace mppi::models
 /**
  * @struct mppi::models::OptimizerSettings
  * @brief Settings for the optimizer to use
+ *（优化器配置：MPPI 算法的全部超参数集合）
+ *
+ * 中文说明——各参数在 MPPI 中的作用：
+ * - batch_size：每个周期并行采样的噪声轨迹数量（如 2000 条）；
+ * - time_steps：预测时域的离散时间步数（如 56 步 * model_dt）；
+ * - sampling_std：高斯噪声标准差，决定探索范围；
+ * - temperature：软最大（softmax）温度，控制轨迹权重的尖锐程度
+ *   （值越小越接近硬选择最优轨迹，值越大权重越平滑）；
+ * - gamma：折扣因子，用于加权平均时强调近期代价；
+ * - iteration_count：单个控制周期内的优化迭代次数；
+ * - shift_control_sequence：是否在周期结束时将控制序列向前滚动一步。
  */
 struct OptimizerSettings
 {
-  models::ControlConstraints base_constraints{0, 0, 0, 0};
-  models::ControlConstraints constraints{0, 0, 0, 0};
-  models::SamplingStd sampling_std{0, 0, 0};
-  float model_dt{0};
-  float temperature{0};
-  float gamma{0};
-  unsigned int batch_size{0};
-  unsigned int time_steps{0};
-  unsigned int iteration_count{0};
-  bool shift_control_sequence{false};
-  size_t retry_attempt_limit{0};
+  models::ControlConstraints base_constraints{0, 0, 0, 0};  // 基础控制约束（参数原值，未受速度限制影响）
+  models::ControlConstraints constraints{0, 0, 0, 0};      // 当前生效的控制约束（可能被 setSpeedLimit 缩放）
+  models::SamplingStd sampling_std{0, 0, 0};                // 噪声采样标准差
+  float model_dt{0};        // 轨迹推演的时间步长（秒）
+  float temperature{0};    // softmax 温度系数
+  float gamma{0};           // 代价折扣/加权因子
+  unsigned int batch_size{0};       // 采样轨迹批次大小
+  unsigned int time_steps{0};       // 预测时间步数
+  unsigned int iteration_count{0};  // 每周期优化迭代次数
+  bool shift_control_sequence{false};  // 是否启用控制序列滚动
+  size_t retry_attempt_limit{0};       // 优化失败（如无有效轨迹）时的重试次数上限
 };
 
 }  // namespace mppi::models

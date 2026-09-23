@@ -14,6 +14,18 @@
 
 #ifndef NAV2_COSTMAP_2D__FOOTPRINT_SUBSCRIBER_HPP_
 #define NAV2_COSTMAP_2D__FOOTPRINT_SUBSCRIBER_HPP_
+// ============================================================================
+// 中文注释：足迹话题订阅器头文件（实现见 footprint_subscriber.cpp）
+//
+// 【类功能】
+// 订阅 geometry_msgs/PolygonStamped 动态足迹话题，支持"运行时可变的
+// 机器人足迹"（如负载变化时其他节点实时发布新足迹）。
+// 提供：
+//   - getFootprintRaw()：发布坐标系下的原始足迹；
+//   - getFootprintInRobotFrame()：经 TF 变换到机器人基坐标系的足迹
+//     （先平移后旋转，等价于 TF 逆变换）。
+// 线程安全：原子交换 shared_ptr 消息（免锁）。
+// ============================================================================
 
 #include <string>
 #include <vector>

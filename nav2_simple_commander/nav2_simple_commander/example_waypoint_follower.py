@@ -13,6 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# ============================================================================
+# 文件说明（中文）：
+# nav2_simple_commander 的"航点跟随"示例程序。
+# 模块定位：演示使用 /follow_waypoints 动作（nav2_waypoint_follower）：
+# 机器人依次精确停靠每个航点（与 NavigateThroughPoses 的连续通过不同），
+# 每个航点可触发任务执行器（task executor）插件完成拍照等附加任务。
+# 主体流程与 example_nav_to_pose 相同：设初始位姿 -> 等激活 ->
+# followWaypoints -> 轮询反馈 -> 输出结果。
+# ============================================================================
+
 from geometry_msgs.msg import PoseStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 import rclpy

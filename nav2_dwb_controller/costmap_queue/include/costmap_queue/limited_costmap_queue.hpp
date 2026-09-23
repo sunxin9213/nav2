@@ -37,6 +37,19 @@
 
 #include "costmap_queue/costmap_queue.hpp"
 
+// ============================================================================
+// 模块说明：受限代价地图队列（LimitedCostmapQueue）
+// ----------------------------------------------------------------------------
+// CostmapQueue 的受限版本：BFS 扩散只延伸到距源点 cell_distance_limit
+// 个格子以内，超出即不再入队。
+// 使用场景：当只需要源点附近的距离场时（例如膨胀层只需要膨胀半径内的
+// 距离、DWB 评价器只需局部范围），受限扩散可以大幅减少计算量——
+// 从 O(整张地图) 降到 O(限制半径的平方)。
+// 实现方式：重写 validCellToQueue 钩子，把 distance_ > max_distance_ 的
+// 格子直接拒之门外；同时在构造时把 max_distance_ 设为限制值，距离查找表
+// 也只需覆盖该范围。
+// ============================================================================
+
 namespace costmap_queue
 {
 
@@ -44,13 +57,16 @@ namespace costmap_queue
  * @class LimitedCostmapQueue
  * @brief Extension of Costmap Queue where distances are limited to a given distance from source cells.
  */
+// 受限扩散队列：限制 BFS 波前只传播到指定格子距离以内
 class LimitedCostmapQueue : public CostmapQueue
 {
 public:
   /**
    * @brief Constructor with limit as an integer number of cells.
    */
+  // 构造：cell_distance_limit 为最大扩散距离（格数），内部设置 max_distance_ 后 reset
   LimitedCostmapQueue(nav2_costmap_2d::Costmap2D & costmap, const int cell_distance_limit);
+  // 只允许距离 <= max_distance_ 的格子入队（超出限制即截断扩散）
   bool validCellToQueue(const CellData & cell) override;
 };
 }  // namespace costmap_queue

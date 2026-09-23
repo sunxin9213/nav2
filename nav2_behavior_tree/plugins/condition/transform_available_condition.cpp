@@ -12,6 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// =============================================================================
+// 【文件说明】transform_available_condition.cpp
+// 【所属模块】nav2_behavior_tree/plugins/condition —— Nav2 行为树的条件节点插件
+//
+// 实现 TransformAvailable 行为树节点：检查两个坐标系之间的 tf 变换
+// 是否已可用（如 map -> odom 定位是否已收敛）。
+// 一旦找到过一次就永久返回 SUCCESS（was_found_ 缓存）。
+//
+// 【在 Nav2 导航流程中的位置】
+// 导航启动前置条件：AMCL 尚未发布 map->odom 变换时导航无法进行，
+// 该条件用于 gating（如放在导航树开头，等待定位就绪）。
+//
+// 【BehaviorTree.CPP 与 ROS2 API 要点】
+// - 条件节点：变换可用 -> SUCCESS（此后一直 SUCCESS）；不可用 ->
+//   FAILURE（下个 tick 重试）。
+// - ROS2 tf2 API：tf_->canTransform(child, parent, TimePointZero)——
+//   只查询不计算（区别于 lookupTransform），TimePointZero 表示
+//   "只要有任意时刻的变换即可"。
+// - 输入端口：child（子坐标系）、parent（父坐标系）。
+// - XML 使用示例：
+//   <TransformAvailable child="map" parent="odom"/>
+// =============================================================================
+
 #include <string>
 #include <chrono>
 #include <memory>
@@ -23,54 +46,60 @@ using namespace std::chrono_literals; // NOLINT
 namespace nav2_behavior_tree
 {
 
+// 构造函数：读取坐标系端口并校验非空。
 TransformAvailableCondition::TransformAvailableCondition(
   const std::string & condition_name,
   const BT::NodeConfiguration & conf)
 : BT::ConditionNode(condition_name, conf),
-// 实现该逻辑，并处理相关状态转换。
   was_found_(false)
 {
+  // 从黑板取共享 ROS2 节点与 tf2 变换缓冲区。
   node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
   tf_ = config().blackboard->get<std::shared_ptr<tf2_ros::Buffer>>("tf_buffer");
 
-// 实现该逻辑，并处理相关状态转换。
+  // 读取要检查的坐标系对。
   getInput("child", child_frame_);
-// 实现该逻辑，并处理相关状态转换。
   getInput("parent", parent_frame_);
 
+  // 参数校验：坐标系名不能为空（配置错误的树直接致命退出）。
   if (child_frame_.empty() || parent_frame_.empty()) {
     RCLCPP_FATAL(
       node_->get_logger(), "Child frame (%s) or parent frame (%s) were empty.",
       child_frame_.c_str(), parent_frame_.c_str());
-// 实现该逻辑，并处理相关状态转换。
     exit(-1);
   }
 
   RCLCPP_DEBUG(node_->get_logger(), "Initialized an TransformAvailableCondition BT node");
 }
 
-// 评估当前条件是否满足 ~TransformAvailableCondition 所代表的判定逻辑。
+// 析构函数：仅打日志（智能指针自动释放）。
 TransformAvailableCondition::~TransformAvailableCondition()
 {
   RCLCPP_DEBUG(node_->get_logger(), "Shutting down TransformAvailableCondition BT node");
 }
 
-// 初始化 NodeStatus TransformAvailableCondition::tick 对象，读取参数并准备运行时依赖。
+// tick 主函数：检查 tf 变换是否可用。
 BT::NodeStatus TransformAvailableCondition::tick()
 {
+  // 一旦找到过：直接返回 SUCCESS（变换缓存命中，避免重复查询）。
   if (was_found_) {
     return BT::NodeStatus::SUCCESS;
   }
 
+  // 查询 tf 缓冲区：child -> parent 的变换是否存在。
+  // TimePointZero 表示任意时刻的变换都算可用；
+  // tf_error 出参带回失败原因（如超时、外推错误）。
   std::string tf_error;
   bool found = tf_->canTransform(
     child_frame_, parent_frame_, tf2::TimePointZero, &tf_error);
 
   if (found) {
+    // 找到：置缓存标志并返回 SUCCESS。
     was_found_ = true;
     return BT::NodeStatus::SUCCESS;
   }
 
+  // 未找到：打印原因（如定位尚未收敛），返回 FAILURE 等待下个 tick 重试。
   RCLCPP_INFO(
     node_->get_logger(), "Transform from %s to %s was not found, tf error: %s",
     child_frame_.c_str(), parent_frame_.c_str(), tf_error.c_str());
@@ -81,7 +110,7 @@ BT::NodeStatus TransformAvailableCondition::tick()
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
-// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
+// 节点注册：动态库加载时把 "TransformAvailable" 标签注册进 factory。
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::TransformAvailableCondition>("TransformAvailable");

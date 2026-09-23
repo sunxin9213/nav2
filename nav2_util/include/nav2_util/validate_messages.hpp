@@ -43,7 +43,7 @@
 namespace nav2_util
 {
 
-
+// 基础重载：校验单个 double 值无 NaN/Inf
 bool validateMsg(const double & num)
 {
   /*  @brief double/float value check
@@ -56,6 +56,7 @@ bool validateMsg(const double & num)
   return true;
 }
 
+// 数组版本：逐元素递归校验（如协方差矩阵 covariance 字段）
 template<size_t N>
 bool validateMsg(const std::array<double, N> & msg)
 {
@@ -71,6 +72,7 @@ bool validateMsg(const std::array<double, N> & msg)
 }
 
 const int NSEC_PER_SEC = 1e9;  // 1 second = 1e9 nanosecond
+// 时间戳版本：纳秒字段必须小于 1e9（否则不是一个合法时刻）
 bool validateMsg(const builtin_interfaces::msg::Time & msg)
 {
   if (msg.nanosec >= NSEC_PER_SEC) {
@@ -79,6 +81,7 @@ bool validateMsg(const builtin_interfaces::msg::Time & msg)
   return true;
 }
 
+// Header 版本：先校验子字段 stamp，再要求 frame_id 非空
 bool validateMsg(const std_msgs::msg::Header & msg)
 {
   //  check sub-type
@@ -93,6 +96,7 @@ bool validateMsg(const std_msgs::msg::Header & msg)
   return true;
 }
 
+// Point 版本：三分量逐一做数值校验
 bool validateMsg(const geometry_msgs::msg::Point & msg)
 {
   //  check sub-type
@@ -103,6 +107,7 @@ bool validateMsg(const geometry_msgs::msg::Point & msg)
 }
 
 const double epsilon = 1e-4;
+// 四元数版本：除分量数值校验外，还检查模长近似为 1（单位四元数）
 bool validateMsg(const geometry_msgs::msg::Quaternion & msg)
 {
   //  check sub-type
@@ -111,6 +116,7 @@ bool validateMsg(const geometry_msgs::msg::Quaternion & msg)
   if (!validateMsg(msg.z)) {return false;}
   if (!validateMsg(msg.w)) {return false;}
 
+  // x^2+y^2+z^2+w^2 应等于 1，允许 1e-4 的误差
   if (abs(msg.x * msg.x + msg.y * msg.y + msg.z * msg.z + msg.w * msg.w - 1.0) >= epsilon) {
     return false;
   }
@@ -118,6 +124,7 @@ bool validateMsg(const geometry_msgs::msg::Quaternion & msg)
   return true;
 }
 
+// Pose 版本：位置 + 姿态分别校验
 bool validateMsg(const geometry_msgs::msg::Pose & msg)
 {
   // check sub-type
@@ -126,6 +133,7 @@ bool validateMsg(const geometry_msgs::msg::Pose & msg)
   return true;
 }
 
+// PoseWithCovariance 版本：位姿 + 36 元素协方差数组
 bool validateMsg(const geometry_msgs::msg::PoseWithCovariance & msg)
 {
   // check sub-type
@@ -135,6 +143,7 @@ bool validateMsg(const geometry_msgs::msg::PoseWithCovariance & msg)
   return true;
 }
 
+// PoseWithCovarianceStamped 版本：消息头 + 带协方差的位姿
 bool validateMsg(const geometry_msgs::msg::PoseWithCovarianceStamped & msg)
 {
   // check sub-type
@@ -145,6 +154,7 @@ bool validateMsg(const geometry_msgs::msg::PoseWithCovarianceStamped & msg)
 
 
 // Function to verify map meta information
+// 地图元信息版本：原点位姿、分辨率数值合法，且宽高不为 0
 bool validateMsg(const nav_msgs::msg::MapMetaData & msg)
 {
   // check sub-type
@@ -158,6 +168,7 @@ bool validateMsg(const nav_msgs::msg::MapMetaData & msg)
 }
 
 // for msg-type like map, costmap and others as `OccupancyGrid`
+// 占据栅格版本：除子字段校验外，还检查数据长度 = 宽 * 高（逻辑一致性）
 bool validateMsg(const nav_msgs::msg::OccupancyGrid & msg)
 {
   // check sub-type

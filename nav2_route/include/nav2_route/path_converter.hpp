@@ -12,6 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 文件说明（中文）：
+// PathConverter（路径转换器）类的头文件声明。
+// 模块定位：把稀疏路线（节点-边序列）加密为稠密 nav_msgs/Path，
+// 支持拐角圆弧平滑（CornerArc）与重路由部分边插值，
+// 并发布到 "plan" 话题供控制器使用。
+// 详细中文注释的实现见 src/path_converter.cpp。
+// ============================================================================
+
 #ifndef NAV2_ROUTE__PATH_CONVERTER_HPP_
 #define NAV2_ROUTE__PATH_CONVERTER_HPP_
 

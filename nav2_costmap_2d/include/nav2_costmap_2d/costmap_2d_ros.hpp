@@ -37,6 +37,23 @@
  *********************************************************************/
 #ifndef NAV2_COSTMAP_2D__COSTMAP_2D_ROS_HPP_
 #define NAV2_COSTMAP_2D__COSTMAP_2D_ROS_HPP_
+// ============================================================================
+// 中文注释：Costmap2DROS 节点类头文件（实现见 costmap_2d_ros.cpp，已含中文注释）
+//
+// 【类功能】
+// 代价地图的"ROS 门面"：一个 rclcpp_lifecycle 生命周期节点，封装：
+//   - LayeredCostmap 容器与 pluginlib 插件的加载/管理；
+//   - 生命周期状态机（on_configure/on_activate/on_deactivate/on_cleanup）；
+//   - 传感器数据 → 地图更新循环（map_update_timer_ 定时驱动
+//     updateMap：updateBounds → updateCosts 两阶段）；
+//   - getRobotPose()：经 TF2 把 odom→base 变换得到机器人位姿；
+//   - 足迹管理（footprint/robot_radius 参数、setUnpaddedRobotFootprint）；
+//   - 滚动窗口（rolling_window）模式；
+//   - 发布器（Costmap2DPublisher）与清除服务（ClearCostmapService）。
+// 生命周期语义：configure 建结构（声明参数、加载插件）；
+// activate 开始更新（激活层/发布器/定时器）；deactivate 暂停；
+// cleanup 销毁全部资源。
+// ============================================================================
 
 #include <atomic>
 #include <memory>

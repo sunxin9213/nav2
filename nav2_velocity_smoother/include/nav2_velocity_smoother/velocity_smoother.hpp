@@ -15,6 +15,17 @@
 #ifndef NAV2_VELOCITY_SMOOTHER__VELOCITY_SMOOTHER_HPP_
 #define NAV2_VELOCITY_SMOOTHER__VELOCITY_SMOOTHER_HPP_
 
+// ============================================================================
+// 文件说明（中文）：
+// VelocitySmoother（速度平滑器）节点的头文件声明。
+// 模块定位：串接在控制器与底盘之间的速度平滑节点。订阅 cmd_vel，
+// 结合里程计反馈的实际速度，按加速度/减速度/加加速度（deadband
+// 死区）约束对指令进行平滑，以固定周期发布到 cmd_vel_smoothed。
+// 支持开环（无里程计）与闭环两种模式，以及 eta 约束缩放算法
+//（各轴等比例缩放以保持运动轨迹形状）。
+// 详细中文注释的实现见 src/velocity_smoother.cpp。
+// ============================================================================
+
 #include <chrono>
 #include <limits>
 #include <memory>

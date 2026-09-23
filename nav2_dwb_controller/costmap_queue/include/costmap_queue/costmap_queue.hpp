@@ -42,12 +42,39 @@
 #include "nav2_costmap_2d/costmap_2d.hpp"
 #include "costmap_queue/map_based_queue.hpp"
 
+// ============================================================================
+// 模块说明：代价地图 BFS 扩散队列（CostmapQueue）
+// ----------------------------------------------------------------------------
+// costmap_queue 包的核心类。它解决的问题：给定代价地图上一组"源格"
+// （source cells，例如障碍物格或路径点格），计算其他所有格子各自离哪个
+// 源格最近、距离多少。这是导航领域的经典"波前扩散"（wavefront
+// propagation）问题：
+//   - 膨胀层（InflationLayer）用它计算每格到最近障碍物的距离，
+//     从而按指数衰减公式赋予代价值；
+//   - DWB 的 map_grid 系列评价器用它计算每格到全局路径/目标的距离场。
+//
+// 算法本质（Dijkstra 的整数化特例 / BFS）：
+//   1. 所有源格入队（enqueueCell，源格自身即源点，距离 0）；
+//   2. 循环取队首（getNextCell，距离最小的格），将其四邻域格入队，
+//      邻居的"源点"继承自当前格，距离 = 预计算的距离表中查表值；
+//   3. seen_ 数组保证每格只入队一次（贪心最优：距离小的先出队）。
+//
+// 距离度量：默认欧氏距离（hypot）；manhattan=true 时用曼哈顿距离
+// （DWB 的 MapGridCritic 用曼哈顿距离，膨胀层用欧氏距离）。
+// 距离不实时计算，而是预计算成二维查表 cached_distances_[dx][dy]，
+// 每格只需一次 O(1) 查表。
+//
+// 扩展点：虚函数 validCellToQueue 允许派生类限制扩散范围——
+// LimitedCostmapQueue 用它实现"只扩散到距离上限以内"。
+// ============================================================================
+
 namespace costmap_queue
 {
 /**
  * @class CellData
  * @brief Storage for cell information used during queue expansion
  */
+// 队列元素：记录扩散过程中一个格子的全部信息
 class CellData
 {
 public:
@@ -60,6 +87,7 @@ public:
    * @param sx The x coordinate of the closest source cell in the costmap
    * @param sy The y coordinate of the closest source cell in the costmap
    */
+  // 完整构造：距离 d、格子一维索引 i、格子坐标 (x,y)、最近源点坐标 (sx,sy)
   CellData(
     const double d, const unsigned int i, const unsigned int x, const unsigned int y,
     const unsigned int sx, const unsigned int sy)
@@ -70,20 +98,22 @@ public:
   /**
    * @brief Default Constructor - Should be used sparingly
    */
+  // 默认构造：距离设为 double 最大值（表示"尚未确定/无穷远"）
   CellData()
   : distance_(std::numeric_limits<double>::max()), index_(0), x_(0), y_(0), src_x_(0), src_y_(0)
   {
   }
 
+  // 无符号整数的安全求差：避免 unsigned 相减出现负数回绕
   static unsigned absolute_difference(const unsigned x, const unsigned y)
   {
     return (x > y) ? (x - y) : (y - x);
   }
 
-  double distance_;
-  unsigned int index_;
-  unsigned int x_, y_;
-  unsigned int src_x_, src_y_;
+  double distance_;         // 本格到其最近源点的距离（队列的优先级键）
+  unsigned int index_;      // 本格在代价地图中的一维索引（与 x_,y_ 冗余）
+  unsigned int x_, y_;      // 本格的栅格坐标
+  unsigned int src_x_, src_y_;  // 最近源点的栅格坐标（膨胀层据此查源格代价）
 };
 
 /**
@@ -113,11 +143,13 @@ public:
    * @param costmap Costmap which defines the size/number of cells
    * @param manhattan If true, sort cells by Manhattan distance, otherwise use Euclidean distance
    */
+  // 构造：绑定代价地图；manhattan 选择距离度量（默认欧氏）
   explicit CostmapQueue(nav2_costmap_2d::Costmap2D & costmap, bool manhattan = false);
 
   /**
    * @brief Clear the queue
    */
+  // 重置：清空 seen_ 数组、重建距离查找表、调用基类清空队列
   void reset() override;
 
   /**
@@ -125,6 +157,7 @@ public:
    * @param x X coordinate of the cell
    * @param y Y coordinate of the cell
    */
+  // 源格入队：以自身为源点（src = 自身坐标），距离为 0
   void enqueueCell(unsigned int x, unsigned int y);
 
   /**
@@ -133,6 +166,8 @@ public:
    *
    * NB: Assumes that isEmpty has been called before this call and returned false
    */
+  // 取出下一个要处理的格子（距离最小者），并把它的四邻域入队
+  //（调用前必须先确认 isEmpty() == false）
   CellData getNextCell();
 
   /**
@@ -140,16 +175,18 @@ public:
    * @param cell The cell to check
    * @return True, unless overriden
    */
+  // 钩子函数：派生类重写以限制扩散范围（如 LimitedCostmapQueue 的距离上限）
   virtual bool validCellToQueue(const CellData & /*cell*/) {return true;}
   /**
    * @brief convenience typedef for a pointer
    */
-  typedef std::shared_ptr<CostmapQueue> Ptr;
+  typedef std::shared_ptr<CostmapQueue> Ptr;  // 智能指针别名，便于外部持有
 
 protected:
   /**
    * @brief Enqueue a cell with the given coordinates and the given source cell
    */
+  // 内部入队：给定格子坐标与源点坐标，计算距离后按优先级入队
   void enqueueCell(
     unsigned int index, unsigned int cur_x, unsigned int cur_y, unsigned int src_x,
     unsigned int src_y);
@@ -157,12 +194,13 @@ protected:
   /**
    * @brief Compute the cached distances
    */
+  // 预计算距离查找表：cached_distances_[dx][dy] = hypot(dx,dy) 或 dx+dy
   void computeCache();
 
-  nav2_costmap_2d::Costmap2D & costmap_;
-  std::vector<bool> seen_;
-  int max_distance_;
-  bool manhattan_;
+  nav2_costmap_2d::Costmap2D & costmap_;  // 宿主代价地图的引用
+  std::vector<bool> seen_;                 // 每格是否已入过队（保证每格只处理一次）
+  int max_distance_;                       // 距离表覆盖的最大跨度（格数）
+  bool manhattan_;                         // true=曼哈顿距离，false=欧氏距离
 
 protected:
   /**
@@ -173,6 +211,7 @@ protected:
    * @param src_y The y coordinate of the source cell
    * @return
    */
+  // 距离查表：以 |dx|、|dy| 为下标在预计算表中取值，O(1)
   inline double distanceLookup(
     const unsigned int cur_x, const unsigned int cur_y,
     const unsigned int src_x, const unsigned int src_y)
@@ -181,8 +220,8 @@ protected:
     unsigned int dy = CellData::absolute_difference(cur_y, src_y);
     return cached_distances_[dx][dy];
   }
-  std::vector<std::vector<double>> cached_distances_;
-  int cached_max_distance_;
+  std::vector<std::vector<double>> cached_distances_;  // 预计算距离表 [dx][dy]
+  int cached_max_distance_;                            // 距离表当前对应的最大跨度
 };
 }  // namespace costmap_queue
 

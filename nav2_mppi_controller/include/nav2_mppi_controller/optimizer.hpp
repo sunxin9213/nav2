@@ -51,6 +51,23 @@ namespace mppi
 /**
  * @class mppi::Optimizer
  * @brief Main algorithm optimizer of the MPPI Controller
+ *（MPPI 主优化器：实现模型预测路径积分控制的核心类）
+ *
+ * 中文说明：
+ * MPPI（Model Predictive Path Integral，模型预测路径积分控制）核心流程：
+ * 1. 保存上一周期的最优控制序列（滚动时域），向其叠加批量高斯噪声，
+ *    生成 batch_size 条候选控制序列（由 NoiseGenerator 异步完成）；
+ * 2. 将每条控制序列代入运动模型（运动学/动力学）前向积分（rollout），
+ *    得到 batch_size 条候选轨迹（Trajectories）；
+ * 3. 由 CriticManager 调用各 critic（代价函数：避障、路径跟踪、目标、
+ *    速度约束等）对每条轨迹打分，得到 costs_；
+ * 4. 对代价做软最大（softmax）得到每条轨迹的权重 w_i ∝ exp(-cost_i/T)，
+ *    将所有噪声控制序列按权重加权平均，更新最优控制序列；
+ * 5. 只输出序列第一个时间步的控制量作为 cmd_vel（滚动优化）；
+ * 6. 序列向前滚动一步（shift），进入下一周期。
+ *
+ * 在 Nav2 中的位置：由 MPPIController（controller 插件）持有，负责
+ * computeVelocityCommands 内的全部计算，是 nav2_mppi_controller 的算法核心。
  */
 class Optimizer
 {
@@ -236,31 +253,31 @@ protected:
   bool fallback(bool fail);
 
 protected:
-  rclcpp_lifecycle::LifecycleNode::WeakPtr parent_;
-  std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros_;
-  nav2_costmap_2d::Costmap2D * costmap_;
-  std::string name_;
+  rclcpp_lifecycle::LifecycleNode::WeakPtr parent_;  // 父生命周期节点（controller_server）弱引用
+  std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros_;  // 局部代价地图封装
+  nav2_costmap_2d::Costmap2D * costmap_;             // 代价地图底层指针
+  std::string name_;                                 // 插件名称（参数命名空间）
 
-  std::shared_ptr<MotionModel> motion_model_;
+  std::shared_ptr<MotionModel> motion_model_;        // 运动模型（差速/Omni/阿克曼），用于 rollout 推演
 
-  ParametersHandler * parameters_handler_;
-  CriticManager critic_manager_;
-  NoiseGenerator noise_generator_;
+  ParametersHandler * parameters_handler_;           // 参数处理器（动态参数）
+  CriticManager critic_manager_;                     // critic 管理器：加载并调度各代价函数插件
+  NoiseGenerator noise_generator_;                  // 噪声生成器（独立线程）
 
-  models::OptimizerSettings settings_;
+  models::OptimizerSettings settings_;               // 优化器超参数（批次、时域、温度等）
 
-  models::State state_;
-  models::ControlSequence control_sequence_;
-  std::array<mppi::models::Control, 4> control_history_;
-  models::Trajectories generated_trajectories_;
-  models::Path path_;
-  xt::xtensor<float, 1> costs_;
+  models::State state_;                              // 批量状态（噪声控制 + 速度）
+  models::ControlSequence control_sequence_;         // 当前最优控制序列（优化变量）
+  std::array<mppi::models::Control, 4> control_history_;  // 最近 4 个周期的控制量历史（用于 fallback 减速）
+  models::Trajectories generated_trajectories_;     // 本周期生成的候选轨迹
+  models::Path path_;                                // 转换为张量的全局路径
+  xt::xtensor<float, 1> costs_;                      // 每条候选轨迹的代价
 
   CriticData critics_data_ =
   {state_, generated_trajectories_, path_, costs_, settings_.model_dt, false, nullptr, nullptr,
-    std::nullopt, std::nullopt};  /// Caution, keep references
+    std::nullopt, std::nullopt};  /// Caution, keep references（注意：此处持有上述成员的引用，须保证引用对象生命周期；预填充了 critic 公共数据以避免每周期重建）
 
-  rclcpp::Logger logger_{rclcpp::get_logger("MPPIController")};
+  rclcpp::Logger logger_{rclcpp::get_logger("MPPIController")};  // 日志器
 };
 
 template<typename E>

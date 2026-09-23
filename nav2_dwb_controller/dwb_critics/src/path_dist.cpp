@@ -40,14 +40,21 @@
 
 namespace dwb_critics
 {
+// 中文说明（文件级）：
+// 路径距离（Path Dist）critic：以全局路径（限局部代价地图内的部分）
+// 为距离场种子，惩罚轨迹点到全局路径的曼哈顿距离，
+// 使候选轨迹贴近全局路径行进。继承 MapGridCritic 的距离扩散机制。
+
+// 周期准备：将局部地图内的全局路径点作为 0 距离种子并扩散距离场
 bool PathDistCritic::prepare(
   const geometry_msgs::msg::Pose2D &, const nav_2d_msgs::msg::Twist2D &,
   const geometry_msgs::msg::Pose2D &,
   const nav_2d_msgs::msg::Path2D & global_plan)
 {
-  reset();
+  reset();  // 清零距离场（全部设为不可达）
   bool started_path = false;
 
+  // 将全局路径重采样到代价地图分辨率（过稀的路径段插入中间点）
   nav_2d_msgs::msg::Path2D adjusted_global_plan =
     nav_2d_utils::adjustPlanResolution(global_plan, costmap_->getResolution());
 
@@ -60,6 +67,8 @@ bool PathDistCritic::prepare(
 
   unsigned int i;
   // put global path points into local map until we reach the border of the local map
+  //（把落在局部代价地图内且非未知区域的路径点设为 0 距离种子；
+  //  一旦离开局部地图即停止，只跟踪局部段）
   for (i = 0; i < adjusted_global_plan.poses.size(); ++i) {
     double g_x = adjusted_global_plan.poses[i].x;
     double g_y = adjusted_global_plan.poses[i].y;
@@ -68,15 +77,17 @@ bool PathDistCritic::prepare(
         g_x, g_y, map_x,
         map_y) && costmap_->getCost(map_x, map_y) != nav2_costmap_2d::NO_INFORMATION)
     {
+      // 该路径点在局部地图内：设为种子（距离 0）并入扩散队列
       int index = costmap_->getIndex(map_x, map_y);
       cell_values_[index] = 0.0;
       queue_->enqueueCell(map_x, map_y);
       started_path = true;
     } else if (started_path) {
-      break;
+      break;  // 路径已离开局部地图：停止收集种子
     }
   }
   if (!started_path) {
+    // 局部地图内没有任何路径点：评分无法进行
     RCLCPP_ERROR(
       rclcpp::get_logger("PathDistCritic"),
       "None of the %d first of %zu (%zu) points of the global plan were in "
@@ -85,6 +96,7 @@ bool PathDistCritic::prepare(
     return false;
   }
 
+  // 从种子栅格做曼哈顿距离扩散，生成完整距离场
   propogateManhattanDistances();
 
   return true;

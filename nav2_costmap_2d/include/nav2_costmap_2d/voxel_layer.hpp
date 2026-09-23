@@ -37,6 +37,21 @@
  *********************************************************************/
 #ifndef NAV2_COSTMAP_2D__VOXEL_LAYER_HPP_
 #define NAV2_COSTMAP_2D__VOXEL_LAYER_HPP_
+// ============================================================================
+// 中文注释：体素层（VoxelLayer）头文件（实现见 voxel_layer.cpp）
+//
+// 【类功能】
+// ObstacleLayer 的 3D 扩展：在 2D 代价地图之上维护三维体素栅格
+// （voxel_grid_，nav2_voxel_grid 包，每列一个 32 位位图表示 z 向占据）。
+// 支持：3D 标记（列占据体素数达 mark_threshold_ 才写 2D 障碍）、
+// 3D 清除（视线追踪在体素空间进行）、体素地图可视化发布。
+// 关键成员：
+//   - voxel_grid_：体素栅格（x/y 尺寸与 2D 地图一致，z 为 size_z_ 层）；
+//   - z_resolution_/origin_z_：z 轴几何参数；
+//   - unknown_threshold_：列内未知体素数阈值（判 FREE/NO_INFO）；
+//   - mark_threshold_：列内占据体素数阈值（判是否写 2D 致命障碍）。
+// 【继承体系】Layer → CostmapLayer → ObstacleLayer → VoxelLayer
+// ============================================================================
 
 #include <vector>
 #include "message_filters/subscriber.h"

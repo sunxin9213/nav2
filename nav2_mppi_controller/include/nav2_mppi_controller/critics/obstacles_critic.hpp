@@ -32,6 +32,9 @@ namespace mppi::critics
  * the planned path. This is important to tune in tandem with PathAlign to make a balance
  * between path-tracking and dynamic obstacle avoidance capabilities as desirable for a
  * particular application
+ * （障碍物评价器：基于"到障碍物的距离"做斥力型惩罚（由膨胀代价反解），
+ *  允许轨迹偏离参考路径绕开障碍物。需与 PathAlign 权重配合调节，
+ *  在"跟得紧"与"躲得开"之间取得平衡。）
  */
 class ObstaclesCritic : public CriticFunction
 {
@@ -39,14 +42,14 @@ public:
   /**
     * @brief Initialize critic
     */
-  void initialize() override;
+  void initialize() override;  // 读取权重/斥力参数/膨胀层参数并初始化碰撞检测器
 
   /**
    * @brief Evaluate cost related to obstacle avoidance
    *
    * @param costs [out] add obstacle cost values to this tensor
    */
-  void score(CriticData & data) override;
+  void score(CriticData & data) override;  // 逐轨迹点计算距离惩罚（近障碍大，远障碍衰减为 0）
 
 protected:
   /**
@@ -54,6 +57,7 @@ protected:
     * @param cost Costmap cost
     * @return bool if in collision
     */
+  // 代价值达到碰撞阈值即视为碰撞
   inline bool inCollision(float cost) const;
 
   /**
@@ -63,6 +67,7 @@ protected:
     * @param theta theta of pose
     * @return Collision information at pose
     */
+  // 查询位姿处的碰撞信息（含足迹检测分支）
   inline CollisionCost costAtPose(float x, float y, float theta);
 
   /**
@@ -70,6 +75,7 @@ protected:
     * @param cost Costmap cost
     * @return float Distance to the obstacle represented by cost
     */
+  // 由膨胀代价值反解到障碍物的距离（利用指数衰减函数的逆映射）
   inline float distanceToObstacle(const CollisionCost & cost);
 
   /**
@@ -79,23 +85,24 @@ protected:
     * @return double circumscribed cost, any higher than this and need to do full footprint collision checking
     * since some element of the robot could be in collision
     */
+  // 反解外接圆代价：中心代价超过该值时必须做完整足迹碰撞检测
   float findCircumscribedCost(std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap);
 
 protected:
   nav2_costmap_2d::FootprintCollisionChecker<nav2_costmap_2d::Costmap2D *>
-  collision_checker_{nullptr};
+  collision_checker_{nullptr};  // 足迹碰撞检测器
 
-  bool consider_footprint_{true};
-  float collision_cost_{0};
-  float inflation_scale_factor_{0}, inflation_radius_{0};
+  bool consider_footprint_{true};       // 是否使用完整足迹
+  float collision_cost_{0};            // 判定碰撞的代价值
+  float inflation_scale_factor_{0}, inflation_radius_{0};  // 膨胀层指数衰减系数与半径
 
-  float possibly_inscribed_cost_;
-  float collision_margin_distance_;
-  float near_goal_distance_;
-  float circumscribed_cost_{0}, circumscribed_radius_{0};
+  float possibly_inscribed_cost_;       // 内切代价阈值
+  float collision_margin_distance_;    // 碰撞安全裕量（额外留出的距离）
+  float near_goal_distance_;           // 距目标该距离内停止惩罚（避免终点附近卡死）
+  float circumscribed_cost_{0}, circumscribed_radius_{0};  // 外接圆代价与半径
 
-  unsigned int power_{0};
-  float repulsion_weight_, critical_weight_{0};
+  unsigned int power_{0};              // 代价幂次
+  float repulsion_weight_, critical_weight_{0};  // 斥力权重与临界碰撞权重
 };
 
 }  // namespace mppi::critics

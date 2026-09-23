@@ -12,6 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 文件说明（中文）：
+// Source（观测数据源基类）的实现。
+// 模块定位：nav2_collision_monitor 中所有传感器数据源的公共基类。
+// 碰撞监视器从多种数据源（激光扫描 Scan、点云 PointCloud、
+// 红外/超声测距 Range）获取障碍物观测；本基类统一管理：
+//   - 数据源名称、话题（getCommonParameters）、TF 句柄与坐标系；
+//   - 数据有效性判断（sourceValid：超过 source_timeout 未更新则忽略）；
+//   - 使能开关（enabled 参数，支持运行时动态修改）。
+// 子类只需实现数据回调与点提取逻辑（见 scan.cpp / pointcloud.cpp / range.cpp）。
+// ============================================================================
+
 #include "nav2_collision_monitor/source.hpp"
 
 #include <exception>
@@ -26,6 +38,10 @@
 namespace nav2_collision_monitor
 {
 
+// ---------------------------------------------------------------------------
+// 构造函数：保存数据源名称、TF 缓冲、机器人本体/全局坐标系、
+// TF 容差、数据超时时间与"基座漂移校正"开关。
+// ---------------------------------------------------------------------------
 Source::Source(
   const nav2_util::LifecycleNode::WeakPtr & node,
   const std::string & source_name,
@@ -46,6 +62,9 @@ Source::~Source()
 {
 }
 
+// ---------------------------------------------------------------------------
+// 配置：注册动态参数回调（运行时修改 enabled 等参数立即生效）。
+// ---------------------------------------------------------------------------
 bool Source::configure()
 {
   auto node = node_.lock();
@@ -57,6 +76,11 @@ bool Source::configure()
   return true;
 }
 
+// ---------------------------------------------------------------------------
+// 读取所有数据源共有的参数：
+//   <source_name>.topic  数据话题（默认 "scan"，针对激光雷达）
+//   <source_name>.enabled 是否启用该数据源
+// ---------------------------------------------------------------------------
 void Source::getCommonParameters(std::string & source_topic)
 {
   auto node = node_.lock();
@@ -74,6 +98,10 @@ void Source::getCommonParameters(std::string & source_topic)
   enabled_ = node->get_parameter(source_name_ + ".enabled").as_bool();
 }
 
+// ---------------------------------------------------------------------------
+// 判断数据源是否有效：最近一帧数据的时间戳距当前时刻超过
+// source_timeout_ 则视为过期（传感器掉线/数据陈旧），告警并返回 false。
+// ---------------------------------------------------------------------------
 bool Source::sourceValid(
   const rclcpp::Time & source_time,
   const rclcpp::Time & curr_time) const
@@ -93,11 +121,16 @@ bool Source::sourceValid(
   return true;
 }
 
+// 返回数据源是否启用
 bool Source::getEnabled() const
 {
   return enabled_;
 }
 
+// ---------------------------------------------------------------------------
+// 动态参数回调：处理运行时的参数修改请求。
+// 目前仅支持布尔型 enabled 参数（动态启停数据源）。
+// ---------------------------------------------------------------------------
 rcl_interfaces::msg::SetParametersResult
 Source::dynamicParametersCallback(
   std::vector<rclcpp::Parameter> parameters)

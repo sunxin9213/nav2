@@ -40,33 +40,39 @@
 
 namespace dwb_core
 {
+// 记录一条非法轨迹：以 (评价器名, 异常描述) 为键累加计数
 void IllegalTrajectoryTracker::addIllegalTrajectory(
   const dwb_core::IllegalTrajectoryException & e)
 {
-  counts_[std::make_pair(e.getCriticName(), e.what())]++;
-  illegal_count_++;
+  counts_[std::make_pair(e.getCriticName(), e.what())]++;  // 按失败原因分类统计
+  illegal_count_++;  // 非法轨迹总数
 }
 
+// 记录一条合法轨迹（仅需计数）
 void IllegalTrajectoryTracker::addLegalTrajectory()
 {
   legal_count_++;
 }
 
+// 计算各失败原因占全部轨迹（合法+非法）的百分比，
+// 用于日志中诊断"为什么大多数轨迹被拒"
 std::map<std::pair<std::string, std::string>,
   double> IllegalTrajectoryTracker::getPercentages() const
 {
   std::map<std::pair<std::string, std::string>, double> percents;
-  double denominator = static_cast<double>(legal_count_ + illegal_count_);
+  double denominator = static_cast<double>(legal_count_ + illegal_count_);  // 总轨迹数
   for (auto const & x : counts_) {
     percents[x.first] = static_cast<double>(x.second) / denominator;
   }
   return percents;
 }
 
+// 生成汇总消息：合法数为 0 时给出警告措辞，否则给出合法占比
 std::string IllegalTrajectoryTracker::getMessage() const
 {
   std::ostringstream msg;
   if (legal_count_ == 0) {
+    // 一条合法轨迹都没有 -> 抛出 NoLegalTrajectoriesException 的场景
     msg << "No valid trajectories out of " << illegal_count_ << "! ";
   } else {
     unsigned int total = legal_count_ + illegal_count_;

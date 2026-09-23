@@ -41,9 +41,11 @@ namespace nav2_util
 /**
   * @brief OccupancyGrid data constants
   */
-static constexpr int8_t OCC_GRID_UNKNOWN = -1;
-static constexpr int8_t OCC_GRID_FREE = 0;
-static constexpr int8_t OCC_GRID_OCCUPIED = 100;
+// OccupancyGrid（占据栅格）数据的取值常量：
+// ROS 标准约定 data 数组中每个 int8_t 单元的取值含义
+static constexpr int8_t OCC_GRID_UNKNOWN = -1;   // 未知区域（无观测数据）
+static constexpr int8_t OCC_GRID_FREE = 0;       // 完全自由（无障碍）
+static constexpr int8_t OCC_GRID_OCCUPIED = 100; // 完全占据（确定障碍）
 
 }  // namespace nav2_util
 

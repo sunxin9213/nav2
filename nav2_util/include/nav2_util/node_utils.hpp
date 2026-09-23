@@ -23,6 +23,17 @@
 namespace nav2_util
 {
 
+// ==================== 节点与参数相关实用工具 ====================
+// 本头文件提供 ROS2 节点/参数操作的一系列工具：
+// - 节点名的清洗与唯一化（sanitize_node_name / generate_internal_node_name）
+// - 命名空间拼接（add_namespaces）
+// - 内部辅助节点的创建（generate_internal_node）
+// - 参数安全声明模板（declare_parameter_if_not_declared，两个重载）
+// - 插件类型参数读取（get_plugin_type_param）
+// - 节点间参数整体拷贝（copy_all_parameters）
+// 这些模板均以 NodeT（节点指针类型）作为模板参数，可同时兼容
+// rclcpp::Node 和 rclcpp_lifecycle::LifecycleNode 等不同节点类型。
+
 /// Replace invalid characters in a potential node name
 /**
  * There is frequently a need to create internal nodes. They must have a name,
@@ -96,6 +107,8 @@ void declare_parameter_if_not_declared(
   const rcl_interfaces::msg::ParameterDescriptor & parameter_descriptor =
   rcl_interfaces::msg::ParameterDescriptor())
 {
+  // 幂等声明：先检查参数是否已存在（可能来自 YAML 配置文件或其他节点的声明），
+  // 只有未声明时才用给定的默认值声明，避免重复声明抛出异常。
   if (!node->has_parameter(param_name)) {
     node->declare_parameter(param_name, default_value, parameter_descriptor);
   }
@@ -117,6 +130,8 @@ void declare_parameter_if_not_declared(
   const rcl_interfaces::msg::ParameterDescriptor & parameter_descriptor =
   rcl_interfaces::msg::ParameterDescriptor())
 {
+  // 与上一个重载相同：仅在参数尚未声明时才按"类型"声明（不带默认值），
+  // 适用于只关心类型约束的场景
   if (!node->has_parameter(param_name)) {
     node->declare_parameter(param_name, param_type, parameter_descriptor);
   }
@@ -136,15 +151,19 @@ std::string get_plugin_type_param(
   NodeT node,
   const std::string & plugin_name)
 {
+  // 先确保 "<plugin_name>.plugin" 参数已声明（按字符串类型），
+  // Nav2 的惯例：每个插件在参数服务器上以 "xxx.plugin = 包名::插件类" 的形式配置
   declare_parameter_if_not_declared(node, plugin_name + ".plugin", rclcpp::PARAMETER_STRING);
   std::string plugin_type;
   try {
+    // 读取插件类型字符串；读取失败（返回 false）属于致命错误，直接退出进程
     if (!node->get_parameter(plugin_name + ".plugin", plugin_type)) {
       RCLCPP_FATAL(
         node->get_logger(), "Can not get 'plugin' param value for %s", plugin_name.c_str());
       exit(-1);
     }
   } catch (rclcpp::exceptions::ParameterUninitializedException & ex) {
+    // 参数已声明但未赋值（未初始化）也会抛异常，同样视为致命错误
     RCLCPP_FATAL(node->get_logger(), "'plugin' param not defined for %s", plugin_name.c_str());
     exit(-1);
   }
@@ -162,8 +181,12 @@ template<typename NodeT1, typename NodeT2>
 void copy_all_parameters(const NodeT1 & parent, const NodeT2 & child)
 {
   using Parameters = std::vector<rclcpp::Parameter>;
+  // 列出父节点的全部参数名（depth=0 表示不按前缀分组展开），
+  // 再一次性取出所有参数对象（含名称与取值）
   std::vector<std::string> param_names = parent->list_parameters({}, 0).names;
   Parameters params = parent->get_parameters(param_names);
+  // 逐个检查子节点是否已有同名参数，只复制缺失的，
+  // 已存在的参数保持子节点自身的值，避免覆盖
   for (Parameters::const_iterator iter = params.begin(); iter != params.end(); ++iter) {
     if (!child->has_parameter(iter->get_name())) {
       child->declare_parameter(iter->get_name(), iter->get_parameter_value());

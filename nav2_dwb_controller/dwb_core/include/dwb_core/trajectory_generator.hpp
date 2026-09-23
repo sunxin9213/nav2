@@ -60,6 +60,10 @@ namespace dwb_core
  *
  * Both components rely heavily on the robot's kinematic model, and can share many parameters,
  * which is why they are grouped into a singular class.
+ * （轨迹生成器插件接口：组合两个职责——
+ *  1) 枚举候选速度（迭代器接口）；
+ *  2) 由候选速度前向推演出轨迹。
+ *  二者都强依赖机器人运动学模型，故合并为一个插件类。）
  */
 class TrajectoryGenerator
 {
@@ -75,24 +79,25 @@ public:
   virtual void initialize(
     const nav2_util::LifecycleNode::SharedPtr & nh,
     const std::string & plugin_name) = 0;
-  virtual void reset() {}
+  virtual void reset() {}  // 复位内部状态（新任务时调用）
   /**
    * @brief Start a new iteration based on the current velocity
    * @param current_velocity
    */
+  // 以当前速度为中心开始新一轮速度枚举
   virtual void startNewIteration(const nav_2d_msgs::msg::Twist2D & current_velocity) = 0;
 
   /**
    * @brief Test to see whether there are more twists to test
    * @return True if more twists, false otherwise
    */
-  virtual bool hasMoreTwists() = 0;
+  virtual bool hasMoreTwists() = 0;  // 速度空间是否枚举完毕
 
   /**
    * @brief Return the next twist and advance the iteration
    * @return The Twist!
    */
-  virtual nav_2d_msgs::msg::Twist2D nextTwist() = 0;
+  virtual nav_2d_msgs::msg::Twist2D nextTwist() = 0;  // 取下一个候选速度
 
   /**
    * @brief Get all the twists for an iteration.
@@ -102,11 +107,12 @@ public:
    * @param current_velocity
    * @return all the twists
    */
+  // 便利方法：一次性取出一轮迭代的所有候选速度
   virtual std::vector<nav_2d_msgs::msg::Twist2D> getTwists(
     const nav_2d_msgs::msg::Twist2D & current_velocity)
   {
     std::vector<nav_2d_msgs::msg::Twist2D> twists;
-    startNewIteration(current_velocity);
+    startNewIteration(current_velocity);  // 重新开始（会丢弃进行中的迭代）
     while (hasMoreTwists()) {
       twists.push_back(nextTwist());
     }
@@ -119,6 +125,7 @@ public:
    * @param start_vel Current robot velocity
    * @param cmd_vel The desired command velocity
    */
+  // 由候选速度在 sim_time 窗口内推演完整轨迹
   virtual dwb_msgs::msg::Trajectory2D generateTrajectory(
     const geometry_msgs::msg::Pose2D & start_pose,
     const nav_2d_msgs::msg::Twist2D & start_vel,
@@ -131,6 +138,7 @@ public:
    * @param percentage Setting speed limit in percentage if true
    * or in absolute values in false case.
    */
+  // 限速接口：由速度限制过滤器触发（绝对值或百分比模式）
   virtual void setSpeedLimit(const double & speed_limit, const bool & percentage) = 0;
 };
 

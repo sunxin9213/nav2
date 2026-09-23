@@ -12,6 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 文件说明（中文）：
+// RoutePlanner（路线规划器）类的头文件声明。
+// 模块定位：在任意路图上做最优路线搜索（Dijkstra 最短路径），
+// 边代价可由 EdgeScorer 插件体系计算，支持阻塞边/节点排除。
+// 详细中文注释的实现见 src/route_planner.cpp。
+// ============================================================================
+
 #ifndef NAV2_ROUTE__ROUTE_PLANNER_HPP_
 #define NAV2_ROUTE__ROUTE_PLANNER_HPP_
 

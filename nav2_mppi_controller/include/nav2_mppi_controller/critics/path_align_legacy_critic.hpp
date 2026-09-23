@@ -29,6 +29,9 @@ namespace mppi::critics
  * difficult (or impossible) to deviate in the presence of dynamic obstacles.
  * This is an important critic to tune and consider in tandem with Obstacle.
  * This is the initial 'Legacy' implementation before replacement Oct 2023.
+ * （路径对齐评价器的旧版实现：对每个轨迹点用暴力搜索最近的路径点并取
+ *  横向偏差。2023 年 10 月被基于弧长积分匹配的新版 PathAlignCritic 取代，
+ *  保留用于对照与回退。参数含义与新版一致。）
  */
 class PathAlignLegacyCritic : public CriticFunction
 {
@@ -36,23 +39,23 @@ public:
   /**
     * @brief Initialize critic
     */
-  void initialize() override;
+  void initialize() override;  // 读取权重/偏移/占用比例阈值等参数
 
   /**
    * @brief Evaluate cost related to trajectories path alignment
    *
    * @param costs [out] add reference cost values to this tensor
    */
-  void score(CriticData & data) override;
+  void score(CriticData & data) override;  // 暴力最近点搜索计算侧向偏差代价
 
 protected:
-  size_t offset_from_furthest_{0};
-  int trajectory_point_step_{0};
-  float threshold_to_consider_{0};
-  float max_path_occupancy_ratio_{0};
-  bool use_path_orientations_{false};
-  unsigned int power_{0};
-  float weight_{0};
+  size_t offset_from_furthest_{0};     // 相对轨迹可达最远路径点的索引偏移
+  int trajectory_point_step_{0};       // 轨迹点采样步长（跳点打分提速）
+  float threshold_to_consider_{0};     // 该偏差内不惩罚（死区）
+  float max_path_occupancy_ratio_{0};  // 路径被障碍占用比例上限
+  bool use_path_orientations_{false};  // 是否用路径点自身朝向
+  unsigned int power_{0};              // 代价幂次
+  float weight_{0};                    // 评价器权重
 };
 
 }  // namespace mppi::critics

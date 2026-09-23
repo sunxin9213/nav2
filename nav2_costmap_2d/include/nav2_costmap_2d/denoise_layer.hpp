@@ -14,6 +14,21 @@
 
 #ifndef NAV2_COSTMAP_2D__DENOISE_LAYER_HPP_
 #define NAV2_COSTMAP_2D__DENOISE_LAYER_HPP_
+// ============================================================================
+// 中文注释：去噪层（DenoiseLayer）头文件（实现见 denoise_layer.cpp）
+//
+// 【类功能】
+// 后处理层：对主地图做形态学去噪，清除孤立小障碍块（传感器噪声）。
+// 无独立缓存——直接就地修改主地图（与其他层的重要区别）。
+// 关键成员：
+//   - minimal_group_size_：小于该尺寸的障碍连通组被清除；
+//   - group_connectivity_type_：4 连通或 8 连通；
+//   - groups_remover_：连通域分割器（Way4/Way8）；
+//   - buffer_：免拷贝图像算法的工作缓冲。
+// 【继承体系】Layer → DenoiseLayer（无缓存，直接操作主地图）
+// 【依赖】denoise/image.hpp（零拷贝 ROI 图像视图）、
+// denoise/image_processing.hpp（膨胀/连通域算法）
+// ============================================================================
 
 #include "nav2_costmap_2d/layer.hpp"
 #include "nav2_costmap_2d/denoise/image_processing.hpp"

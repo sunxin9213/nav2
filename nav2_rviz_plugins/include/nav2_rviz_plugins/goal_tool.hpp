@@ -36,6 +36,8 @@ class StringProperty;
 namespace nav2_rviz_plugins
 {
 
+// "Nav2 Goal" RViz 工具：继承 PoseTool（点选+拖拽定向），
+// 用户设定的位姿通过全局 GoalUpdater 的 Qt 信号转发给 Nav2 面板
 class RVIZ_DEFAULT_PLUGINS_PUBLIC GoalTool : public rviz_default_plugins::tools::PoseTool
 {
   Q_OBJECT
@@ -44,9 +46,11 @@ public:
   GoalTool();
   ~GoalTool() override;
 
+  // 插件初始化：设置名称与图标
   void onInitialize() override;
 
 protected:
+  // 用户设定目标点完成时回调（x/y 为坐标，theta 为朝向角）
   void onPoseSet(double x, double y, double theta) override;
 };
 

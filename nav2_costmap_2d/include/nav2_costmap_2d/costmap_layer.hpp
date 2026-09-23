@@ -37,6 +37,24 @@
  *********************************************************************/
 #ifndef NAV2_COSTMAP_2D__COSTMAP_LAYER_HPP_
 #define NAV2_COSTMAP_2D__COSTMAP_LAYER_HPP_
+// ============================================================================
+// 中文注释：CostmapLayer 中间层基类头文件（实现见 costmap_layer.cpp）
+//
+// 【类功能】
+// "自带缓存地图"的层基类：同时继承 Layer（插件接口）与 Costmap2D
+// （数据存储），即本层维护一张与主地图同几何参数的内部代价地图。
+// 提供：
+//   - touch()/addExtraBounds()/useExtraBounds()：更新边界与额外重绘区；
+//   - matchSize()：与主地图尺寸对齐；
+//   - clearArea()：区域置为 NO_INFORMATION（clear costmap 服务用）；
+//   - 四种合并策略：updateWithMax（取最大，默认最安全）、
+//     updateWithTrueOverwrite（无条件覆盖，静态层用）、
+//     updateWithOverwrite（非未知才覆盖）、updateWithAddition（相加饱和）。
+//
+// 【继承体系】
+//   Layer + Costmap2D → CostmapLayer → StaticLayer / ObstacleLayer / VoxelLayer
+// （InflationLayer、各 CostmapFilter、DenoiseLayer 无独立缓存，直接继承 Layer）
+// ============================================================================
 
 #include <rclcpp/rclcpp.hpp>
 #include <nav2_costmap_2d/layer.hpp>

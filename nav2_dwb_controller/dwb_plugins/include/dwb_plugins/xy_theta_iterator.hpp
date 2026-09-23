@@ -44,6 +44,8 @@
 
 namespace dwb_plugins
 {
+// XYTheta 速度迭代器：组合三个一维采样器（x/y/theta）做笛卡尔积枚举，
+// 并过滤掉超出合成速度上下限的组合，是 DWB 默认的速度采样策略
 class XYThetaIterator : public VelocityIterator
 {
 public:
@@ -52,10 +54,11 @@ public:
   void initialize(
     const nav2_util::LifecycleNode::SharedPtr & nh,
     KinematicsHandler::Ptr kinematics,
-    const std::string & plugin_name) override;
+    const std::string & plugin_name) override;  // 读取各轴样本数并保存运动学参数
   void startNewIteration(const nav_2d_msgs::msg::Twist2D & current_velocity, double dt) override;
-  bool hasMoreTwists() override;
-  nav_2d_msgs::msg::Twist2D nextTwist() override;
+  // 用当前速度与时间窗 dt 初始化三个一维迭代器
+  bool hasMoreTwists() override;          // 三重循环是否遍历完毕
+  nav_2d_msgs::msg::Twist2D nextTwist() override;  // 返回下一个合法速度组合
 
 protected:
   /**
@@ -69,13 +72,14 @@ protected:
    *  2) min_speed_xy is negative or min_speed_theta is negative or
    *     hypot(x,y) is greater than min_speed_xy or fabs(theta) is greater than min_speed_theta.
    */
+  // 检查 (x,y,theta) 组合是否满足合成速度的绝对限制（上限与死区）
   bool isValidSpeed(double x, double y, double theta);
-  virtual bool isValidVelocity();
-  void iterateToValidVelocity();
-  int vx_samples_, vy_samples_, vtheta_samples_;
-  KinematicsHandler::Ptr kinematics_handler_;
+  virtual bool isValidVelocity();      // 当前组合是否合法（多态钩子）
+  void iterateToValidVelocity();       // 跳过所有非法组合直到找到合法速度
+  int vx_samples_, vy_samples_, vtheta_samples_;  // 三轴各自的采样数
+  KinematicsHandler::Ptr kinematics_handler_;      // 运动学参数来源
 
-  std::shared_ptr<OneDVelocityIterator> x_it_, y_it_, th_it_;
+  std::shared_ptr<OneDVelocityIterator> x_it_, y_it_, th_it_;  // 三个一维采样器
 };
 }  // namespace dwb_plugins
 

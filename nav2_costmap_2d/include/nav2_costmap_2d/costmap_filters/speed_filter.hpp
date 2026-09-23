@@ -37,6 +37,19 @@
 
 #ifndef NAV2_COSTMAP_2D__COSTMAP_FILTERS__SPEED_FILTER_HPP_
 #define NAV2_COSTMAP_2D__COSTMAP_FILTERS__SPEED_FILTER_HPP_
+// ============================================================================
+// 中文注释：限速区过滤器头文件（实现见 speed_filter.cpp）
+//
+// 【类功能】
+// 订阅限速掩码地图，按机器人位置计算速度限制并发布
+// nav2_msgs/SpeedLimit 消息（speed_limit 话题）——不修改主地图，
+// 而是影响"速度维度"（控制器/速度平滑器订阅该消息）。
+// 速度换算：speed_limit = base + mask_data * multiplier，
+// 百分比模式（type=SPEED_FILTER_PERCENT）或绝对 m/s 模式
+// （type=SPEED_FILTER_ABSOLUTE）。掩码值 0=不限速；
+// 限速值变化时才发布新消息。
+// 【继承体系】Layer → CostmapFilter → SpeedFilter
+// ============================================================================
 
 #include <memory>
 #include <string>

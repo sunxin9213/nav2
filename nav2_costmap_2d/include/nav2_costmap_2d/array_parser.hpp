@@ -30,6 +30,14 @@
  */
 #ifndef NAV2_COSTMAP_2D__ARRAY_PARSER_HPP_
 #define NAV2_COSTMAP_2D__ARRAY_PARSER_HPP_
+// ============================================================================
+// 中文注释：数组字符串解析器头文件（实现见 array_parser.cpp）
+//
+// 【文件功能】
+// parseVVF()：把 "[[1.0, 2.0], [3.3, 4.4]]" 形式的二维浮点数组
+// 字符串解析为 std::vector<std::vector<float>>。
+// 主要用于解析 YAML 中的 footprint 足迹多边形参数。
+// ============================================================================
 
 #include <vector>
 #include <string>

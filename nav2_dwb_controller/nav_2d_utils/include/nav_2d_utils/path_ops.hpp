@@ -46,6 +46,16 @@ namespace nav_2d_utils
  * @param resolution desired distance between waypoints
  * @return Higher resolution plan
  */
+// ---------------------------------------------------------------------------
+// 路径分辨率调整（adjustPlanResolution）：
+// 全局规划器输出的路径点间距可能远大于局部代价地图的分辨率（例如全局
+// 规划在粗粒度栅格上搜索，或路径被抽稀过）。BFW/DWB 的评价器（尤其是
+// map_grid 系列）以路径点为源点做 BFS，点距过稀会导致距离场精度不足。
+// 本函数在相邻路径点间距超过 2*resolution（即"空洞"超过两个格子）时，
+// 按分辨率线性内插补齐中间点（x/y/theta 均匀插值），输出与代价地图
+// 分辨率匹配的高密度路径。
+// ---------------------------------------------------------------------------
+// 提升路径分辨率：在相邻点间距过大处按 resolution 线性插入中间路径点
 nav_2d_msgs::msg::Path2D adjustPlanResolution(
   const nav_2d_msgs::msg::Path2D & global_plan_in,
   double resolution);

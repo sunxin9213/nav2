@@ -37,6 +37,33 @@
  *********************************************************************/
 #ifndef NAV2_COSTMAP_2D__COSTMAP_2D_HPP_
 #define NAV2_COSTMAP_2D__COSTMAP_2D_HPP_
+// ============================================================================
+// 中文注释：Costmap2D 核心类头文件（见 costmap_2d.cpp 的详细说明）
+//
+// 【类功能】
+// Costmap2D 是 Nav2 代价地图体系的底层数据结构：一张 2D 栅格代价地图，
+// 提供"世界坐标 ↔ 栅格坐标"换算、栅格代价读写、地图尺寸调整、
+// 滚动窗口原点平移（updateOrigin）、多边形栅格化与射线追踪等能力。
+//
+// 【内存模型】
+// costmap_ 为一维 unsigned char 数组（行优先），栅格 (mx,my) 的下标：
+//     index = mx + my * size_x_    （见 getIndex()）
+// 几何参数：resolution_（米/格）、(origin_x_, origin_y_)（左下角世界坐标）、
+// size_x_/size_y_（格数）。
+//
+// 【坐标换算】（mapToWorld / worldToMap 系列）
+// 世界→栅格：mx = (wx - origin_x) / resolution（向下取整）；
+// 栅格→世界：wx = origin_x + (mx + 0.5) * resolution（格中心约定）。
+//
+// 【代价语义】（见 cost_values.hpp）
+// 0=FREE_SPACE 自由；253=INSCRIBED_INFLATED_OBSTACLE 内切必碰；
+// 254=LETHAL_OBSTACLE 致命障碍；255=NO_INFORMATION 未知；
+// 1~252 为中间代价（膨胀层按距离衰减产生）。
+//
+// 【在 Nav2 中的位置】
+// LayeredCostmap（主地图）与各 CostmapLayer（层内缓存）都直接持有本类；
+// 继承链：Costmap2D → CostmapLayer → ObstacleLayer/StaticLayer/VoxelLayer。
+// ============================================================================
 
 #include <string.h>
 #include <stdio.h>

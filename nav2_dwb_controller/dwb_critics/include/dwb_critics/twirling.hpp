@@ -37,6 +37,19 @@
 
 #include "dwb_core/trajectory_critic.hpp"
 
+// ============================================================================
+// 模块说明：旋转惩罚评价器（TwirlingCritic）
+// ----------------------------------------------------------------------------
+// 对轨迹的角速度施加纯粹惩罚，抑制机器人"边走边自旋"（twirling）的行为。
+// 背景：
+//   - 差速机器人：平移必然伴随旋转，此评价器基本不起作用；
+//   - 全向（holonomic / 麦轮）机器人：可以边平移边任意自旋，规划器有时
+//     会选出"一路转着圈去目标"的怪异轨迹。本评价器通过 |wz| * scale 的
+//     代价让规划器倾向"保持朝向、直接平移"的轨迹。
+// 打分公式：scoreTrajectory 直接返回轨迹角速度 theta 的绝对值（再乘
+// 评价器统一权重 scale），无其他逻辑。
+// ============================================================================
+
 namespace dwb_critics
 {
 /**
@@ -48,10 +61,13 @@ namespace dwb_critics
  * sometimes a robot spins more than you'd like on its way to a goal. This class provides a way
  * to assign a penalty purely to rotational velocities.
  */
+// 旋转惩罚评价器：全向底盘专属，惩罚轨迹角速度以避免边走边转圈
 class TwirlingCritic : public dwb_core::TrajectoryCritic
 {
 public:
+  // 初始化：调用基类 onInit（本评价器无额外参数）
   void onInit() override;
+  // 打分：返回轨迹角速度的绝对值（转得越快罚分越高）
   double scoreTrajectory(const dwb_msgs::msg::Trajectory2D & traj) override;
 };
 }  // namespace dwb_critics

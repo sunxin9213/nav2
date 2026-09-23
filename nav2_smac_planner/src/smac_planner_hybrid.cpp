@@ -30,6 +30,13 @@ using namespace std::chrono;  // NOLINT
 using rcl_interfaces::msg::ParameterType;
 using std::placeholders::_1;
 
+// 【中文注释】SmacPlannerHybrid：SMAC 混合 A* 全局规划器的 ROS2 插件。
+// 算法：Hybrid A*（状态格 state lattice 搜索 + 最小曲率约束）——
+//   节点是 SE(2) 位姿 (x, y, theta bin)，用满足最小转弯半径的运动基元
+//   （Dubins/Reeds-Shepp：直行/左转/右转/倒车）扩展，
+//   启发函数 = max(2D 障碍 Dijkstra 启发, Dubins/RS 距离启发)，
+//   并周期性尝试 Dubins/RS 解析扩展直连目标。
+// 适用于阿克曼/类车底盘（不能原地转向）的全局规划。
 SmacPlannerHybrid::SmacPlannerHybrid()
 : _a_star(nullptr),
   _collision_checker(nullptr, 1, nullptr),
@@ -51,6 +58,8 @@ void SmacPlannerHybrid::configure(
   std::string name, std::shared_ptr<tf2_ros::Buffer>/*tf*/,
   std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros)
 {
+  // 【中文注释】生命周期 configure：保存节点/costmap 句柄，声明并读取全部参数，
+  // 构建碰撞检查器、A* 搜索器、可选平滑器和可选下采样器。
   _node = parent;
   auto node = parent.lock();
   _logger = node->get_logger();
@@ -67,6 +76,11 @@ void SmacPlannerHybrid::configure(
   bool smooth_path;
 
   // General planner params
+  // 【中文注释】参数声明与读取（未显式设置时使用默认值）：
+  // downsample_costmap/downsampling_factor：是否下采样 costmap 及倍率（加速搜索）；
+  // angle_quantization_bins：朝向角离散数（默认 72 = 5 度/bin，决定搜索第三维大小）；
+  // tolerance：目标容差(米)；allow_unknown：允许穿越未知区；
+  // max_iterations / max_on_approach_iterations：迭代上限；smooth_path：结果平滑开关。
   nav2_util::declare_parameter_if_not_declared(
     node, name + ".downsample_costmap", rclcpp::ParameterValue(false));
   node->get_parameter(name + ".downsample_costmap", _downsample_costmap);
@@ -95,6 +109,17 @@ void SmacPlannerHybrid::configure(
   nav2_util::declare_parameter_if_not_declared(
     node, name + ".smooth_path", rclcpp::ParameterValue(true));
   node->get_parameter(name + ".smooth_path", smooth_path);
+
+  // 【中文注释】运动学/启发/代价参数：
+  // minimum_turning_radius：最小转弯半径(米)，Hybrid A* 的核心运动学约束；
+  // cache_obstacle_heuristic：障碍启发距离场是否跨规划周期缓存；
+  // 代价权重：reverse_penalty(倒车 2.0)、change_penalty(换向 0.0)、
+  // non_straight_penalty(非直线 1.2)、cost_penalty(地图代价 2.0)、
+  // retrospective_penalty(回溯 0.015)；
+  // analytic_expansion_ratio(3.5)：解析扩展尝试频率比例；
+  // analytic_expansion_max_length(3.0m)：解析曲线最大长度（换算为栅格数）；
+  // max_planning_time(5s)：单次规划最大时长；lookup_table_size(20m)：启发查找表窗口；
+  // motion_model_for_search：运动模型 DUBIN(仅前进)/REEDS_SHEPP(可倒车)。
 
   nav2_util::declare_parameter_if_not_declared(
     node, name + ".minimum_turning_radius", rclcpp::ParameterValue(0.4));
@@ -160,6 +185,9 @@ void SmacPlannerHybrid::configure(
   }
 
   // convert to grid coordinates
+  // 【中文注释】单位换算：米制参数转栅格单位——最小转弯半径和查找表窗口
+  // 都除以 (分辨率 x 下采样倍率)；窗口尺寸取整并强制为奇数
+  // （奇数保证目标位于窗口正中，镜像对称查找才成立）。
   if (!_downsample_costmap) {
     _downsampling_factor = 1;
   }
@@ -182,6 +210,7 @@ void SmacPlannerHybrid::configure(
   }
 
   // Initialize collision checker
+  // 【中文注释】初始化碰撞检查器：按角度量化数预旋转足迹，注入机器人足迹信息
   _collision_checker = GridCollisionChecker(_costmap, _angle_quantizations, node);
   _collision_checker.setFootprint(
     _costmap_ros->getRobotFootprint(),
@@ -189,6 +218,8 @@ void SmacPlannerHybrid::configure(
     findCircumscribedCost(_costmap_ros));
 
   // Initialize A* template
+  // 【中文注释】创建 Hybrid A* 搜索器（NodeHybrid 节点实例化）并初始化
+  //（含距离启发查找表预计算）
   _a_star = std::make_unique<AStarAlgorithm<NodeHybrid>>(_motion_model, _search_info);
   _a_star->initialize(
     _allow_unknown,
@@ -199,6 +230,7 @@ void SmacPlannerHybrid::configure(
     _angle_quantizations);
 
   // Initialize path smoother
+  // 【中文注释】可选：创建梯度平滑器
   if (smooth_path) {
     SmootherParams params;
     params.get(node, name);
@@ -207,6 +239,7 @@ void SmacPlannerHybrid::configure(
   }
 
   // Initialize costmap downsampler
+  // 【中文注释】可选：创建 costmap 下采样器（发布到 downsampled_costmap 调试话题）
   if (_downsample_costmap && _downsampling_factor > 1) {
     _costmap_downsampler = std::make_unique<CostmapDownsampler>();
     std::string topic_name = "downsampled_costmap";
@@ -270,12 +303,17 @@ nav_msgs::msg::Path SmacPlannerHybrid::createPlan(
   const geometry_msgs::msg::PoseStamped & start,
   const geometry_msgs::msg::PoseStamped & goal)
 {
+  // 【中文注释】规划入口（planner_server 的 ComputePathToPose 调用）：
+  // 流程：下采样(可选) -> 更新碰撞检查器 -> 设置 SE(2) 起点/终点
+  // -> A* 搜索 -> 栅格转世界坐标 -> 发布原始路径 -> 用剩余时间预算平滑。
+  // 互斥锁防止与动态参数重初始化竞争；costmap 锁保证地图读取一致性。
   std::lock_guard<std::mutex> lock_reinit(_mutex);
   steady_clock::time_point a = steady_clock::now();
 
   std::unique_lock<nav2_costmap_2d::Costmap2D::mutex_t> lock(*(_costmap->getMutex()));
 
   // Downsample costmap, if required
+  // 【中文注释】按需下采样地图并让碰撞检查器指向下采样后的地图
   nav2_costmap_2d::Costmap2D * costmap = _costmap;
   if (_costmap_downsampler) {
     costmap = _costmap_downsampler->downsample(_downsampling_factor);
@@ -283,6 +321,7 @@ nav_msgs::msg::Path SmacPlannerHybrid::createPlan(
   }
 
   // Set collision checker and costmap information
+  // 【中文注释】每次规划都刷新足迹（可能被动态修改）并注入 A*
   _collision_checker.setFootprint(
     _costmap_ros->getRobotFootprint(),
     _costmap_ros->getUseRadius(),
@@ -290,6 +329,8 @@ nav_msgs::msg::Path SmacPlannerHybrid::createPlan(
   _a_star->setCollisionChecker(&_collision_checker);
 
   // Set starting point, in A* bin search coordinates
+  // 【中文注释】起点：世界坐标转栅格坐标 + 朝向弧度转角度 bin
+  //（yaw/bin_size 后归一到 [0, N)，处理负角和浮点边界）
   unsigned int mx_start, my_start, mx_goal, my_goal;
   if (!costmap->worldToMap(start.pose.position.x, start.pose.position.y, mx_start, my_start)) {
     throw std::runtime_error("Start pose is out of costmap!");

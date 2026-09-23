@@ -14,6 +14,17 @@
 
 #ifndef NAV2_COSTMAP_2D__CLEAR_COSTMAP_SERVICE_HPP_
 #define NAV2_COSTMAP_2D__CLEAR_COSTMAP_SERVICE_HPP_
+// ============================================================================
+// 中文注释：清除代价地图服务头文件（实现见 clear_costmap_service.cpp）
+//
+// 【类功能】
+// 提供三个清除服务（服务名带代价地图节点名以区分全局/局部）：
+//   - clear_except_<名>：清除机器人周围区域"以外"的内容；
+//   - clear_around_<名>：清除机器人周围区域"以内"的内容；
+//   - clear_entirely_<名>：整图复位。
+// 只作用于 isClearable()==true 的层（感知层），静态层/过滤器不可清除。
+// 由 Costmap2DROS 在配置阶段创建。
+// ============================================================================
 
 #include <vector>
 #include <string>

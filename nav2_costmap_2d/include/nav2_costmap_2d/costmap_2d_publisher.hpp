@@ -38,6 +38,21 @@
  *********************************************************************/
 #ifndef NAV2_COSTMAP_2D__COSTMAP_2D_PUBLISHER_HPP_
 #define NAV2_COSTMAP_2D__COSTMAP_2D_PUBLISHER_HPP_
+// ============================================================================
+// 中文注释：代价地图发布器头文件（实现见 costmap_2d_publisher.cpp）
+//
+// 【类功能】
+// 把主代价地图发布为 ROS 消息，三个输出通道：
+//   1. <topic>（OccupancyGrid）：经翻译表转换的 -1~100 占用栅格（RViz）；
+//   2. <topic>_raw（nav2_msgs/Costmap）：原始 0~255 代价（无损共享）；
+//   3. <topic>_updates（OccupancyGridUpdate）：只发变化的脏矩形（省带宽）。
+// 另提供 get_costmap 服务按需取整图。
+// 关键成员：
+//   - cost_translation_table_：静态共享的代价翻译表（0~255 → -1~100）；
+//   - x0_/y0_/xn_/yn_：增量更新的脏矩形（外部 updateBounds 标记）；
+//   - 三个生命周期发布器（transient_local + reliable QoS）。
+// 由 Costmap2DROS 持有，每个更新周期调用 publishCostmap()。
+// ============================================================================
 
 #include <algorithm>
 #include <string>

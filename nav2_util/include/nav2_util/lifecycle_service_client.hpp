@@ -28,10 +28,14 @@ namespace nav2_util
 {
 
 /// Helper functions to interact with a lifecycle node.
+// 生命周期节点服务客户端：封装 change_state / get_state 两个标准服务，
+// 用于以编程方式驱动其他生命周期节点的状态迁移
 class LifecycleServiceClient
 {
 public:
+  // 自建内部节点版本（会生成临时客户端节点）
   explicit LifecycleServiceClient(const std::string & lifecycle_node_name);
+  // 复用外部节点版本
   LifecycleServiceClient(
     const std::string & lifecycle_node_name,
     rclcpp::Node::SharedPtr parent_node);
@@ -40,21 +44,26 @@ public:
   /**
    * Throws std::runtime_error on failure
    */
+  // 触发状态迁移：transition 为 lifecycle_msgs::msg::Transition 中的迁移 id
   bool change_state(
     const uint8_t transition,  // takes a lifecycle_msgs::msg::Transition id
     const std::chrono::seconds timeout);
 
   /// Trigger a state change, returning result
+  // 触发状态迁移（无限等待响应、固定 5s 等服务版本）
   bool change_state(std::uint8_t transition);
 
   /// Get the current state as a lifecycle_msgs::msg::State id value
   /**
    * Throws std::runtime_error on failure
    */
+  // 查询目标节点当前状态 id（UNCONFIGURED/INACTIVE/ACTIVE 等）
   uint8_t get_state(const std::chrono::seconds timeout = std::chrono::seconds(2));
 
 protected:
+  // 承载服务客户端的节点（内部生成或外部传入）
   rclcpp::Node::SharedPtr node_;
+  // 两个服务客户端：状态迁移服务与状态查询服务
   ServiceClient<lifecycle_msgs::srv::ChangeState> change_state_;
   ServiceClient<lifecycle_msgs::srv::GetState> get_state_;
 };

@@ -12,6 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 文件说明（中文）：
+// GraphLoader（路图加载器）类的头文件声明。
+// 模块定位：通过 GraphFileLoader 插件（默认 GeoJSON）从文件解析路图，
+// 并把节点坐标 TF 变换到统一的 route_frame。
+// 详细中文注释的实现见 src/graph_loader.cpp。
+// ============================================================================
+
 #ifndef NAV2_ROUTE__GRAPH_LOADER_HPP_
 #define NAV2_ROUTE__GRAPH_LOADER_HPP_
 

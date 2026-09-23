@@ -15,6 +15,14 @@
 #ifndef NAV2_COLLISION_MONITOR__RANGE_HPP_
 #define NAV2_COLLISION_MONITOR__RANGE_HPP_
 
+// ============================================================================
+// 文件说明（中文）：
+// Range（测距传感器数据源）类的头文件声明。
+// 模块定位：处理 sensor_msgs/Range 的红外/超声数据源，
+// 在视场角内按角步长生成保守的潜在障碍物点。
+// 详细中文注释的实现见 src/range.cpp。
+// ============================================================================
+
 #include <memory>
 #include <vector>
 #include <string>

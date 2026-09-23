@@ -13,6 +13,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/*
+ * =============================================================================
+ * 文件：planner_server.cpp（nav2_planner 模块）
+ * =============================================================================
+ * 功能概述：
+ *   本文件实现 PlannerServer（规划服务器），是 Nav2 导航框架中负责"全局规划"
+ *   的核心服务器节点。它是一个 ROS 2 生命周期节点（nav2_util::LifecycleNode），
+ *   通过 pluginlib 动态加载全局规划器插件（nav2_core::GlobalPlanner，
+ *   如 NavfnPlanner、SmacPlanner 等），并向外提供两个 rclcpp_action 动作服务：
+ *     1) compute_path_to_pose       —— 从起点到单个目标点规划一条全局路径；
+ *     2) compute_path_through_poses —— 依次经过多个途经点规划一条拼接路径。
+ *   此外还提供 is_path_valid 服务，供控制器等节点查询当前路径是否仍然可行。
+ *
+ * 在整个导航流程中的位置（Nav2 任务链）：
+ *   bt_navigator（行为树导航器，负责调度与决策）
+ *     → planner_server【本节点】计算全局路径（ComputePathToPose/ThroughPoses）
+ *     → controller_server（控制服务器）沿全局路径跟踪，输出速度指令
+ *     → velocity_smoother（速度平滑器）平滑后发布到 /cmd_vel。
+ *   本节点由 lifecycle_manager 统一管理生命周期（configure→activate→...），
+ *   并通过 Bond 心跳机制向管理器报告自身存活状态。
+ * =============================================================================
+ */
 #include <chrono>
 #include <cmath>
 #include <iomanip>
@@ -67,6 +89,9 @@ PlannerServer::PlannerServer(const rclcpp::NodeOptions & options)
     "global_costmap", std::string{get_namespace()}, "global_costmap");
 }
 
+// 析构函数：兜底释放所有规划器插件与 Costmap 专属线程。
+// 正常流程中 on_cleanup 已完成清理；若 deactivate/cleanup 从未被调用，
+// 这里保证资源（插件实例、线程）仍会被销毁，避免泄漏。
 PlannerServer::~PlannerServer()
 {
   /*
@@ -257,6 +282,9 @@ PlannerServer::on_cleanup(const rclcpp_lifecycle::State & /*state*/)
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
+// 生命周期 on_shutdown 回调：节点关闭阶段。
+// 具体的停用/清理工作已分别在 on_deactivate / on_cleanup 中完成，
+// 此处仅记录日志并返回成功，允许节点安全退出。
 nav2_util::CallbackReturn
 PlannerServer::on_shutdown(const rclcpp_lifecycle::State &)
 {
@@ -264,6 +292,9 @@ PlannerServer::on_shutdown(const rclcpp_lifecycle::State &)
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
+// 检查动作服务器是否为空或未处于激活状态。
+// 当节点已被停用（deactivate）或 Action Server 尚未创建时返回 true，
+// 调用方（computePlan 等）据此直接中止本次任务，避免在无效状态下规划。
 template<typename T>
 bool PlannerServer::isServerInactive(
   std::unique_ptr<nav2_util::SimpleActionServer<T>> & action_server)
@@ -276,6 +307,9 @@ bool PlannerServer::isServerInactive(
   return false;
 }
 
+// 阻塞等待全局 Costmap "就绪"（isCurrent 为 true）。
+// Costmap 在清除/重置后需要重新接收传感器数据填充地图，
+// 在此期间规划可能基于过期地图；因此以 100Hz 轮询直到地图更新完成。
 void PlannerServer::waitForCostmap()
 {
   // Don't compute a plan until costmap is valid (after clear costmap)
@@ -285,6 +319,9 @@ void PlannerServer::waitForCostmap()
   }
 }
 
+// 检查客户端是否请求取消当前动作目标。
+// 若已收到取消请求：记录日志、通过 terminate_all() 终止所有在途目标并返回 true，
+// 调用方据此立即退出规划流程。
 template<typename T>
 bool PlannerServer::isCancelRequested(
   std::unique_ptr<nav2_util::SimpleActionServer<T>> & action_server)
@@ -298,6 +335,9 @@ bool PlannerServer::isCancelRequested(
   return false;
 }
 
+// 处理目标"抢占"（preemption）：若客户端在任务执行中发来了新目标请求，
+// 用 accept_pending_goal() 接受新目标并覆盖传入的 goal 引用，
+// 使得后续规划基于最新的目标执行（实现"边执行边更新目标"的语义）。
 template<typename T>
 void PlannerServer::getPreemptedGoalIfRequested(
   std::unique_ptr<nav2_util::SimpleActionServer<T>> & action_server,
@@ -308,6 +348,11 @@ void PlannerServer::getPreemptedGoalIfRequested(
   }
 }
 
+// 获取规划起始位姿：
+// - 若目标请求中 use_start=true，使用客户端显式指定的 start 位姿；
+// - 否则通过 Costmap（内部经 TF 监听查询 map→base_link 等变换）
+//   获取机器人当前实际位姿；
+// 若获取失败，终止当前动作目标并返回 false。
 template<typename T>
 bool PlannerServer::getStartPose(
   std::unique_ptr<nav2_util::SimpleActionServer<T>> & action_server,
@@ -324,6 +369,9 @@ bool PlannerServer::getStartPose(
   return true;
 }
 
+// 将起点/终点位姿统一转换到全局 Costmap 的坐标系（global frame）。
+// 所有规划器插件均在全局坐标系下工作；若请求中的位姿使用其它 frame，
+// 这里借助 TF 树完成坐标变换；变换失败则终止当前目标并返回 false。
 template<typename T>
 bool PlannerServer::transformPosesToGlobalFrame(
   std::unique_ptr<nav2_util::SimpleActionServer<T>> & action_server,
@@ -342,6 +390,9 @@ bool PlannerServer::transformPosesToGlobalFrame(
   return true;
 }
 
+// 校验规划结果的有效性：
+// 若插件返回的路径不含任何位姿（poses 为空），说明该规划算法
+// 未能生成有效路径（例如目标不可达），此时终止当前动作并返回 false。
 template<typename T>
 bool PlannerServer::validatePath(
   std::unique_ptr<nav2_util::SimpleActionServer<T>> & action_server,
@@ -367,6 +418,15 @@ bool PlannerServer::validatePath(
   return true;
 }
 
+// "多途经点"全局规划主流程（ComputePathThroughPoses 动作的执行回调）：
+// 1) 加锁保护动态参数，防止规划过程中参数被并发修改；
+// 2) 检查服务器状态与取消请求；
+// 3) 等待 Costmap 就绪，并处理目标抢占；
+// 4) 依次对相邻的 (途经点i-1 → 途经点i) 两两调用 getPlan 生成子路径：
+//    第一段的起点为机器人当前位姿（或客户端指定的 start），
+//    后续各段起点取上一段路径的末尾点，允许一定的路径偏差；
+// 5) 将所有子路径拼接为一条完整路径并发布（供 RViz 可视化）；
+// 6) 统计耗时并检查是否超出期望规划频率，最后上报动作成功。
 void
 PlannerServer::computePlanThroughPoses()
 {
@@ -564,6 +624,9 @@ PlannerServer::getPlan(
   return nav_msgs::msg::Path();
 }
 
+// 发布全局路径到 "plan" 话题（nav_msgs/Path 消息），供 RViz 等可视化工具
+// 显示规划结果。仅当生命周期发布器已激活且存在订阅者时才实际发布，
+// 避免无意义的消息拷贝与网络开销。
 void
 PlannerServer::publishPlan(const nav_msgs::msg::Path & path)
 {
@@ -573,6 +636,15 @@ PlannerServer::publishPlan(const nav_msgs::msg::Path & path)
   }
 }
 
+// is_path_valid 服务回调：判断给定路径在当前 Costmap 上是否仍然可行。
+// 典型调用方是控制器服务器（用于检测全局路径被新出现的障碍物堵死，
+// 以便触发路径重规划）。流程：
+// 1) 空路径直接判为无效；
+// 2) 找到路径上距机器人当前位置最近的点（只检查尚未走过的部分）；
+// 3) 从该点起逐点查询 Costmap 代价：
+//    - 机器人模型为圆（use_radius）：worldToMap + getCost 单点查询；
+//    - 否则用 FootprintCollisionChecker 按完整轮廓计算碰撞代价；
+// 4) 若任一点处于致命障碍（LETHAL_OBSTACLE / 内切膨胀障碍），判为无效。
 void PlannerServer::isPathValid(
   const std::shared_ptr<nav2_msgs::srv::IsPathValid::Request> request,
   std::shared_ptr<nav2_msgs::srv::IsPathValid::Response> response)
@@ -644,6 +716,11 @@ void PlannerServer::isPathValid(
   }
 }
 
+// 动态参数回调：由 add_on_set_parameters_callback 注册，
+// 运行期通过 ros2 param set 修改参数时触发。
+// 当前仅支持在线修改 expected_planner_frequency（期望规划频率）：
+// 更新最大规划时长 max_planner_duration_ = 1 / 频率（频率需 > 0）。
+// 加锁以避免与正在执行的规划任务产生数据竞争。
 rcl_interfaces::msg::SetParametersResult
 PlannerServer::dynamicParametersCallback(std::vector<rclcpp::Parameter> parameters)
 {

@@ -35,6 +35,9 @@ namespace nav2_smac_planner
 {
 
 // defining static member for all instance to share
+// 【中文注释】NodeLattice 静态成员：motion_table 为状态格运动表
+// （从 JSON 轨迹文件加载的预计算控制采样基元）；
+// dist_heuristic_lookup_table 为 Dubins/RS 距离启发查找表（与 Hybrid 相同机制）。
 LatticeMotionTable NodeLattice::motion_table;
 float NodeLattice::size_lookup = 25;
 LookupTable NodeLattice::dist_heuristic_lookup_table;
@@ -49,8 +52,14 @@ void LatticeMotionTable::initMotionModel(
   unsigned int & size_x_in,
   SearchInfo & search_info)
 {
+  // 【中文注释】初始化状态格运动模型：从 lattice_filepath 指定的 JSON 文件
+  // 加载"最小控制集"(minimum control set)——该文件由外部工具离线生成，
+  // 包含对机器人做控制空间采样得到的一组运动基元（每个基元是一条
+  // 带长度的轨迹，含中间采样位姿），已保证满足曲率/速度/加速度等运动学约束。
+  // 这里把基元按起始朝向分桶存入 motion_primitives[heading]。
   size_x = size_x_in;
 
+  // 【中文注释】文件路径未变则跳过重复解析
   if (current_lattice_filepath == search_info.lattice_filepath) {
     return;
   }
@@ -66,6 +75,7 @@ void LatticeMotionTable::initMotionModel(
   rotation_penalty = search_info.rotation_penalty;
 
   // Get the metadata about this minimum control set
+  // 【中文注释】读取文件元数据（朝向数、最小转弯半径、栅格分辨率等）并解析 JSON
   lattice_metadata = getLatticeMetadata(current_lattice_filepath);
   std::ifstream latticeFile(current_lattice_filepath);
   if (!latticeFile.is_open()) {
@@ -75,6 +85,8 @@ void LatticeMotionTable::initMotionModel(
   latticeFile >> json;
   num_angle_quantization = lattice_metadata.number_of_headings;
 
+  // 【中文注释】按是否允许倒车选择 OMPL 状态空间（Dubins 或 Reeds-Shepp），
+  // 供解析扩展和距离启发使用
   if (!state_space) {
     if (!allow_reverse_expansion) {
       state_space = std::make_unique<ompl::base::DubinsStateSpace>(
@@ -86,6 +98,8 @@ void LatticeMotionTable::initMotionModel(
   }
 
   // Populate the motion primitives at each heading angle
+  // 【中文注释】按起始朝向角把基元分桶：JSON 中基元按 start_angle 排序，
+  // 遇到新起始角就开一个新桶，motion_primitives[i] 即朝向 bin i 可用的基元集
   float prev_start_angle = 0.0;
   std::vector<MotionPrimitive> primitives;
   nlohmann::json json_primitives = json["primitives"];
@@ -103,6 +117,7 @@ void LatticeMotionTable::initMotionModel(
   motion_primitives.push_back(primitives);
 
   // Populate useful precomputed values to be leveraged
+  // 【中文注释】预计算各朝向角的 cos/sin 供后用
   trig_values.reserve(lattice_metadata.number_of_headings);
   for (unsigned int i = 0; i < lattice_metadata.heading_angles.size(); ++i) {
     trig_values.emplace_back(
@@ -113,6 +128,9 @@ void LatticeMotionTable::initMotionModel(
 
 MotionPrimitivePtrs LatticeMotionTable::getMotionPrimitives(const NodeLattice * node)
 {
+  // 【中文注释】返回当前节点可用的基元集合：
+  // 先取当前朝向 bin 的基元；若允许倒车扩展，再取"相反朝向"(bin - N/2)
+  // 的基元集合（倒着开时基元的起始朝向是车头反方向），两者拼接返回。
   MotionPrimitives & prims_at_heading = motion_primitives[node->pose.theta];
   MotionPrimitivePtrs primitive_projection_list;
   for (unsigned int i = 0; i != prims_at_heading.size(); i++) {
@@ -121,6 +139,7 @@ MotionPrimitivePtrs LatticeMotionTable::getMotionPrimitives(const NodeLattice * 
 
   if (allow_reverse_expansion) {
     // Find normalized heading bin of the reverse expansion
+    // 【中文注释】计算相反朝向 bin 并归一化到 [0, N)
     double reserve_heading = node->pose.theta - (num_angle_quantization / 2);
     if (reserve_heading < 0) {
       reserve_heading += num_angle_quantization;
@@ -140,6 +159,7 @@ MotionPrimitivePtrs LatticeMotionTable::getMotionPrimitives(const NodeLattice * 
 
 LatticeMetadata LatticeMotionTable::getLatticeMetadata(const std::string & lattice_filepath)
 {
+  // 【中文注释】从 JSON 文件读 lattice_metadata 节并反序列化为结构体
   std::ifstream lattice_file(lattice_filepath);
   if (!lattice_file.is_open()) {
     throw std::runtime_error("Could not open lattice file!");
@@ -154,6 +174,8 @@ LatticeMetadata LatticeMotionTable::getLatticeMetadata(const std::string & latti
 
 unsigned int LatticeMotionTable::getClosestAngularBin(const double & theta)
 {
+  // 【中文注释】把连续角度量化到最接近的朝向 bin：
+  // 注意 Lattice 的朝向角不一定是均匀分布，因此线性扫描取最短角距者
   float min_dist = std::numeric_limits<float>::max();
   unsigned int closest_idx = 0;
   float dist = 0.0;
@@ -169,9 +191,13 @@ unsigned int LatticeMotionTable::getClosestAngularBin(const double & theta)
 
 float & LatticeMotionTable::getAngleFromBin(const unsigned int & bin_idx)
 {
+  // 【中文注释】bin 索引转实际朝向角（弧度，来自元数据表）
   return lattice_metadata.heading_angles[bin_idx];
 }
 
+// 【中文注释】NodeLattice：状态格(state lattice)节点，结构类似 NodeHybrid
+// （SE(2) 位姿 + 静态运动表），区别在于运动基元不是内建的 Dubins/RS 生成，
+// 而是从外部 JSON 文件加载的预计算控制采样轨迹，能表达更复杂的运动模型。
 NodeLattice::NodeLattice(const unsigned int index)
 : parent(nullptr),
   pose(0.0f, 0.0f, 0.0f),
@@ -210,6 +236,10 @@ bool NodeLattice::isNodeValid(
 {
   // Check primitive end pose
   // Convert grid quantization of primitives to radians, then collision checker quantization
+  // 【中文注释】Lattice 的碰撞检查比 Hybrid 更严格：不仅检查基元终点位姿，
+  // 还沿基元轨迹每隔至少一个栅格对角线距离(2*res^2 的平方)检查中间位姿。
+  // 节点代价取整条基元覆盖的所有采样点中的最大代价值。
+  // 注意角度需从 lattice 的量化换算到碰撞检查器的角度 bin。
   static const double bin_size = 2.0 * M_PI / collision_checker->getPrecomputedAngles().size();
   const double & angle = motion_table.getAngleFromBin(this->pose.theta) / bin_size;
   if (collision_checker->inCollision(
@@ -219,6 +249,7 @@ bool NodeLattice::isNodeValid(
   }
 
   // Set the cost of a node to the highest cost across the primitive
+  // 【中文注释】节点代价 = 基元全程最大代价值（保守策略，保证轨迹整体安全）
   float max_cell_cost = collision_checker->getCost();
 
   // If valid motion primitives are set, check intermediary poses > 1 cell apart
@@ -228,6 +259,8 @@ bool NodeLattice::isNodeValid(
     MotionPose last_pose(1e9, 1e9, 1e9), pose_dist(0.0, 0.0, 0.0);
 
     // Back out the initial node starting point to move motion primitive relative to
+    // 【中文注释】基元位姿以米为单位、相对 (0,0) 存储；
+    // 用终点位姿反推基元起点，把基元整体平移到当前节点位置
     MotionPose initial_pose, prim_pose;
     initial_pose._x = this->pose.x - (motion_primitive->poses.back()._x / grid_resolution);
     initial_pose._y = this->pose.y - (motion_primitive->poses.back()._y / grid_resolution);
@@ -235,15 +268,18 @@ bool NodeLattice::isNodeValid(
 
     for (auto it = motion_primitive->poses.begin(); it != motion_primitive->poses.end(); ++it) {
       // poses are in metric coordinates from (0, 0), not grid space yet
+      // 【中文注释】只在离上个检查点超过一个栅格时才检查（用平方比较避免开方）
       pose_dist = *it - last_pose;
       // Avoid square roots by (hypot(x, y) > res) == (x*x+y*y > diag*diag)
       if (pose_dist._x * pose_dist._x + pose_dist._y * pose_dist._y > resolution_diag_sq) {
         last_pose = *it;
         // Convert primitive pose into grid space if it should be checked
+        // 【中文注释】把基元中间位姿换算到栅格空间做碰撞检查
         prim_pose._x = initial_pose._x + (it->_x / grid_resolution);
         prim_pose._y = initial_pose._y + (it->_y / grid_resolution);
         // If reversing, invert the angle because the robot is backing into the primitive
         // not driving forward with it
+        // 【中文注释】倒车时机器人朝向与基元方向相反：角度加 PI 翻转
         if (is_backwards) {
           prim_pose._theta = std::fmod(it->_theta + M_PI, 2.0 * M_PI);
         } else {
@@ -268,6 +304,13 @@ bool NodeLattice::isNodeValid(
 
 float NodeLattice::getTraversalCost(const NodePtr & child)
 {
+  // 【中文注释】Lattice 边代价（与 Hybrid 类似但基于基元长度）：
+  //   基础项 = 基元轨迹长度(换算成栅格) * (行进奖励 + cost_penalty * 归一化代价)
+  //   原地旋转基元(轨迹长度~0)：只收 rotation_penalty；
+  //   直线基元(弧长~0)：无附加惩罚；
+  //   转弯且左右方向不变：乘 non_straight_penalty；
+  //   转弯且换向：乘 non_straight_penalty + change_penalty；
+  //   倒车基元：再乘 reverse_penalty。
   const float normalized_cost = child->getCost() / 252.0;
   if (std::isnan(normalized_cost)) {
     throw std::runtime_error(
@@ -276,6 +319,7 @@ float NodeLattice::getTraversalCost(const NodePtr & child)
   }
 
   // this is the first node
+  // 【中文注释】起点无入边基元：只收基元长度
   MotionPrimitive * prim = this->getMotionPrimitive();
   MotionPrimitive * transition_prim = child->getMotionPrimitive();
   const float prim_length =
@@ -285,6 +329,7 @@ float NodeLattice::getTraversalCost(const NodePtr & child)
   }
 
   // Pure rotation in place 1 angular bin in either direction
+  // 【中文注释】原地旋转基元（轨迹长度接近 0）
   if (transition_prim->trajectory_length < 1e-4) {
     return motion_table.rotation_penalty * (1.0 + motion_table.cost_penalty * normalized_cost);
   }
@@ -322,6 +367,8 @@ float NodeLattice::getHeuristicCost(
   const nav2_costmap_2d::Costmap2D * costmap)
 {
   // get obstacle heuristic value
+  // 【中文注释】启发函数与 Hybrid 相同：max(障碍启发, 距离启发)
+  //（复用 NodeHybrid 的静态距离场与距离查找表机制）
   const float obstacle_heuristic = getObstacleHeuristic(
     node_coords, goal_coords, motion_table.cost_penalty);
   const float distance_heuristic =
@@ -336,6 +383,7 @@ void NodeLattice::initMotionModel(
   unsigned int & /*num_angle_quantization*/,
   SearchInfo & search_info)
 {
+  // 【中文注释】入口：只接受 STATE_LATTICE 模型，委托给运动表初始化（加载 JSON 基元）
   if (motion_model != MotionModel::STATE_LATTICE) {
     throw std::runtime_error(
             "Invalid motion model for Lattice node. Please select"
@@ -419,6 +467,9 @@ void NodeLattice::precomputeDistanceHeuristic(
   const SearchInfo & search_info)
 {
   // Dubin or Reeds-Shepp shortest distances
+  // 【中文注释】预计算距离启发查找表：与 NodeHybrid::precomputeDistanceHeuristic
+  // 机制相同（目标局部窗口内的 Dubins/RS 距离表，利用对称性只存上半平面），
+  // 区别是朝向角来自 lattice 元数据（可能非均匀分布）。
   if (!search_info.allow_reverse_expansion) {
     motion_table.state_space = std::make_unique<ompl::base::DubinsStateSpace>(
       search_info.minimum_turning_radius);
@@ -464,6 +515,8 @@ void NodeLattice::getNeighbors(
   const bool & traverse_unknown,
   NodeVector & neighbors)
 {
+  // 【中文注释】Lattice 邻域扩展：遍历当前朝向可用的所有运动基元（含倒车基元）。
+  // 与 Hybrid 的关键区别：碰撞检查传入基元本身，会沿基元轨迹逐点检查。
   unsigned int index = 0;
   bool backwards = false;
   NodePtr neighbor = nullptr;
@@ -471,6 +524,8 @@ void NodeLattice::getNeighbors(
   MotionPrimitivePtrs motion_primitives = motion_table.getMotionPrimitives(this);
   const float & grid_resolution = motion_table.lattice_metadata.grid_resolution;
 
+  // 【中文注释】找到正反基元的分界索引：getMotionPrimitives 先返回正向基元
+  // （与当前朝向相同），再追加反向基元（起始朝向相反），分界点在此确定
   unsigned int direction_change_idx = 1e9;
   for (unsigned int i = 0; i != motion_primitives.size(); i++) {
     if (motion_primitives[0]->start_angle != motion_primitives[i]->start_angle) {
@@ -480,6 +535,7 @@ void NodeLattice::getNeighbors(
   }
 
   for (unsigned int i = 0; i != motion_primitives.size(); i++) {
+    // 【中文注释】基元终点位姿（米制转栅格）叠加当前节点坐标得到投影
     const MotionPose & end_pose = motion_primitives[i]->poses.back();
     motion_projection.x = this->pose.x + (end_pose._x / grid_resolution);
     motion_projection.y = this->pose.y + (end_pose._y / grid_resolution);
@@ -489,6 +545,8 @@ void NodeLattice::getNeighbors(
     // the orientation of the robot is mirrored from what it would otherwise
     // appear to be from the motion primitives file. We want to take this into
     // account in case the robot base footprint is asymmetric.
+    // 【中文注释】反向基元：机器人车头朝向与基元运动方向相反（差 N/2 个 bin），
+    // 需要把朝向镜像 180 度（对非对称足迹很重要）
     backwards = false;
     if (i >= direction_change_idx) {
       backwards = true;
@@ -511,6 +569,8 @@ void NodeLattice::getNeighbors(
     if (NeighborGetter(index, neighbor) && !neighbor->wasVisited()) {
       // Cache the initial pose in case it was visited but valid
       // don't want to disrupt continuous coordinate expansion
+      // 【中文注释】同 Hybrid：临时写连续位姿 -> 带基元做碰撞检查 ->
+      // 通过则记录基元和倒车标记，失败则回滚位姿
       initial_node_coords = neighbor->pose;
       neighbor->setPose(
         Coordinates(
@@ -536,6 +596,9 @@ void NodeLattice::getNeighbors(
 
 bool NodeLattice::backtracePath(CoordinateVector & path)
 {
+  // 【中文注释】回溯路径：与 2D/Hybrid 不同的是，每个节点不只输出一个点，
+  // 而是把该节点所经运动基元的完整密集轨迹点（栅格分辨率级）加入路径，
+  // 使输出路径天然连续、无需额外插值。
   if (!this->parent) {
     return false;
   }
@@ -557,6 +620,10 @@ void NodeLattice::addNodeToPath(
   NodeLattice::NodePtr current_node,
   NodeLattice::CoordinateVector & path)
 {
+  // 【中文注释】把单个节点展开为路径点序列：
+  // 反推基元起点，逆序（crbegin 从终点向起点）遍历基元中间位姿，
+  // 换算到栅格空间并加入路径；倒车时角度加 PI 翻转。
+  // 解析扩展节点没有基元，直接输出节点位姿（bin 转弧度）。
   Coordinates initial_pose, prim_pose;
   MotionPrimitive * prim = nullptr;
   const float & grid_resolution = NodeLattice::motion_table.lattice_metadata.grid_resolution;

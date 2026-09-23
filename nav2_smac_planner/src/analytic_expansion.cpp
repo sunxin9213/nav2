@@ -25,6 +25,17 @@
 namespace nav2_smac_planner
 {
 
+// 【中文注释】解析扩展（Analytic Expansion）实现：
+// SMAC 在标准 A* 图搜索之外的"抄近道"机制——定期尝试用解析可算的曲线
+// 从当前扩展节点直接连到目标：
+//   - Dubins 模型：前进-only 的最短曲线（圆弧-直线-圆弧，CSC 等类型），经 OMPL 计算；
+//   - Reeds-Shepp 模型：允许倒车的最短曲线（含倒车段），同样经 OMPL 计算；
+//   - State Lattice：同上（曲线需与预计算轨迹表的角度 bin 对齐）；
+//   - Node2D：不支持（特化为空实现，2D 搜索靠邻域扩展即可）。
+// 连接成功的判定：把曲线按 sqrt(2) 栅格间距离散采样，逐点做碰撞检查，
+// 全部通过才接受。成功后直接把曲线节点串成链并接到目标，立即结束搜索。
+// 触发频率由 analytic_expansion_ratio 控制（离目标越近尝试越频繁）。
+
 template<typename NodeT>
 AnalyticExpansion<NodeT>::AnalyticExpansion(
   const MotionModel & motion_model,
@@ -53,10 +64,14 @@ typename AnalyticExpansion<NodeT>::NodePtr AnalyticExpansion<NodeT>::tryAnalytic
   int & closest_distance)
 {
   // This must be a valid motion model for analytic expansion to be attempted
+  // 【中文注释】只有曲线运动模型（Dubin / Reeds-Shepp / 状态格）才支持解析扩展，
+  // 2D 网格模型走特化的空实现。
   if (_motion_model == MotionModel::DUBIN || _motion_model == MotionModel::REEDS_SHEPP ||
     _motion_model == MotionModel::STATE_LATTICE)
   {
     // See if we are closer and should be expanding more often
+    // 【中文注释】动态调整尝试频率：更新历史"离目标最近距离"closest_distance
+    // （用启发值近似），离目标越近，两次尝试之间的迭代间隔越短。
     auto costmap = _collision_checker->getCostmap();
     const Coordinates node_coords =
       NodeT::getCoords(current_node->getIndex(), costmap->getSizeInCellsX(), _dim_3_size);
@@ -67,22 +82,30 @@ typename AnalyticExpansion<NodeT>::NodePtr AnalyticExpansion<NodeT>::tryAnalytic
     // We want to expand at a rate of d/expansion_ratio,
     // but check to see if we are so close that we would be expanding every iteration
     // If so, limit it to the expansion ratio (rounded up)
+    // 【中文注释】目标尝试间隔 = 最近距离 / analytic_expansion_ratio，
+    // 并限制最小不小于 ratio 本身（避免贴着目标时每次迭代都做昂贵的曲线检查）。
     int desired_iterations = std::max(
       static_cast<int>(closest_distance / _search_info.analytic_expansion_ratio),
       static_cast<int>(std::ceil(_search_info.analytic_expansion_ratio)));
 
     // If we are closer now, we should update the target number of iterations to go
+    // 【中文注释】若本次更接近目标，缩短剩余等待的迭代数
     analytic_iterations =
       std::min(analytic_iterations, desired_iterations);
 
     // Always run the expansion on the first run in case there is a
     // trivial path to be found
+    // 【中文注释】计数归零时执行一次解析扩展尝试（首轮也会触发，
+    // 以便起终点之间存在"平凡直达路径"时直接秒出结果）。
     if (analytic_iterations <= 0) {
       // Reset the counter and try the analytic path expansion
       analytic_iterations = desired_iterations;
       AnalyticExpansionNodes analytic_nodes = getAnalyticPath(current_node, goal_node, getter);
       if (!analytic_nodes.empty()) {
         // If we have a valid path, attempt to refine it
+        // 【中文注释】成功后做"回溯精炼"：从当前节点沿父链每次回退 5 个节点，
+        // 重新尝试解析曲线；若更早的祖先也能直连目标，就用更早的连接点
+        // （曲线更长、路径整体更优），最多回退 8 次（约 40 个节点）。
         NodePtr node = current_node;
         NodePtr test_node = current_node;
         AnalyticExpansionNodes refined_analytic_nodes;
@@ -105,6 +128,7 @@ typename AnalyticExpansion<NodeT>::NodePtr AnalyticExpansion<NodeT>::tryAnalytic
           }
         }
 
+        // 【中文注释】把最终选定的曲线写入搜索图（设置父链）并返回目标节点
         return setAnalyticPath(node, goal_node, analytic_nodes);
       }
     }
@@ -122,6 +146,14 @@ typename AnalyticExpansion<NodeT>::AnalyticExpansionNodes AnalyticExpansion<Node
   const NodePtr & goal,
   const NodeGetter & node_getter)
 {
+  // 【中文注释】生成从 node 到 goal 的解析曲线并离散校验：
+  // 1) 把起终点 SE(2) 位姿填入 OMPL 状态空间（Dubins 或 RS 空间）；
+  // 2) state_space->distance() 给出最短曲线长度 d；
+  // 3) 距离过长则放弃（防止离目标很远时"抄近道"穿过高代价区，
+  //    该阈值 analytic_expansion_max_length 不应小于 4~5 倍最小转弯半径，
+  //    否则规划时间会暴涨）；
+  // 4) 按每段 sqrt(2) 栅格的距离对曲线插值采样，逐点转换为状态格节点
+  //    并做碰撞检查（isNodeValid），任何一点失败则整体失败。
   static ompl::base::ScopedState<> from(node->motion_table.state_space), to(
     node->motion_table.state_space), s(node->motion_table.state_space);
   from[0] = node->pose.x;
@@ -142,6 +174,7 @@ typename AnalyticExpansion<NodeT>::AnalyticExpansionNodes AnalyticExpansion<Node
   }
 
   // A move of sqrt(2) is guaranteed to be in a new cell
+  // 【中文注释】sqrt(2) 是保证每个采样点落入不同栅格的最大步长（对角线长度）
   static const float sqrt_2 = std::sqrt(2.);
   unsigned int num_intervals = std::floor(d / sqrt_2);
 
@@ -153,6 +186,7 @@ typename AnalyticExpansion<NodeT>::AnalyticExpansionNodes AnalyticExpansion<Node
   double theta;
 
   // Pre-allocate
+  // 【中文注释】prev 记录曲线上的上一个节点，用于避免重复节点
   NodePtr prev(node);
   unsigned int index = 0;
   NodePtr next(nullptr);
@@ -161,6 +195,9 @@ typename AnalyticExpansion<NodeT>::AnalyticExpansionNodes AnalyticExpansion<Node
   bool failure = false;
 
   // Check intermediary poses (non-goal, non-start)
+  // 【中文注释】沿曲线逐段插值：interpolate() 得到第 i 段的 (x,y,theta)，
+  // 角度归一到 [0,2PI) 后量化到最近的角度 bin，再构造节点索引；
+  // 节点必须通过碰撞检查且不与上一点重复，否则整体失败。
   for (float i = 1; i <= num_intervals; i++) {
     node->motion_table.state_space->interpolate(from(), to(), i / num_intervals, s());
     reals = s.reals();
@@ -176,6 +213,8 @@ typename AnalyticExpansion<NodeT>::AnalyticExpansionNodes AnalyticExpansion<Node
       static_cast<unsigned int>(angle));
     // Get the node from the graph
     if (node_getter(index, next)) {
+      // 【中文注释】临时把曲线位姿写进节点做碰撞检查，
+      // 并保存原始位姿以便失败时回滚（不影响后续搜索）
       Coordinates initial_node_coords = next->pose;
       proposed_coordinates = {static_cast<float>(reals[0]), static_cast<float>(reals[1]), angle};
       next->setPose(proposed_coordinates);
@@ -197,6 +236,7 @@ typename AnalyticExpansion<NodeT>::AnalyticExpansionNodes AnalyticExpansion<Node
   }
 
   // Reset to initial poses to not impact future searches
+  // 【中文注释】无论成败，把所有被临时改写位姿的节点恢复原值
   for (const auto & node_pose : possible_nodes) {
     const auto & n = node_pose.node;
     n->setPose(node_pose.initial_coords);
@@ -215,6 +255,10 @@ typename AnalyticExpansion<NodeT>::NodePtr AnalyticExpansion<NodeT>::setAnalytic
   const NodePtr & goal_node,
   const AnalyticExpansionNodes & expanded_nodes)
 {
+  // 【中文注释】把校验通过的曲线节点正式写入搜索图：
+  // 依次设置父指针形成 node -> ... -> goal 的链，写入曲线位姿并标记 visited。
+  // 若某个中间节点已被搜索访问过（wasVisited），则复制出一个"脱节点"
+  // （detached node，索引 -1，不进图）来承载曲线状态，避免破坏既有搜索状态。
   _detached_nodes.clear();
   // Legitimate final path - set the parent relationships, states, and poses
   NodePtr prev = node;
@@ -233,6 +277,7 @@ typename AnalyticExpansion<NodeT>::NodePtr AnalyticExpansion<NodeT>::setAnalytic
     }
   }
   if (goal_node != prev) {
+    // 【中文注释】最后把目标节点接到曲线末端，返回目标节点供 A* 主循环立即回溯
     goal_node->parent = prev;
     cleanNode(goal_node);
     goal_node->visited();
@@ -243,6 +288,8 @@ typename AnalyticExpansion<NodeT>::NodePtr AnalyticExpansion<NodeT>::setAnalytic
 template<>
 void AnalyticExpansion<NodeLattice>::cleanNode(const NodePtr & node)
 {
+  // 【中文注释】Lattice 特化：曲线节点不来自预计算轨迹表，清除其运动基元指针，
+  // 防止回溯路径时误用基元信息做轨迹重构
   node->setMotionPrimitive(nullptr);
 }
 
@@ -251,6 +298,8 @@ void AnalyticExpansion<NodeT>::cleanNode(const NodePtr & /*expanded_nodes*/)
 {
 }
 
+// 【中文注释】以下三个 Node2D 特化均为空实现：
+// 2D 网格搜索没有连续角度/转弯半径概念，解析扩展不适用。
 template<>
 typename AnalyticExpansion<Node2D>::AnalyticExpansionNodes AnalyticExpansion<Node2D>::
 getAnalyticPath(

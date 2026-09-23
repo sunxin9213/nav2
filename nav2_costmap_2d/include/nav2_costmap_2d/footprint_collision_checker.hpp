@@ -16,6 +16,18 @@
 
 #ifndef NAV2_COSTMAP_2D__FOOTPRINT_COLLISION_CHECKER_HPP_
 #define NAV2_COSTMAP_2D__FOOTPRINT_COLLISION_CHECKER_HPP_
+// ============================================================================
+// 中文注释：足迹碰撞检测器头文件（实现见 footprint_collision_checker.cpp）
+//
+// 【类功能】
+// 模板类（CostmapT = Costmap2D* 或 shared_ptr<Costmap2D>）：
+// 计算足迹多边形扫过区域的最大代价（轮廓 Bresenham 栅格化）。
+//   - footprintCost(footprint)：足迹（世界坐标）碰撞代价；
+//   - footprintCostAtPose(x,y,theta,footprint)：按位姿变换后检测——
+//     控制器评估候选轨迹的标准入口；
+//   - 返回 LETHAL_OBSTACLE(254)=碰撞、INSCRIBED_INFLATED_OBSTACLE(253)=
+//     中心必碰、其他值越大越危险。
+// ============================================================================
 
 #include <string>
 #include <vector>

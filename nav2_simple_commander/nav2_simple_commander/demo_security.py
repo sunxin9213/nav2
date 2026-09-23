@@ -13,6 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# ============================================================================
+# 文件说明（中文）：
+# nav2_simple_commander 的"安防巡逻"演示程序。
+# 模块定位：演示安防巡逻场景：机器人搭载安防摄像头沿固定路线
+# 循环巡逻（录制或供安保人员实时查看），使用 followWaypoints
+# 逐航点停靠，结束后返回起点待命。
+# ============================================================================
+
 from copy import deepcopy
 
 from geometry_msgs.msg import PoseStamped
@@ -26,6 +34,7 @@ from rclpy.duration import Duration
 Basic security route patrol demo. In this demonstration, the expectation
 is that there are security cameras mounted on the robots recording or being
 watched live by security staff.
+基础安防巡逻演示：机器人搭载摄像头沿路线巡逻供录制/实时监控。
 """
 
 

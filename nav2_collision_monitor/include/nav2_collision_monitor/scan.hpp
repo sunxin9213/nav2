@@ -15,6 +15,13 @@
 #ifndef NAV2_COLLISION_MONITOR__SCAN_HPP_
 #define NAV2_COLLISION_MONITOR__SCAN_HPP_
 
+// ============================================================================
+// 文件说明（中文）：
+// Scan（激光扫描数据源）类的头文件声明。
+// 模块定位：处理 sensor_msgs/LaserScan 的 2D 激光雷达数据源。
+// 详细中文注释的实现见 src/scan.cpp。
+// ============================================================================
+
 #include <memory>
 #include <string>
 #include <vector>

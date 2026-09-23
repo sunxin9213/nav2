@@ -12,6 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 文件说明（中文）：
+// 地图解释模式（MapMode）枚举定义。
+// 模块定位：nav2_map_server 加载/保存地图时，图像像素灰度与
+// 占据栅格值之间的映射规则。lightness（亮度）指像素 RGB 通道
+// 平均值（0~255 归一化到 0~1）。三种模式详见枚举注释；
+// 实现（字符串转换）见 src/map_mode.cpp。
+// ============================================================================
+
 #ifndef NAV2_MAP_SERVER__MAP_MODE_HPP_
 #define NAV2_MAP_SERVER__MAP_MODE_HPP_
 

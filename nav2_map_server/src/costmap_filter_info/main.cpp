@@ -12,6 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 文件说明（中文）：
+// costmap_filter_info_server 独立可执行入口：
+// 创建 CostmapFilterInfoServer 生命周期节点并阻塞自旋，
+// 由生命周期管理器调度，向代价地图过滤器发布元信息。
+// ============================================================================
+
 #include <memory>
 
 #include "nav2_map_server/costmap_filter_info_server.hpp"
@@ -23,6 +30,7 @@ int main(int argc, char * argv[])
 
   RCLCPP_INFO(logger, "This is costmap filter info publisher");
 
+  // 初始化 ROS2 -> 创建节点 -> 自旋处理回调 -> 关闭退出
   rclcpp::init(argc, argv);
   auto node = std::make_shared<nav2_map_server::CostmapFilterInfoServer>();
   rclcpp::spin(node->get_node_base_interface());

@@ -37,6 +37,19 @@
 
 #ifndef NAV2_COSTMAP_2D__COSTMAP_FILTERS__KEEPOUT_FILTER_HPP_
 #define NAV2_COSTMAP_2D__COSTMAP_FILTERS__KEEPOUT_FILTER_HPP_
+// ============================================================================
+// 中文注释：禁行区过滤器头文件（实现见 keepout_filter.cpp）
+//
+// 【类功能】
+// 订阅禁行掩码地图（OccupancyGrid），把掩码代价叠加到主地图
+// （只增不减，掩码值大于现值或现值为未知时写入），使规划器绕开禁行区。
+// 关键成员：
+//   - mask_costmap_：掩码转成的 Costmap2D；
+//   - has_updated_data_：收到新掩码时标记整图待更新；
+//   - process()：同坐标系时先算两图重叠窗口再迭代（性能优化），
+//     异坐标系时经 TF 逐点变换。
+// 【继承体系】Layer → CostmapFilter → KeepoutFilter
+// ============================================================================
 
 #include <string>
 #include <memory>

@@ -22,19 +22,27 @@ using namespace std::chrono_literals;  // NOLINT
 
 namespace nav2_util
 {
+// 本文件实现 OdomSmoother（里程计滑动窗口平滑器）：
+// 订阅 /odom 话题，维护最近 filter_duration 秒内的速度历史，
+// 用简单滑动平均（SMA）输出平滑后的速度，供控制器等模块使用。
 
+// 普通节点版本构造函数
 OdomSmoother::OdomSmoother(
   const rclcpp::Node::WeakPtr & parent,
   double filter_duration,
   const std::string & odom_topic)
 : odom_history_duration_(rclcpp::Duration::from_seconds(filter_duration))
 {
+  // WeakPtr::lock() 取回共享指针：若父节点已销毁则得到空指针
   auto node = parent.lock();
+  // 创建里程计订阅，回调绑定到成员函数 odomCallback
   odom_sub_ = node->create_subscription<nav_msgs::msg::Odometry>(
     odom_topic,
     rclcpp::SystemDefaultsQoS(),
     std::bind(&OdomSmoother::odomCallback, this, std::placeholders::_1));
 
+  // 累加器初值清零：odom_cumulate_ 始终保存窗口内所有消息的速度之和，
+  // 配合窗口大小即可 O(1) 求得滑动平均
   odom_cumulate_.twist.twist.linear.x = 0;
   odom_cumulate_.twist.twist.linear.y = 0;
   odom_cumulate_.twist.twist.linear.z = 0;
@@ -43,6 +51,7 @@ OdomSmoother::OdomSmoother(
   odom_cumulate_.twist.twist.angular.z = 0;
 }
 
+// 生命周期节点版本构造函数：逻辑与上面完全一致，仅节点类型不同
 OdomSmoother::OdomSmoother(
   const nav2_util::LifecycleNode::WeakPtr & parent,
   double filter_duration,
@@ -65,17 +74,22 @@ OdomSmoother::OdomSmoother(
 
 void OdomSmoother::odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg)
 {
+  // 加锁保护共享状态（回调线程与用户查询线程并发访问）
   std::lock_guard<std::mutex> lock(odom_mutex_);
 
   // update cumulated odom only if history is not empty
   if (!odom_history_.empty()) {
     // to store current time
+    // 当前消息时间戳
     auto current_time = rclcpp::Time(msg->header.stamp);
 
     // to store time of the first odom in history
+    // 窗口中最早一条消息的时间戳
     auto front_time = rclcpp::Time(odom_history_.front().header.stamp);
 
     // update cumulated odom when duration has exceeded and pop earliest msg
+    // 滑动窗口淘汰：把所有"距当前消息超过窗口时长"的旧消息弹出，
+    // 每弹一条就从累加器中减去它的速度，保持累加器与窗口内容一致
     while (current_time - front_time > odom_history_duration_) {
       const auto & odom = odom_history_.front();
       odom_cumulate_.twist.twist.linear.x -= odom.twist.twist.linear.x;
@@ -86,21 +100,25 @@ void OdomSmoother::odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg)
       odom_cumulate_.twist.twist.angular.z -= odom.twist.twist.angular.z;
       odom_history_.pop_front();
 
+      // 防止 while 条件在空队列上解引用 front()
       if (odom_history_.empty()) {
         break;
       }
 
       // update with the timestamp of earliest odom message in history
+      // 刷新"最早消息时间戳"以继续判断下一条
       front_time = rclcpp::Time(odom_history_.front().header.stamp);
     }
   }
 
+  // 新消息入队并重算平滑速度
   odom_history_.push_back(*msg);
   updateState();
 }
 
 void OdomSmoother::updateState()
 {
+  // 把最新一条消息的速度累加进窗口总和
   const auto & odom = odom_history_.back();
   odom_cumulate_.twist.twist.linear.x += odom.twist.twist.linear.x;
   odom_cumulate_.twist.twist.linear.y += odom.twist.twist.linear.y;
@@ -109,6 +127,7 @@ void OdomSmoother::updateState()
   odom_cumulate_.twist.twist.angular.y += odom.twist.twist.angular.y;
   odom_cumulate_.twist.twist.angular.z += odom.twist.twist.angular.z;
 
+  // 平滑速度 = 窗口速度总和 / 窗口消息数（简单滑动平均）
   vel_smooth_.header = odom.header;
   vel_smooth_.twist.linear.x = odom_cumulate_.twist.twist.linear.x / odom_history_.size();
   vel_smooth_.twist.linear.y = odom_cumulate_.twist.twist.linear.y / odom_history_.size();

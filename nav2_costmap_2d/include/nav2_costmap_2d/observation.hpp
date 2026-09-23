@@ -31,6 +31,21 @@
 
 #ifndef NAV2_COSTMAP_2D__OBSERVATION_HPP_
 #define NAV2_COSTMAP_2D__OBSERVATION_HPP_
+// ============================================================================
+// 中文注释：观测（Observation）数据结构头文件
+//
+// 【结构功能】
+// 一条"传感器观测"的统一封装，由 ObservationBuffer 产出、
+// ObstacleLayer/VoxelLayer 消费：
+//   - origin_：传感器原点（已变换到全局坐标系），清除射线的发射点；
+//   - cloud_：过滤后的全局系点云（裸指针，观察拷贝语义深拷贝）；
+//   - obstacle_max/min_range_：标记障碍的距离上下限（米）；
+//   - raytrace_max/min_range_：清除射线的距离上下限（米）。
+//
+// 【设计要点】
+// cloud_ 使用裸指针 + 手写深拷贝构造/赋值（容器插入兼容）；
+// 析构函数负责 delete，拷贝时 new 一份新的 PointCloud2。
+// ============================================================================
 
 #include <geometry_msgs/msg/point.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>

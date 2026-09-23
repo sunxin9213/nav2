@@ -42,21 +42,29 @@
 namespace dwb_critics
 {
 
+// 中文说明（文件级）：
+// 目标对齐（Goal Align）critic：与 PathAlignCritic 类似使用前探点评分，
+// 但距离场种子是“目标点 + 朝目标方向前探”的虚拟点，
+// 引导机器人鼻尖最终对准目标方向。继承 GoalDistCritic。
+
+// 初始化：复用父类初始化并读取前探距离
 void GoalAlignCritic::onInit()
 {
   GoalDistCritic::onInit();
-  stop_on_failure_ = false;
+  stop_on_failure_ = false;  // 对齐类 critic 不因障碍抛异常
 
   auto node = node_.lock();
   if (!node) {
     throw std::runtime_error{"Failed to lock node"};
   }
 
+  // 前探点距离（“鼻尖”伸出量）
   forward_point_distance_ = nav_2d_utils::searchAndGetParam(
     node,
     dwb_plugin_name_ + "." + name_ + ".forward_point_distance", 0.325);
 }
 
+// 周期准备：把路径终点沿“机器人指向目标的方向”前探得到虚拟目标点
 bool GoalAlignCritic::prepare(
   const geometry_msgs::msg::Pose2D & pose, const nav_2d_msgs::msg::Twist2D & vel,
   const geometry_msgs::msg::Pose2D & goal,
@@ -67,15 +75,19 @@ bool GoalAlignCritic::prepare(
   // path for the robot center. Choosing the final position after
   // turning towards goal orientation causes instability when the
   // robot needs to make a 180 degree turn at the end
+  //（计算机器人指向目标的方向角）
   double angle_to_goal = atan2(goal.y - pose.y, goal.x - pose.x);
 
+  // 把路径终点沿该方向平移前探距离，作为对齐目标
   nav_2d_msgs::msg::Path2D target_poses = global_plan;
   target_poses.poses.back().x += forward_point_distance_ * cos(angle_to_goal);
   target_poses.poses.back().y += forward_point_distance_ * sin(angle_to_goal);
 
+  // 复用父类：以虚拟目标点为种子构建距离场
   return GoalDistCritic::prepare(pose, vel, goal, target_poses);
 }
 
+// 单点评分：用前探点查询到虚拟目标的距离
 double GoalAlignCritic::scorePose(const geometry_msgs::msg::Pose2D & pose)
 {
   return GoalDistCritic::scorePose(getForwardPose(pose, forward_point_distance_));

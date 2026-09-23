@@ -25,6 +25,9 @@ namespace nav2_util
 /**
  * @class nav2_util::ClearEntirelyCostmapServiceClient
  * @brief A service client to clear costmaps entirely
+ * "完全清除代价地图"服务客户端：继承通用 ServiceClient 模板并特化为
+ * nav2_msgs::srv::ClearEntireCostmap 服务，用于请求 costmap 服务器
+ * 清空指定代价地图的全部数据（请求/响应均为空字段）。
  */
 class ClearEntirelyCostmapServiceClient
   : public nav2_util::ServiceClient<nav2_msgs::srv::ClearEntireCostmap>
@@ -33,11 +36,13 @@ public:
   /**
 * @brief A constructor for nav2_util::ClearEntirelyCostmapServiceClient
    */
+  // 直接把服务名转发给基类构造函数
   explicit ClearEntirelyCostmapServiceClient(const std::string & service_name)
   : nav2_util::ServiceClient<nav2_msgs::srv::ClearEntireCostmap>(service_name)
   {
   }
 
+  // 类型别名简化：从基类提取该服务的 Request/Response 类型
   using clearEntirelyCostmapServiceRequest =
     nav2_util::ServiceClient<nav2_msgs::srv::ClearEntireCostmap>::RequestType;
   using clearEntirelyCostmapServiceResponse =

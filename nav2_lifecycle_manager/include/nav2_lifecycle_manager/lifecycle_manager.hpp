@@ -13,6 +13,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/*
+ * =============================================================================
+ * 文件：lifecycle_manager.hpp（nav2_lifecycle_manager 模块）
+ * =============================================================================
+ * 功能概述：
+ *   声明 LifecycleManager 类——Nav2 的生命周期管理器（普通 rclcpp::Node）。
+ *   核心职责：
+ *   - 状态机编排：按 node_names 参数顺序（configure/activate 正序，
+ *     deactivate/cleanup/shutdown 逆序）驱动所有受管生命周期节点；
+ *   - Bond 心跳守护：为每个 active 节点建立 bond::Bond 连接，
+ *     周期检查心跳，失联时硬重置系统并可选等待节点复活重启；
+ *   - 对外服务：manage_nodes（STARTUP/RESET/SHUTDOWN/PAUSE/RESUME 命令）、
+ *     is_active（系统是否整体激活）；
+ *   - 诊断上报：经 diagnostic_updater 发布 Nav2 健康状态。
+ *   关键实现细节：服务回调跑在独立的 MutuallyExclusive 回调组与专属线程
+ *   （service_thread_）上，避免耗时生命周期转换阻塞主执行器。
+ *   对应实现见 lifecycle_manager.cpp。
+ * =============================================================================
+ */
+
 #ifndef NAV2_LIFECYCLE_MANAGER__LIFECYCLE_MANAGER_HPP_
 #define NAV2_LIFECYCLE_MANAGER__LIFECYCLE_MANAGER_HPP_
 
@@ -60,10 +80,17 @@ public:
   ~LifecycleManager();
 
 protected:
+  // ---- 回调组与服务线程 ----
+  // callback_group_：MutuallyExclusive 回调组，服务/定时器均挂在其上，
+  //                 与主执行器分离，保证状态转换期间系统仍可响应；
+  // service_thread_：跑上述回调组的专属执行线程（NodeThread）。
   // Callback group used by services and timers
   rclcpp::CallbackGroup::SharedPtr callback_group_;
   std::unique_ptr<nav2_util::NodeThread> service_thread_;
 
+  // ---- 本节点提供的服务 ----
+  // manager_srv_：manage_nodes 服务（生命周期命令分派）；
+  // is_active_srv_：is_active 服务（查询系统整体是否激活）。
   // The services provided by this node
   rclcpp::Service<ManageLifecycleNodes>::SharedPtr manager_srv_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr is_active_srv_;
@@ -203,12 +230,23 @@ protected:
    */
   void registerRclPreshutdownCallback();
 
+  // ---- 定时器与 bond 参数 ----
+  // init_timer_：延迟初始化定时器（触发一次后自取消）；
+  // bond_timer_：200ms 周期的 bond 心跳检查定时器；
+  // bond_respawn_timer_：bond 失败后 1s 周期的复活重连定时器；
+  // bond_timeout_：心跳超时阈值（默认 4s，<=0 表示禁用 bond 监控）。
   // Timer thread to look at bond connections
   rclcpp::TimerBase::SharedPtr init_timer_;
   rclcpp::TimerBase::SharedPtr bond_timer_;
   rclcpp::TimerBase::SharedPtr bond_respawn_timer_;
   std::chrono::milliseconds bond_timeout_;
 
+  // ---- bond 与节点管理表 ----
+  // bond_map_：节点名 → bond::Bond 连接（激活节点的心跳通道）；
+  // node_map_：节点名 → LifecycleServiceClient（发送生命周期转换的客户端）；
+  // transition_label_map_：转换 ID → 日志标签（如 "Activating "）；
+  // transition_state_map_：转换 ID → 预期的最终 primary state，
+  //                         用于转换后校验节点是否真正到达目标状态。
   // A map of all nodes to check bond connection
   std::map<std::string, std::shared_ptr<bond::Bond>> bond_map_;
 
@@ -220,6 +258,13 @@ protected:
   // A map of the expected transitions to primary states
   std::unordered_map<std::uint8_t, std::uint8_t> transition_state_map_;
 
+  // ---- 参数与状态 ----
+  // node_names_：受管节点名列表（按期望的启动顺序排列）；
+  // autostart_：构造完成后是否自动执行 startup()；
+  // attempt_respawn_reconnection_：bond 失败后是否等待崩溃节点复活重连；
+  // system_active_：受管系统整体是否处于 active 状态（is_active 依据）；
+  // diagnostics_updater_：诊断更新器，发布 Nav2 健康状态；
+  // bond_respawn_*：复活重连的起始时间与最大等待时长。
   // The names of the nodes to be managed, in the order of desired bring-up
   std::vector<std::string> node_names_;
 

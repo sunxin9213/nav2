@@ -12,6 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/*
+ * =============================================================================
+ * 文件：position_goal_checker.cpp（nav2_controller 模块）
+ * =============================================================================
+ * 功能概述：
+ *   实现 PositionGoalChecker——"仅位置"目标检查器插件
+ *   （nav2_core::GoalChecker 接口实现）。
+ *   与 SimpleGoalChecker 的区别：只判定 XY 位置容差，完全忽略朝向，
+ *   适用于圆形/全向机器人或"到达即可，不关心朝向"的任务。
+ *   同样支持 stateful 模式：位置一旦达标即锁存，之后立即返回已到达。
+ *
+ * 在整个导航流程中的位置：
+ *   bt_navigator → planner_server → controller_server【本插件在此被调用】
+ *   → velocity_smoother。
+ * =============================================================================
+ */
+
 #include <memory>
 #include <string>
 #include <limits>
@@ -25,6 +42,7 @@ using std::placeholders::_1;
 namespace nav2_controller
 {
 
+// 构造函数：默认位置容差 0.25m（平方 0.0625），默认开启有状态检查。
 PositionGoalChecker::PositionGoalChecker()
 : xy_goal_tolerance_(0.25),
   xy_goal_tolerance_sq_(0.0625),
@@ -33,6 +51,8 @@ PositionGoalChecker::PositionGoalChecker()
 {
 }
 
+// 插件初始化：声明并读取 xy_goal_tolerance 与 stateful 参数，
+// 注册动态参数回调（可运行期修改）。
 void PositionGoalChecker::initialize(
   const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
   const std::string & plugin_name,
@@ -58,11 +78,16 @@ void PositionGoalChecker::initialize(
     std::bind(&PositionGoalChecker::dynamicParametersCallback, this, _1));
 }
 
+// 复位状态：清除"位置已达标"锁存，供新任务开始时调用。
 void PositionGoalChecker::reset()
 {
   position_reached_ = false;
 }
 
+// 核心判定：只比较 XY 位置（距离平方 <= 容差平方），
+// 不检查朝向与速度（对应形参留空不使用）。
+// stateful 模式下位置一旦达标即置 position_reached_ 锁存，
+// 后续周期直接返回 true，避免容差圆边缘抖动导致反复判断。
 bool PositionGoalChecker::isGoalReached(
   const geometry_msgs::msg::Pose & query_pose, const geometry_msgs::msg::Pose & goal_pose,
   const geometry_msgs::msg::Twist &)
@@ -86,6 +111,8 @@ bool PositionGoalChecker::isGoalReached(
   return position_reached;
 }
 
+// 暴露容差：位置容差仅填 x/y；朝向容差返回单位四元数（0 容差，
+// 表示本检查器不做朝向判定）；速度容差全部置为无效值（不限制速度）。
 bool PositionGoalChecker::getTolerances(
   geometry_msgs::msg::Pose & pose_tolerance,
   geometry_msgs::msg::Twist & vel_tolerance)
@@ -113,12 +140,15 @@ bool PositionGoalChecker::getTolerances(
   return true;
 }
 
+// 编程接口：由代码（而非参数文件）直接设置位置容差，
+// 供控制器插件等在特殊场景下动态调整；同步更新平方值。
 void nav2_controller::PositionGoalChecker::setXYGoalTolerance(double tolerance)
 {
   xy_goal_tolerance_ = tolerance;
   xy_goal_tolerance_sq_ = tolerance * tolerance;
 }
 
+// 动态参数回调：在线修改位置容差与 stateful 开关。
 rcl_interfaces::msg::SetParametersResult
 PositionGoalChecker::dynamicParametersCallback(std::vector<rclcpp::Parameter> parameters)
 {
@@ -144,4 +174,6 @@ PositionGoalChecker::dynamicParametersCallback(std::vector<rclcpp::Parameter> pa
 
 }  // namespace nav2_controller
 
+// pluginlib 导出宏：注册为 nav2_core::GoalChecker 插件，
+// 供 ControllerServer 按名称动态加载。
 PLUGINLIB_EXPORT_CLASS(nav2_controller::PositionGoalChecker, nav2_core::GoalChecker)

@@ -1,0 +1,11 @@
+[
+  {
+    "id": "shutdown-1790117648584",
+    "from": "team-lead",
+    "to": "costmap-commenter",
+    "type": "shutdown_request",
+    "content": "{\"type\":\"shutdown_request\",\"request_id\":\"shutdown-1790117648584\",\"reason\":\"任务完成，感谢出色的工作。请确认关闭。\",\"from\":\"team-lead\",\"timestamp\":\"2026-09-22T22:54:08.584Z\"}",
+    "timestamp": "2026-09-22T22:54:08.584Z",
+    "read": true
+  }
+]

@@ -33,15 +33,17 @@ namespace nav2_rviz_plugins
 {
 using nav2_util::geometry_utils::orientationAroundZAxis;
 
-// Define global GoalPoseUpdater so that the nav2 GoalTool plugin can access to update goal pose
+// Define global GoalPoseUpdater so that the nav2 GoalTool plugin can update goal pose
+// 全局 GoalUpdater 定义：GoalTool 工具插件通过它把目标点信号发给本面板
 GoalPoseUpdater GoalUpdater;
 
+// 构造函数：创建全部 UI 控件、搭建 Qt 状态机、初始化 ROS 客户端
 Nav2Panel::Nav2Panel(QWidget * parent)
 : Panel(parent),
   server_timeout_(100)
 {
   // Create the control button and its tooltip
-
+  // 创建三个按钮与四个状态显示标签
   start_reset_button_ = new QPushButton;
   pause_resume_button_ = new QPushButton;
   navigation_mode_button_ = new QPushButton;
@@ -51,7 +53,7 @@ Nav2Panel::Nav2Panel(QWidget * parent)
   navigation_feedback_indicator_ = new QLabel;
 
   // Create the state machine used to present the proper control button states in the UI
-
+  // 各按钮在不同状态下的提示文案（tooltip）
   const char * startup_msg = "Configure and activate all nav2 lifecycle nodes";
   const char * shutdown_msg = "Deactivate and cleanup all nav2 lifecycle nodes";
   const char * cancel_msg = "Cancel navigation";
@@ -62,6 +64,7 @@ Nav2Panel::Nav2Panel(QWidget * parent)
   const char * nft_goal_msg = "Start navigating through poses";
   const char * cancel_waypoint_msg = "Cancel waypoint / viapoint accumulation mode";
 
+  // 状态标签的富文本（active 显示为绿色）
   const QString navigation_active("<table><tr><td width=100><b>Navigation:</b></td>"
     "<td><font color=green>active</color></td></tr></table>");
   const QString navigation_inactive("<table><tr><td width=100><b>Navigation:</b></td>"
@@ -75,6 +78,7 @@ Nav2Panel::Nav2Panel(QWidget * parent)
   const QString localization_unknown("<table><tr><td width=100><b>Localization:</b></td>"
     "<td>unknown</td></tr></table>");
 
+  // 初始显示 unknown / 默认状态
   navigation_status_indicator_->setText(navigation_unknown);
   localization_status_indicator_->setText(localization_unknown);
   navigation_goal_status_indicator_->setText(getGoalStatusLabel());
@@ -84,6 +88,10 @@ Nav2Panel::Nav2Panel(QWidget * parent)
   navigation_goal_status_indicator_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
   navigation_feedback_indicator_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
+  // ===== 以下定义状态机的各状态并给按钮绑定属性（assignProperty：
+  // 进入该状态时自动把按钮的 text/enabled/toolTip 设为指定值）=====
+
+  // pre_initial：面板刚创建、初始检测线程尚未返回，全部按钮禁用
   pre_initial_ = new QState();
   pre_initial_->setObjectName("pre_initial");
   pre_initial_->assignProperty(start_reset_button_, "text", "Startup");
@@ -97,6 +105,7 @@ Nav2Panel::Nav2Panel(QWidget * parent)
     "Waypoint / Nav Through Poses Mode");
   pre_initial_->assignProperty(navigation_mode_button_, "enabled", false);
 
+  // initial：系统未启动，只有 Startup 按钮可用
   initial_ = new QState();
   initial_->setObjectName("initial");
   initial_->assignProperty(start_reset_button_, "text", "Startup");
@@ -110,6 +119,7 @@ Nav2Panel::Nav2Panel(QWidget * parent)
   initial_->assignProperty(navigation_mode_button_, "enabled", false);
 
   // State entered when navigate_to_pose action is not active
+  // idle：系统已启动且无导航任务，三个按钮全部可用（Reset/Pause/进入路点模式）
   idle_ = new QState();
   idle_->setObjectName("idle");
   idle_->assignProperty(start_reset_button_, "text", "Reset");
@@ -125,6 +135,7 @@ Nav2Panel::Nav2Panel(QWidget * parent)
   idle_->assignProperty(navigation_mode_button_, "toolTip", single_goal_msg);
 
   // State entered when navigate_to_pose action is not active
+  // accumulating：路点收集模式，每次点选目标会追加而非立即导航
   accumulating_ = new QState();
   accumulating_->setObjectName("accumulating");
   accumulating_->assignProperty(start_reset_button_, "text", "Cancel Accumulation");
@@ -139,6 +150,7 @@ Nav2Panel::Nav2Panel(QWidget * parent)
   accumulating_->assignProperty(navigation_mode_button_, "enabled", true);
   accumulating_->assignProperty(navigation_mode_button_, "toolTip", waypoint_goal_msg);
 
+  // accumulated_wp：路点收集完成并已发出 FollowWaypoints，执行中
   accumulated_wp_ = new QState();
   accumulated_wp_->setObjectName("accumulated_wp");
   accumulated_wp_->assignProperty(start_reset_button_, "text", "Cancel");
@@ -153,6 +165,7 @@ Nav2Panel::Nav2Panel(QWidget * parent)
   accumulated_wp_->assignProperty(navigation_mode_button_, "enabled", false);
   accumulated_wp_->assignProperty(navigation_mode_button_, "toolTip", waypoint_goal_msg);
 
+  // accumulated_nav_through_poses：途经点收集完成并已发出 NavigateThroughPoses
   accumulated_nav_through_poses_ = new QState();
   accumulated_nav_through_poses_->setObjectName("accumulated_nav_through_poses");
   accumulated_nav_through_poses_->assignProperty(start_reset_button_, "text", "Cancel");
@@ -174,6 +187,7 @@ Nav2Panel::Nav2Panel(QWidget * parent)
     waypoint_goal_msg);
 
   // State entered to cancel the navigate_to_pose action
+  // canceled/reset/resumed：一瞬间的过渡态，靠 entered/exited 信号触发动作后自动跳走
   canceled_ = new QState();
   canceled_->setObjectName("canceled");
 
@@ -182,6 +196,7 @@ Nav2Panel::Nav2Panel(QWidget * parent)
   reset_->setObjectName("reset");
 
   // State entered while the navigate_to_pose action is active
+  // running：单点导航执行中，只能 Cancel，其余按钮禁用
   running_ = new QState();
   running_->setObjectName("running");
   running_->assignProperty(start_reset_button_, "text", "Cancel");
@@ -194,6 +209,7 @@ Nav2Panel::Nav2Panel(QWidget * parent)
   running_->assignProperty(navigation_mode_button_, "enabled", false);
 
   // State entered when pause is requested
+  // paused：暂停态，只有 Reset 和 Resume 可用
   paused_ = new QState();
   paused_->setObjectName("pausing");
   paused_->assignProperty(start_reset_button_, "text", "Reset");
@@ -211,6 +227,7 @@ Nav2Panel::Nav2Panel(QWidget * parent)
   resumed_ = new QState();
   resumed_->setObjectName("resuming");
 
+  // ===== 把状态的进入/退出信号连接到业务槽函数 =====
   QObject::connect(initial_, SIGNAL(exited()), this, SLOT(onStartup()));
   QObject::connect(canceled_, SIGNAL(exited()), this, SLOT(onCancel()));
   QObject::connect(reset_, SIGNAL(exited()), this, SLOT(onShutdown()));
@@ -223,6 +240,7 @@ Nav2Panel::Nav2Panel(QWidget * parent)
     SLOT(onAccumulatedNTP()));
 
   // Start/Reset button click transitions
+  // ===== 按钮点击迁移：定义"哪个状态下点哪个按钮跳到哪个状态" =====
   initial_->addTransition(start_reset_button_, SIGNAL(clicked()), idle_);
   idle_->addTransition(start_reset_button_, SIGNAL(clicked()), reset_);
   running_->addTransition(start_reset_button_, SIGNAL(clicked()), canceled_);
@@ -237,6 +255,7 @@ Nav2Panel::Nav2Panel(QWidget * parent)
   accumulated_nav_through_poses_->addTransition(start_reset_button_, SIGNAL(clicked()), canceled_);
 
   // Internal state transitions
+  // 过渡态的自动跳转：进入 canceled/reset/resumed 后立即回到目标状态
   canceled_->addTransition(canceled_, SIGNAL(entered()), idle_);
   reset_->addTransition(reset_, SIGNAL(entered()), initial_);
   resumed_->addTransition(resumed_, SIGNAL(entered()), idle_);
@@ -256,6 +275,12 @@ Nav2Panel::Nav2Panel(QWidget * parent)
   runningTransition->setTargetState(idle_);
   running_->addTransition(runningTransition);
 
+  // ROS Action Transitions: So when actions are updated remotely (failing, succeeding, etc)
+  // the state of the application will also update. This means that if in the processing
+  // states and then goes inactive, move back to the idle state. Vise versa as well.
+  // 上面已建立 idle<->running 的 Action 状态迁移，下面再为
+  // 路点跟随（wp）与途经点导航（NTP）建立同样的双向迁移：
+  // Action 在远端结束/失败时自动回到 idle，开始执行时进入对应执行态
   ROSActionQTransition * idleAccumulatedWpTransition =
     new ROSActionQTransition(QActionState::INACTIVE);
   idleAccumulatedWpTransition->setTargetState(accumulated_wp_);
@@ -274,17 +299,22 @@ Nav2Panel::Nav2Panel(QWidget * parent)
   accumulatedNTPTransition->setTargetState(idle_);
   accumulated_nav_through_poses_->addTransition(accumulatedNTPTransition);
 
+  // ===== 初始化 ROS 侧资源 =====
+  // 创建专用客户端节点（通过重映射命名为 rviz_navigation_dialog_action_client）
   auto options = rclcpp::NodeOptions().arguments(
     {"--ros-args", "--remap", "__node:=rviz_navigation_dialog_action_client", "--"});
   client_node_ = std::make_shared<rclcpp::Node>("_", options);
 
+  // 两个生命周期管理客户端：分别对应导航组与定位组的管理器
   client_nav_ = std::make_shared<nav2_lifecycle_manager::LifecycleManagerClient>(
     "lifecycle_manager_navigation", client_node_);
   client_loc_ = std::make_shared<nav2_lifecycle_manager::LifecycleManagerClient>(
     "lifecycle_manager_localization", client_node_);
+  // 创建初始检测线程（结束后自动销毁）
   initial_thread_ = new InitialThread(client_nav_, client_loc_);
   connect(initial_thread_, &InitialThread::finished, initial_thread_, &QObject::deleteLater);
 
+  // 初始检测结果驱动 pre_initial -> idle / initial 的迁移
   QSignalTransition * activeSignal = new QSignalTransition(
     initial_thread_,
     &InitialThread::navigationActive);
@@ -320,6 +350,7 @@ Nav2Panel::Nav2Panel(QWidget * parent)
       localization_status_indicator_->setText(localization_inactive);
     });
 
+  // 把所有状态加入状态机，pre_initial 为初始状态
   state_machine_.addState(pre_initial_);
   state_machine_.addState(initial_);
   state_machine_.addState(idle_);
@@ -335,10 +366,12 @@ Nav2Panel::Nav2Panel(QWidget * parent)
   state_machine_.setInitialState(pre_initial_);
 
   // delay starting initial thread until state machine has started or a race occurs
+  // 状态机启动后再启动检测线程，否则信号可能早于迁移注册而丢失（竞态）
   QObject::connect(&state_machine_, SIGNAL(started()), this, SLOT(startThread()));
   state_machine_.start();
 
   // Lay out the items in the panel
+  // 面板垂直布局：状态标签在上方，三个按钮在下方
   QVBoxLayout * main_layout = new QVBoxLayout;
   main_layout->addWidget(navigation_status_indicator_);
   main_layout->addWidget(localization_status_indicator_);
@@ -351,6 +384,7 @@ Nav2Panel::Nav2Panel(QWidget * parent)
   main_layout->setContentsMargins(10, 10, 10, 10);
   setLayout(main_layout);
 
+  // 创建三个 Action 客户端并初始化 Goal 消息
   navigation_action_client_ =
     rclcpp_action::create_client<nav2_msgs::action::NavigateToPose>(
     client_node_,
@@ -372,6 +406,7 @@ Nav2Panel::Nav2Panel(QWidget * parent)
     "waypoints",
     rclcpp::QoS(1).transient_local());
 
+  // 连接全局 GoalUpdater 的目标信号：GoalTool 每次选点都会触发 onNewGoal
   QObject::connect(
     &GoalUpdater, SIGNAL(updateGoal(double,double,double,QString)),                 // NOLINT
     this, SLOT(onNewGoal(double,double,double,QString)));  // NOLINT
@@ -384,9 +419,11 @@ Nav2Panel::~Nav2Panel()
 void
 Nav2Panel::onInitialize()
 {
+  // 取 RViz 的内部 ROS 节点（在 RViz 的执行器中 spin，回调自动分发）
   auto node = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
 
   // create action feedback subscribers
+  // 直接订阅两个 Action 的 feedback 话题，用 lambda 更新反馈标签
   navigation_feedback_sub_ =
     node->create_subscription<nav2_msgs::action::NavigateToPose::Impl::FeedbackMessage>(
     "navigate_to_pose/_action/feedback",
@@ -435,6 +472,7 @@ Nav2Panel::startThread()
 void
 Nav2Panel::onPause()
 {
+  // 暂停：在线程池中异步调用两个管理器的 pause()，避免阻塞 UI
   QFuture<void> futureNav =
     QtConcurrent::run(
     std::bind(
@@ -450,6 +488,7 @@ Nav2Panel::onPause()
 void
 Nav2Panel::onResume()
 {
+  // 恢复：异步调用两个管理器的 resume()
   QFuture<void> futureNav =
     QtConcurrent::run(
     std::bind(
@@ -465,6 +504,7 @@ Nav2Panel::onResume()
 void
 Nav2Panel::onStartup()
 {
+  // 启动：异步调用两个管理器的 startup()（configure + activate 所有节点）
   QFuture<void> futureNav =
     QtConcurrent::run(
     std::bind(
@@ -480,6 +520,7 @@ Nav2Panel::onStartup()
 void
 Nav2Panel::onShutdown()
 {
+  // 关闭：异步调用两个管理器的 reset()（deactivate + cleanup），并停掉状态轮询定时器
   QFuture<void> futureNav =
     QtConcurrent::run(
     std::bind(
@@ -496,6 +537,7 @@ Nav2Panel::onShutdown()
 void
 Nav2Panel::onCancel()
 {
+  // 取消导航：把实际的取消流程丢到线程池执行
   QFuture<void> future =
     QtConcurrent::run(
     std::bind(
@@ -506,6 +548,7 @@ Nav2Panel::onCancel()
 void
 Nav2Panel::onNewGoal(double x, double y, double theta, QString frame)
 {
+  // 把 GoalTool 传来的参数组装成 PoseStamped 消息
   auto pose = geometry_msgs::msg::PoseStamped();
 
   pose.header.stamp = rclcpp::Clock().now();
@@ -513,21 +556,27 @@ Nav2Panel::onNewGoal(double x, double y, double theta, QString frame)
   pose.pose.position.x = x;
   pose.pose.position.y = y;
   pose.pose.position.z = 0.0;
+  // 偏航角转四元数（平面导航）
   pose.pose.orientation = orientationAroundZAxis(theta);
 
   if (state_machine_.configuration().contains(accumulating_)) {
+    // 路点收集模式：新目标只是追加到列表
     acummulated_poses_.push_back(pose);
   } else {
+    // 普通模式：直接发起单点导航
     std::cout << "Start navigation" << std::endl;
     startNavigation(pose);
   }
 
+  // 更新路点可视化 marker
   updateWpNavigationMarkers();
 }
 
 void
 Nav2Panel::onCancelButtonPressed()
 {
+  // 依次尝试取消三种 Action（哪个有活动句柄就取消哪个），
+  // 使用 spin_until_future_complete 同步等待取消结果
   if (navigation_goal_handle_) {
     auto future_cancel = navigation_action_client_->async_cancel_goal(navigation_goal_handle_);
 

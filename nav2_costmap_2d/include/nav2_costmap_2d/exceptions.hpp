@@ -33,6 +33,19 @@
  */
 #ifndef NAV2_COSTMAP_2D__EXCEPTIONS_HPP_
 #define NAV2_COSTMAP_2D__EXCEPTIONS_HPP_
+// ============================================================================
+// 中文注释：代价地图异常体系头文件
+//
+// 【文件功能】
+// 定义 nav2_costmap_2d 的自定义异常（均继承 std::runtime_error）：
+//   - Costmap2DCLIException：非法命令行/服务参数；
+//   - IllegalPoseException：给定位姿落在代价地图范围之外
+//     （碰撞检测时抛出，见 costmap_topic_collision_checker）；
+//   - CollisionCheckerException：碰撞检测运行时错误
+//     （如地图/足迹尚不可用）。
+// Nav2 惯例：用继承自 runtime_error 的具名异常类区分错误类别，
+// 便于调用方按类型捕获并做不同处理（安全优先时统一视为碰撞）。
+// ============================================================================
 
 #include <stdexcept>
 #include <string>

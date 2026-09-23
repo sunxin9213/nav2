@@ -12,6 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 文件说明（中文）：
+// RouteServer（路线服务器）类的头文件声明。
+// 模块定位：基于路图（route graph）的动作服务器，补充 Planner Server
+// 的自由空间规划——适用于结构化环境（车间/仓库/道路）的拓扑导航。
+// 对外提供 compute_route / compute_and_track_route 两个动作、
+// set_route_graph 服务与 route_graph 可视化话题。
+// 详细中文注释的实现见 src/route_server.cpp。
+// ============================================================================
+
 #ifndef NAV2_ROUTE__ROUTE_SERVER_HPP_
 #define NAV2_ROUTE__ROUTE_SERVER_HPP_
 
@@ -199,32 +209,40 @@ protected:
   template<typename GoalT>
   void exceptionWarning(const std::shared_ptr<const GoalT> goal, const std::exception & ex);
 
+  // 两个动作服务器：一次性计算 / 计算并跟踪
   std::shared_ptr<ComputeRouteServer> compute_route_server_;
   std::shared_ptr<ComputeAndTrackRouteServer> compute_and_track_route_server_;
 
   // TF
+  // TF 缓冲与监听器（坐标变换）
   std::shared_ptr<tf2_ros::Buffer> tf_;
   std::shared_ptr<tf2_ros::TransformListener> transform_listener_;
 
   // Publish the route for visualization
+  // 路图可视化发布器（MarkerArray，transient_local）
   rclcpp_lifecycle::LifecyclePublisher<visualization_msgs::msg::MarkerArray>::SharedPtr
     graph_vis_publisher_;
 
   // Set or modify graph
+  // 运行时设置/更换路图的服务
   rclcpp::Service<nav2_msgs::srv::SetRouteGraph>::SharedPtr set_graph_service_;
 
   // Internal tools
+  // 五大协作组件：图加载 / 路线规划 / 路线跟踪 / 路径转换 / 目标意图提取
   std::shared_ptr<GraphLoader> graph_loader_;
   std::shared_ptr<RoutePlanner> route_planner_;
   std::shared_ptr<RouteTracker> route_tracker_;
   std::shared_ptr<PathConverter> path_converter_;
   std::shared_ptr<GoalIntentExtractor> goal_intent_extractor_;
 
+  // 全局代价地图订阅器（供评分、跟踪等组件使用）
   std::shared_ptr<nav2_costmap_2d::CostmapSubscriber> costmap_subscriber_;
 
   // State Data
+  // 当前路图及其 nodeid -> 图下标 的映射
   Graph graph_;
   GraphToIDMap id_to_graph_map_;
+  // 各坐标系名与单次规划最大时长
   std::string route_frame_, global_frame_, base_frame_;
   double max_planning_time_;
 };

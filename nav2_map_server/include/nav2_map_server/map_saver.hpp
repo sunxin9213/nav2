@@ -13,6 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 文件说明（中文）：
+// MapSaver（地图保存器）节点的头文件声明。
+// 模块定位：nav2_map_server 中的生命周期节点，提供 SaveMap 服务，
+// 运行时订阅地图话题并保存为文件（图像 + YAML 元数据）。
+// 实现（.cpp）见 src/map_saver/map_saver.cpp；
+// 底层文件读写由 map_io.hpp/.cpp（saveMapToFile）完成。
+// ============================================================================
+
 #ifndef NAV2_MAP_SERVER__MAP_SAVER_HPP_
 #define NAV2_MAP_SERVER__MAP_SAVER_HPP_
 
@@ -100,16 +109,19 @@ protected:
     std::shared_ptr<nav2_msgs::srv::SaveMap::Response> response);
 
   // The timeout for saving the map in service
+  // 等待地图消息的超时时间
   std::shared_ptr<rclcpp::Duration> save_map_timeout_;
   // Default values for map thresholds
-  double free_thresh_default_;
-  double occupied_thresh_default_;
+  double free_thresh_default_;       // 空闲阈值默认值
+  double occupied_thresh_default_;   // 占据阈值默认值
   // param for handling QoS configuration
+  // 是否以 transient_local QoS 订阅地图话题
   bool map_subscribe_transient_local_;
 
   // The name of the service for saving a map from topic
   const std::string save_map_service_name_{"save_map"};
   // A service to save the map to a file at run time (SaveMap)
+  // SaveMap 服务句柄（完整服务名 = 节点名/save_map）
   rclcpp::Service<nav2_msgs::srv::SaveMap>::SharedPtr save_map_service_;
 };
 

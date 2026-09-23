@@ -21,6 +21,7 @@
 namespace nav2_util
 {
 
+// Tokens: split() 的返回类型，即字符串切分结果列表
 typedef std::vector<std::string> Tokens;
 
 /*
@@ -28,6 +29,7 @@ typedef std::vector<std::string> Tokens;
  * @param in String of topic in
  * @return String out without slash
 */
+// 去掉话题名开头的 '/'（把绝对话题名转为相对形式）
 std::string strip_leading_slash(const std::string & in);
 
 ///
@@ -37,6 +39,7 @@ std::string strip_leading_slash(const std::string & in);
  * @param Delimiter criteria
  * @return Tokens
 */
+// 按指定分隔符把字符串切分为多个 token
 Tokens split(const std::string & tokenstring, char delimiter);
 
 }  // namespace nav2_util

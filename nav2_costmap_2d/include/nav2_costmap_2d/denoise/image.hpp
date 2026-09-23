@@ -14,6 +14,19 @@
 
 #ifndef NAV2_COSTMAP_2D__DENOISE__IMAGE_HPP_
 #define NAV2_COSTMAP_2D__DENOISE__IMAGE_HPP_
+// ============================================================================
+// 中文注释：零拷贝图像视图（Image）头文件——去噪层的图像抽象
+//
+// 【类功能】
+// Image<T>：对外部一维缓冲区的二维"ROI 视图"包装（不拥有数据）：
+//   - rows()/columns()/step()：行数/列数/行步长（字节或元素数）；
+//   - at()/row()：按 (行,列) 访问元素（内部按 row*step+col 计算）；
+//   - empty()：尺寸为零判断；
+//   - convert()：对每个元素做映射/修改（配合去噪算法使用）。
+// 典型用法：把主地图的一维 unsigned char 数组包装为
+// Image<uint8_t>(height, width, ptr, step)，让形态学算法以二维方式
+// 就地处理地图数据而无需拷贝。
+// ============================================================================
 
 #include <cstddef>
 #include <stdexcept>

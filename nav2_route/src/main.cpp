@@ -12,6 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 文件说明（中文）：
+// route_server 独立可执行入口：
+// 创建 RouteServer（路线服务器）生命周期节点并阻塞自旋。
+// 提供基于路图的 compute_route / compute_and_track_route 动作，
+// 适用于结构化环境（车道/走廊）的拓扑导航。
+// ============================================================================
+
 #include <memory>
 
 #include "nav2_route/route_server.hpp"
@@ -19,6 +27,7 @@
 
 int main(int argc, char ** argv)
 {
+  // 初始化 ROS2 -> 创建路线服务器节点 -> 阻塞自旋 -> 关闭退出
   rclcpp::init(argc, argv);
   auto node = std::make_shared<nav2_route::RouteServer>();
   rclcpp::spin(node->get_node_base_interface());

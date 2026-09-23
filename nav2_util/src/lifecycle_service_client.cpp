@@ -29,13 +29,19 @@ using namespace std::chrono_literals;
 
 namespace nav2_util
 {
+// 本文件实现 LifecycleServiceClient：对生命周期节点的
+// change_state / get_state 两个标准服务的高级客户端封装。
 
+// 构造函数（自建内部节点版本）：
+// 用 generate_internal_node 生成一个带唯一名的临时节点来承载服务客户端，
+// 服务名按 ROS2 生命周期规范为 "<节点名>/change_state" 与 "<节点名>/get_state"
 LifecycleServiceClient::LifecycleServiceClient(const string & lifecycle_node_name)
 : node_(generate_internal_node(lifecycle_node_name + "_lifecycle_client")),
   change_state_(lifecycle_node_name + "/change_state", node_),
   get_state_(lifecycle_node_name + "/get_state", node_)
 {
   // Block until server is up
+  // 阻塞等待生命周期服务端上线：每 2s 检查一次，20Hz 限速打印提示
   rclcpp::Rate r(20);
   while (!get_state_.wait_for_service(2s)) {
     RCLCPP_INFO(
@@ -44,6 +50,7 @@ LifecycleServiceClient::LifecycleServiceClient(const string & lifecycle_node_nam
   }
 }
 
+// 构造函数（复用外部节点版本）：避免额外的内部节点开销
 LifecycleServiceClient::LifecycleServiceClient(
   const string & lifecycle_node_name,
   rclcpp::Node::SharedPtr parent_node)
@@ -60,6 +67,7 @@ LifecycleServiceClient::LifecycleServiceClient(
   }
 }
 
+// 触发状态迁移（带超时版本）：失败抛异常
 bool LifecycleServiceClient::change_state(
   const uint8_t transition,
   const seconds timeout)
@@ -68,12 +76,14 @@ bool LifecycleServiceClient::change_state(
     throw std::runtime_error("change_state service is not available!");
   }
 
+  // 组装 ChangeState 请求：只需填迁移 id（如 TRANSITION_CONFIGURE）
   auto request = std::make_shared<lifecycle_msgs::srv::ChangeState::Request>();
   request->transition.id = transition;
   auto response = change_state_.invoke(request, timeout);
   return response.get();
 }
 
+// 触发状态迁移（固定 5s 服务等待版本）：结果以 bool 返回不抛异常
 bool LifecycleServiceClient::change_state(
   std::uint8_t transition)
 {
@@ -87,6 +97,7 @@ bool LifecycleServiceClient::change_state(
   return change_state_.invoke(request, response);
 }
 
+// 查询节点当前生命周期状态 id
 uint8_t LifecycleServiceClient::get_state(
   const seconds timeout)
 {
@@ -94,6 +105,7 @@ uint8_t LifecycleServiceClient::get_state(
     throw std::runtime_error("get_state service is not available!");
   }
 
+  // GetState 请求为空，从响应中取出当前状态 id
   auto request = std::make_shared<lifecycle_msgs::srv::GetState::Request>();
   auto result = get_state_.invoke(request, timeout);
   return result->current_state.id;

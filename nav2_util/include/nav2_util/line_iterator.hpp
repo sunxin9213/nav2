@@ -42,6 +42,9 @@ namespace nav2_util
 /**
  * @class nav2_util::LineIterator
  * @brief An iterator implementing Bresenham Ray-Tracing.
+ * Bresenham 直线光栅化迭代器：以整数运算逐点遍历栅格地图上
+ * (x0,y0) 到 (x1,y1) 之间的直线像素，广泛用于代价地图的
+ * 射线追踪（如清除传感器视线上的栅格）。
  */
 class LineIterator
 {
@@ -64,6 +67,7 @@ public:
     deltay_(abs(y1 - y0)),
     curpixel_(0)
   {
+    // 根据终点相对起点的方向设置 x/y 步进符号（+1 或 -1）
     if (x1_ >= x0_) {                // The x-values are increasing
       xinc1_ = 1;
       xinc2_ = 1;
@@ -80,12 +84,14 @@ public:
       yinc2_ = -1;
     }
 
+    // 以增量较大（更陡/更平缓）的轴为主轴：
+    // 主轴每步必进 1，副轴按累积误差决定是否进 1，这正是 Bresenham 算法核心
     if (deltax_ >= deltay_) {        // There is at least one x-value for every y-value
       xinc1_ = 0;                  // Don't change the x when numerator >= denominator
       yinc2_ = 0;                  // Don't change the y for every iteration
-      den_ = deltax_;
-      num_ = deltax_ / 2;
-      numadd_ = deltay_;
+      den_ = deltax_;              // 分母：主轴总增量
+      num_ = deltax_ / 2;          // 分子：误差累积器，初值取半避免偏向
+      numadd_ = deltay_;           // 每步加入分子：副轴总增量
       numpixels_ = deltax_;         // There are more x-values than y-values
     } else {                      // There is at least one y-value for every x-value
       xinc2_ = 0;                  // Don't change the x for every iteration
@@ -101,6 +107,7 @@ public:
    * @brief If the iterator is valid
    * @return bool If valid
    */
+  // 是否还有可迭代的像素点（当前序号未超过总像素数）
   bool isValid() const
   {
     return curpixel_ <= numpixels_;
@@ -109,14 +116,17 @@ public:
   /**
    * @brief Advance iteration along the line
    */
+  // 前进到直线下一个像素点：误差累积 + 判断副轴是否步进
   void advance()
   {
     num_ += numadd_;              // Increase the numerator by the top of the fraction
     if (num_ >= den_) {           // Check if numerator >= denominator
+      // 误差溢出：副轴额外步进一次，并把误差回绕
       num_ -= den_;               // Calculate the new numerator value
       x_ += xinc1_;               // Change the x as appropriate
       y_ += yinc1_;               // Change the y as appropriate
     }
+    // 主轴每步固定步进一次
     x_ += xinc2_;                 // Change the x as appropriate
     y_ += yinc2_;                 // Change the y as appropriate
 
@@ -178,20 +188,25 @@ public:
   }
 
 private:
+  // 线段两端点坐标
   int x0_;  ///< X coordinate of first end point.
   int y0_;  ///< Y coordinate of first end point.
   int x1_;  ///< X coordinate of second end point.
   int y1_;  ///< Y coordinate of second end point.
 
+  // 当前迭代点坐标
   int x_;  ///< X coordinate of current point.
   int y_;  ///< Y coordinate of current point.
 
+  // 两轴的总增量（绝对值），用于确定主轴
   int deltax_;  ///< Difference between Xs of endpoints.
   int deltay_;  ///< Difference between Ys of endpoints.
 
   int curpixel_;  ///< index of current point in line loop.
-
+  // 步进符号：inc1 用于误差溢出时的副轴步进，inc2 用于主轴的固定步进，
+  // 其中被置 0 的那组表示该轴在对应时机不步进（见构造函数中的主副轴判定）
   int xinc1_, xinc2_, yinc1_, yinc2_;
+  // Bresenham 误差累积：den 分母、num 分子(误差)、numadd 每步增量、numpixels 总像素数
   int den_, num_, numadd_, numpixels_;
 };
 

@@ -24,6 +24,7 @@ namespace nav2_graceful_controller
 /**
    * @brief Create a PointStamped message of the motion target for
    * debugging / visualization porpuses.
+   *（将运动目标位姿转为点消息，用于 RViz 调试可视化）
    *
    * @param motion_target Motion target in PoseStamped format
    * @return geometry_msgs::msg::PointStamped Motion target in PointStamped format
@@ -34,10 +35,11 @@ geometry_msgs::msg::PointStamped createMotionTargetMsg(
 /**
    * @brief Create a flat circle marker of radius slowdown_radius around the motion target for
    * debugging / visualization porpuses.
+   *（在运动目标处生成减速半径的扁球标记，可视化减速范围）
    *
-   * @param motion_target Motion target
-   * @param slowdown_radius Radius of the slowdown circle
-   * @return visualization_msgs::msg::Marker Slowdown marker
+   * @param motion_target Motion target（运动目标）
+   * @param slowdown_radius Radius of the slowdown circle（减速半径）
+   * @return visualization_msgs::msg::Marker Slowdown marker（减速标记）
    */
 visualization_msgs::msg::Marker createSlowdownMarker(
   const geometry_msgs::msg::PoseStamped & motion_target, const double & slowdown_radius);

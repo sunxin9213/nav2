@@ -36,6 +36,34 @@
  *********************************************************************/
 #ifndef NAV2_COSTMAP_2D__LAYER_HPP_
 #define NAV2_COSTMAP_2D__LAYER_HPP_
+// ============================================================================
+// 中文注释：Layer 插件基类头文件（实现见 layer.cpp）
+//
+// 【类功能】
+// 所有代价地图层的抽象基类，定义了分层体系的公共接口：
+//   - initialize()：由 LayeredCostmap 注入运行环境后回调 onInitialize()；
+//   - updateBounds()：更新第一阶段——各层声明本轮影响的世界坐标边界；
+//   - updateCosts()：更新第二阶段——各层把数据写入主地图（master_grid）
+//     的指定栅格窗口内（min_i..max_i, min_j..max_j）；
+//   - activate()/deactivate()：生命周期启停（订阅的建立/断开）；
+//   - reset()/isClearable()：复位与"是否可被 clear costmap 服务清除"；
+//   - onFootprintChanged()：足迹变化通知（内切半径等需重算）。
+//
+// 【两阶段更新机制】（LayeredCostmap 每个 map_update 周期执行）
+//   1) updateBounds：所有层依次运行，通过 min/max 指针累积扩大
+//      本轮更新窗口（世界坐标，米）；
+//   2) updateCosts：窗口换算为栅格索引后，所有层依次把各自数据
+//      合并进主地图。两阶段分离使层间可以互相感知更新范围
+//      （如膨胀层需要把窗口外扩膨胀半径）。
+//
+// 【继承体系】
+//   Layer → CostmapLayer → StaticLayer/ObstacleLayer/VoxelLayer
+//   Layer → InflationLayer
+//   Layer → CostmapFilter → KeepoutFilter/SpeedFilter/BinaryFilter
+//   Layer → DenoiseLayer / RangeSensorLayer
+// 所有子类通过 PLUGINLIB_EXPORT_CLASS 注册为 pluginlib 插件，
+// 由 Costmap2DROS 按 YAML 配置动态加载。
+// ============================================================================
 
 #include <string>
 #include <vector>
@@ -162,13 +190,14 @@ public:
   std::string getFullName(const std::string & param_name);
 
 protected:
-  LayeredCostmap * layered_costmap_;
-  std::string name_;
-  tf2_ros::Buffer * tf_;
-  rclcpp::CallbackGroup::SharedPtr callback_group_;
-  rclcpp_lifecycle::LifecycleNode::WeakPtr node_;
-  rclcpp::Clock::SharedPtr clock_;
-  rclcpp::Logger logger_{rclcpp::get_logger("nav2_costmap_2d")};
+  // ---- 公共运行环境成员（由 initialize() 注入）----
+  LayeredCostmap * layered_costmap_;   // 父容器：可访问主地图/足迹/插件列表
+  std::string name_;                   // 层名（同时是 ROS 参数前缀）
+  tf2_ros::Buffer * tf_;               // TF2 缓冲：层内坐标变换
+  rclcpp::CallbackGroup::SharedPtr callback_group_;   // 专用回调组（订阅回调并发）
+  rclcpp_lifecycle::LifecycleNode::WeakPtr node_;     // 生命周期节点（弱引用，不延长寿命）
+  rclcpp::Clock::SharedPtr clock_;     // 节点时钟
+  rclcpp::Logger logger_{rclcpp::get_logger("nav2_costmap_2d")};  // 日志器
 
   /** @brief This is called at the end of initialize().  Override to
    * implement subclass-specific initialization.

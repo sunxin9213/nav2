@@ -27,6 +27,8 @@ using lifecycle_msgs::msg::Transition;
 namespace nav2_util
 {
 
+// RETRY 宏：反复执行表达式 fn，捕获 runtime_error 并重试，
+// 超过 retries 次后把异常重新抛出（用于对抗服务调用偶发挂死的问题）
 #define RETRY(fn, retries) \
   { \
     int count = 0; \
@@ -42,16 +44,19 @@ namespace nav2_util
     } \
   }
 
+// 启动单个生命周期节点：依次触发 configure -> activate 状态迁移
 static void startupLifecycleNode(
   const std::string & node_name,
   const std::chrono::seconds service_call_timeout,
   const int retries)
 {
+  // 为目标节点创建一个生命周期服务客户端（内部会生成临时内部节点）
   LifecycleServiceClient sc(node_name);
 
   // Despite waiting for the service to be available and using reliable transport
   // service calls still frequently hang. To get reliable startup it's necessary
   // to timeout the service call and retry it when that happens.
+  // 实践中即使服务已可用，调用仍可能挂起，因此用超时 + 重试保证启动可靠
   RETRY(
     sc.change_state(Transition::TRANSITION_CONFIGURE, service_call_timeout),
     retries);
@@ -60,6 +65,7 @@ static void startupLifecycleNode(
     retries);
 }
 
+// 按顺序启动一批生命周期节点（每个节点依次 configure + activate）
 void startup_lifecycle_nodes(
   const std::vector<std::string> & node_names,
   const std::chrono::seconds service_call_timeout,
@@ -70,6 +76,7 @@ void startup_lifecycle_nodes(
   }
 }
 
+// 复位单个生命周期节点：依次触发 deactivate -> cleanup
 static void resetLifecycleNode(
   const std::string & node_name,
   const std::chrono::seconds service_call_timeout,
@@ -88,6 +95,7 @@ static void resetLifecycleNode(
     retries);
 }
 
+// 按顺序复位一批生命周期节点
 void reset_lifecycle_nodes(
   const std::vector<std::string> & node_names,
   const std::chrono::seconds service_call_timeout,

@@ -12,6 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/*
+ * =============================================================================
+ * 文件：lifecycle_manager_client.hpp（nav2_lifecycle_manager 模块）
+ * =============================================================================
+ * 功能概述：
+ *   声明 LifecycleManagerClient 类与 SystemStatus 枚举——
+ *   生命周期管理器的服务客户端辅助类。
+ *   供行为树插件、RViz 插件、测试等外部代码远程控制 lifecycle_manager：
+ *     startup()/shutdown()/pause()/resume()/reset()
+ *       → 调用 <name>/manage_nodes 服务；
+ *     is_active() → 调用 <name>/is_active 服务，返回
+ *       SystemStatus::ACTIVE / INACTIVE / TIMEOUT。
+ *   内部所有服务调用由 nav2_util::ServiceClient 封装，
+ *   基于调用方传入的父节点（parent_node）执行，超时时间可配置（默认无限等待）。
+ *   对应实现见 lifecycle_manager_client.cpp。
+ * =============================================================================
+ */
+
 #ifndef NAV2_LIFECYCLE_MANAGER__LIFECYCLE_MANAGER_CLIENT_HPP_
 #define NAV2_LIFECYCLE_MANAGER__LIFECYCLE_MANAGER_CLIENT_HPP_
 
@@ -34,6 +52,7 @@ namespace nav2_lifecycle_manager
  * @enum nav2_lifecycle_manager::SystemStatus
  * @brief Enum class representing the status of the system.
  */
+// 系统状态枚举：ACTIVE（受管系统整体激活）/ INACTIVE（未激活）/ TIMEOUT（服务调用超时）
 enum class SystemStatus {ACTIVE, INACTIVE, TIMEOUT};
 /**
  * @class nav2_lifecycle_manager::LifeCycleMangerClient
@@ -95,6 +114,11 @@ protected:
     uint8_t command,
     const std::chrono::nanoseconds timeout = std::chrono::nanoseconds(-1));
 
+  // ---- 成员变量 ----
+  // node_：执行服务调用所借助的父节点（复用其 context 与 executor）；
+  // manager_client_：manage_nodes 服务客户端（生命周期命令）；
+  // is_active_client_：is_active 服务客户端（状态查询）；
+  // manage_service_name_ / active_service_name_：两个服务的全限定名称。
   // The node to use for the service call
   rclcpp::Node::SharedPtr node_;
 

@@ -12,6 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// =============================================================================
+// 【文件说明】follow_path_action.cpp
+// 【所属模块】nav2_behavior_tree/plugins/action —— Nav2 行为树的动作节点插件
+//
+// 实现 FollowPath 行为树节点：调用 nav2_controller 的
+// "follow_path" ROS2 Action（nav2_msgs::action::FollowPath），
+// 让控制器（DWB/MPPI/RPP 等）跟踪黑板上的全局路径，
+// 持续向速度平滑器发布速度指令直到到达目标。
+//
+// 【在 Nav2 导航流程中的位置】
+// 典型导航树中位于 ComputePathToPose 之后：读取黑板 "path" 键开始跟踪；
+// 由于跟踪是长时间动作（返回 RUNNING），常用 RateController/SpeedController
+// 装饰器控制其上游重规划频率。
+//
+// 【行为树核心概念】
+// - 输入端口：path（要跟踪的路径）、controller_id（控制器选择，如
+//   "FollowPath"）、goal_checker_id（目标到达判定器选择）。
+// - 本类的亮点是 on_wait_for_result 钩子：动作运行期间持续监测黑板上的
+//   路径/控制器 ID 是否变化，变化则更新 goal_ 并置 goal_updated_=true，
+//   基类 tick() 会在下个周期自动重发新 goal——实现"边走边重新规划"的
+//   运行时目标更新，无需先取消再重发。
+// - XML 使用示例：
+//   <FollowPath path="{path}" controller_id="FollowPath"/>
+// =============================================================================
+
 #include <memory>
 #include <string>
 
@@ -20,42 +45,46 @@
 namespace nav2_behavior_tree
 {
 
+// 构造函数：委托基类创建 "follow_path" action 客户端，无额外初始化。
 FollowPathAction::FollowPathAction(
   const std::string & xml_tag_name,
   const std::string & action_name,
   const BT::NodeConfiguration & conf)
-// 实现该逻辑，并处理相关状态转换。
 : BtActionNode<nav2_msgs::action::FollowPath>(xml_tag_name, action_name, conf)
 {
 }
 
-// 在每次 tick 时读取输入并准备下一步执行状态。
+// on_tick 钩子：动作开始前读取输入端口填充 goal_。
 void FollowPathAction::on_tick()
 {
-// 实现该逻辑，并处理相关状态转换。
+  // 要跟踪的全局路径（通常来自黑板 "path" 键，即规划结果）。
   getInput("path", goal_.path);
-// 实现该逻辑，并处理相关状态转换。
+  // 控制器 ID：XML 中可动态选择用哪个控制器插件执行跟踪。
   getInput("controller_id", goal_.controller_id);
-// 实现该逻辑，并处理相关状态转换。
+  // 目标到达判定器 ID：决定"到达目标"的判据（容差、速度阈值等）。
   getInput("goal_checker_id", goal_.goal_checker_id);
 }
 
+// on_wait_for_result 钩子：跟踪过程中每个等待周期被调用（feedback 为
+// 服务器反馈，本节点不使用）；用于检测输入变化并触发 goal 更新。
 void FollowPathAction::on_wait_for_result(
   std::shared_ptr<const nav2_msgs::action::FollowPath::Feedback>/*feedback*/)
 {
+  // ---- 检测路径是否被上游更新（重新规划出了新路径）----
   nav_msgs::msg::Path new_path;
-// 实现该逻辑，并处理相关状态转换。
   getInput("path", new_path);
 
   // Check if it is not same with the current one
+  // 新路径存在（非空）且与当前不同：更新 goal 并标记 goal_updated_，
+  // the action server on the next loop iteration
+  // 基类 tick() 检测到该标志后会向服务器重发新 goal。
   if (goal_.path != new_path && new_path != nav_msgs::msg::Path()) {
-    // the action server on the next loop iteration
     goal_.path = new_path;
     goal_updated_ = true;
   }
 
+  // ---- 检测控制器 ID 是否变化（运行中切换控制器）----
   std::string new_controller_id;
-// 实现该逻辑，并处理相关状态转换。
   getInput("controller_id", new_controller_id);
 
   if (goal_.controller_id != new_controller_id) {
@@ -63,8 +92,8 @@ void FollowPathAction::on_wait_for_result(
     goal_updated_ = true;
   }
 
+  // ---- 检测目标判定器 ID 是否变化 ----
   std::string new_goal_checker_id;
-// 实现该逻辑，并处理相关状态转换。
   getInput("goal_checker_id", new_goal_checker_id);
 
   if (goal_.goal_checker_id != new_goal_checker_id) {
@@ -76,7 +105,7 @@ void FollowPathAction::on_wait_for_result(
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
-// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
+// 节点注册：动态库加载时把 "FollowPath" 标签绑定到本类构建器。
 BT_REGISTER_NODES(factory)
 {
   BT::NodeBuilder builder =

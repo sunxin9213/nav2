@@ -21,28 +21,38 @@ namespace nav2_util
 {
 
 /// @brief Measures execution time of code between calls to start and end
+// 代码段执行耗时计时器：start()/end() 分别记录起止时刻，再取差值。
+// 使用方式：
+//   timer.start(); ...被测代码...; timer.end();
+//   timer.elapsed_time_in_seconds();
 class ExecutionTimer
 {
 public:
+  // 使用最高精度时钟，时间单位统一为纳秒
   using Clock = std::chrono::high_resolution_clock;
   using nanoseconds = std::chrono::nanoseconds;
 
   /// @brief Call just prior to code you want to measure
+  // 记录起始时刻
   void start() {start_ = Clock::now();}
 
   /// @brief Call just after the code you want to measure
+  // 记录结束时刻
   void end() {end_ = Clock::now();}
 
   /// @brief Extract the measured time as an integral std::chrono::duration object
+  // 以 chrono::nanoseconds 类型返回耗时
   nanoseconds elapsed_time() {return end_ - start_;}
 
   /// @brief Extract the measured time as a floating point number of seconds.
+  // 以 double 秒数返回耗时（duration_cast 为浮点 duration 后 count）
   double elapsed_time_in_seconds()
   {
     return std::chrono::duration<double>(end_ - start_).count();
   }
 
 protected:
+  // 起止时间点
   Clock::time_point start_;
   Clock::time_point end_;
 };

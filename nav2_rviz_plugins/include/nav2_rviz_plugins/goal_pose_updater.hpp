@@ -21,6 +21,9 @@ namespace nav2_rviz_plugins
 {
 
 /// Class to set and update goal pose by emitting signal
+// 目标位姿更新器：GoalTool 调用 setGoal() 发出 Qt 信号，
+// Nav2 面板通过连接 updateGoal 信号来接收新目标点，
+// 从而实现工具插件与面板插件间的解耦通信
 class GoalPoseUpdater : public QObject
 {
   Q_OBJECT
@@ -29,12 +32,14 @@ public:
   GoalPoseUpdater() {}
   ~GoalPoseUpdater() {}
 
+  // 发出目标点更新信号（坐标 + 朝向 + 坐标系名）
   void setGoal(double x, double y, double theta, QString frame)
   {
     emit updateGoal(x, y, theta, frame);
   }
 
 signals:
+  // Qt 信号：携带目标位姿的四个参数
   void updateGoal(double x, double y, double theta, QString frame);
 };
 

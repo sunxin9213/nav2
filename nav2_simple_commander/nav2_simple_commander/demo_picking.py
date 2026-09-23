@@ -13,6 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# ============================================================================
+# 文件说明（中文）：
+# nav2_simple_commander 的"拣货配送"演示程序。
+# 模块定位：演示仓库拣货场景：机器人依次导航到各个货架
+# （由工作人员把货物放上机器人），再到配送目的地卸货，
+# 全程使用 BasicNavigator 的 goToPose 单点导航接口。
+# ============================================================================
+
 from geometry_msgs.msg import PoseStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 
@@ -21,6 +29,7 @@ from rclpy.duration import Duration
 
 
 # Shelf positions for picking
+# 货架位置表（拣货点，名称 -> [x, y]）
 shelf_positions = {
     'shelf_A': [-3.829, -7.604],
     'shelf_B': [-3.791, -3.287],
@@ -28,6 +37,7 @@ shelf_positions = {
     'shelf_D': [-3.24, 5.861]}
 
 # Shipping destination for picked products
+# 拣出货物的配送目的地表（名称 -> [x, y]）
 shipping_destinations = {
     'recycling': [-0.205, 7.403],
     'pallet_jack7': [-0.073, -8.497],

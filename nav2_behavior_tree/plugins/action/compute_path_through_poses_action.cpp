@@ -12,6 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// =============================================================================
+// 【文件说明】compute_path_through_poses_action.cpp
+// 【所属模块】nav2_behavior_tree/plugins/action —— Nav2 行为树的动作节点插件
+//
+// 实现 ComputePathThroughPoses 行为树节点：调用 nav2_planner 的
+// "compute_path_through_poses" ROS2 Action
+// （nav2_msgs::action::ComputePathThroughPoses），
+// 从起点（默认为机器人当前位置）依次经过一组途经点规划一条全局路径。
+//
+// 【在 Nav2 导航流程中的位置】
+// 与 ComputePathToPose 类似，区别在于支持多个途经点；用于多点导航
+// （NavigateThroughPoses）任务的规划阶段。
+//
+// 【行为树核心概念】
+// - 输入端口：goals（途经点数组）、planner_id（规划器选择）、
+//   start（可选显式起点）。
+// - 输出端口：path（规划结果写入黑板，供 FollowPath 跟踪）。
+// - on_success/on_aborted/on_cancelled 钩子保证各种结束路径下
+//   path 端口的值确定（成功=路径，失败/取消=空路径）。
+// - XML 使用示例：
+//   <ComputePathThroughPoses goals="{goals}" path="{path}" planner_id="GridBased"/>
+// =============================================================================
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -21,48 +44,47 @@
 namespace nav2_behavior_tree
 {
 
+// 构造函数：委托基类创建 "compute_path_through_poses" action 客户端。
 ComputePathThroughPosesAction::ComputePathThroughPosesAction(
   const std::string & xml_tag_name,
   const std::string & action_name,
   const BT::NodeConfiguration & conf)
-// 实现该逻辑，并处理相关状态转换。
 : BtActionNode<nav2_msgs::action::ComputePathThroughPoses>(xml_tag_name, action_name, conf)
 {
 }
 
-// 在每次 tick 时读取输入并准备下一步执行状态。
+// on_tick 钩子：动作开始前读取输入端口填充 goal_。
 void ComputePathThroughPosesAction::on_tick()
 {
-// 实现该逻辑，并处理相关状态转换。
+  // 途经点数组：来自黑板 "goals" 键（多点导航的目标集）。
   getInput("goals", goal_.goals);
-// 实现该逻辑，并处理相关状态转换。
+  // 规划器 ID：允许动态选择规划器插件。
   getInput("planner_id", goal_.planner_id);
+  // 可选起点：提供则置 use_start=true，服务器用它代替当前位姿。
   if (getInput("start", goal_.start)) {
     goal_.use_start = true;
   }
 }
 
-// 初始化 NodeStatus ComputePathThroughPosesAction::on_success 对象，读取参数并准备运行时依赖。
+// on_success 钩子：规划成功时把结果路径写入黑板 path 键。
 BT::NodeStatus ComputePathThroughPosesAction::on_success()
 {
   setOutput("path", result_.result->path);
   return BT::NodeStatus::SUCCESS;
 }
 
-// 初始化 NodeStatus ComputePathThroughPosesAction::on_aborted 对象，读取参数并准备运行时依赖。
+// on_aborted 钩子：服务器中止（无可行路径等）时输出空路径并返回 FAILURE。
 BT::NodeStatus ComputePathThroughPosesAction::on_aborted()
 {
   nav_msgs::msg::Path empty_path;
-// 实现该逻辑，并处理相关状态转换。
   setOutput("path", empty_path);
   return BT::NodeStatus::FAILURE;
 }
 
-// 初始化 NodeStatus ComputePathThroughPosesAction::on_cancelled 对象，读取参数并准备运行时依赖。
+// on_cancelled 钩子：被取消时输出空路径；主动取消返回 SUCCESS。
 BT::NodeStatus ComputePathThroughPosesAction::on_cancelled()
 {
   nav_msgs::msg::Path empty_path;
-// 实现该逻辑，并处理相关状态转换。
   setOutput("path", empty_path);
   return BT::NodeStatus::SUCCESS;
 }
@@ -70,7 +92,7 @@ BT::NodeStatus ComputePathThroughPosesAction::on_cancelled()
 }  // namespace nav2_behavior_tree
 
 #include "behaviortree_cpp_v3/bt_factory.h"
-// 将当前节点类型注册到 BehaviorTreeFactory，使 XML 能直接实例化该节点。
+// 节点注册：动态库加载时把 "ComputePathThroughPoses" 标签绑定到本类构建器。
 BT_REGISTER_NODES(factory)
 {
   BT::NodeBuilder builder =

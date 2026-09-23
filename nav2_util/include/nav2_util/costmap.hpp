@@ -26,24 +26,28 @@
 namespace nav2_util
 {
 
+// 测试用代价地图的预设类型枚举（配合 set_test_costmap 使用）
 enum class TestCostmap
 {
-  open_space,
-  bounded,
-  bottom_left_obstacle,
-  top_left_obstacle,
-  maze1,
-  maze2
+  open_space,               // 全自由空间的空地图
+  bounded,                  // 四周未知、内部自由的有界地图
+  bottom_left_obstacle,     // 中下方带障碍块
+  top_left_obstacle,        // 中上方带障碍块
+  maze1,                    // 致命障碍迷宫
+  maze2                     // 混合代价的复杂迷宫
 };
 
 /**
  * @class nav2_util::Costmap
  * @brief Class for a single layered costmap initialized from an
  * occupancy grid representing the map.
+ * 单层代价地图类：把 OccupancyGrid 静态地图转换为 nav2 的代价表示，
+ * 也可加载预设测试地图。注意它不是节点，只持有外部节点的裸指针用于日志和时间。
  */
 class Costmap
 {
 public:
+  // 代价值类型：0-255，0 自由空间，253 内切障碍，254 致命障碍，255 未知
   typedef uint8_t CostValue;
 
   /**
@@ -98,11 +102,12 @@ public:
   bool is_free(const unsigned int index) const;
 
   // Mapping for often used cost values
-  static const CostValue no_information;
-  static const CostValue lethal_obstacle;
-  static const CostValue inscribed_inflated_obstacle;
-  static const CostValue medium_cost;
-  static const CostValue free_space;
+  // 常用代价值的静态常量（定义在 costmap.cpp 中）
+  static const CostValue no_information;                // 255 未知
+  static const CostValue lethal_obstacle;               // 254 致命障碍
+  static const CostValue inscribed_inflated_obstacle;   // 253 内切膨胀障碍
+  static const CostValue medium_cost;                   // 128 中等代价
+  static const CostValue free_space;                    // 0 自由空间
 
 private:
   /**
@@ -118,19 +123,23 @@ private:
   uint8_t interpret_value(const int8_t value) const;
 
   // Costmap isn't itself a node
+  // 本类不是节点，只借用外部节点的指针（用于获取 logger 和时钟）
   rclcpp::Node * node_;
 
   // TODO(orduno): For now, only holding costs from static map
+  // 代价地图的元数据（分辨率、尺寸、原点等）与一维代价数组
   nav2_msgs::msg::CostmapMetaData costmap_properties_;
   std::vector<uint8_t> costs_;
 
   // Static layer parameters
+  // 静态层参数：是否三值化、是否跟踪未知区域、致命阈值、未知代价值
   bool trinary_costmap_;
   bool track_unknown_space_;
   int lethal_threshold_;
   int unknown_cost_value_;
 
   // Flags to determine the origin of the costmap
+  // 地图来源标记：静态地图已加载 / 正在使用测试地图
   bool map_provided_;
   bool using_test_map_;
 };

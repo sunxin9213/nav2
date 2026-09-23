@@ -49,18 +49,30 @@ using costmap_queue::CellData;
 namespace dwb_critics
 {
 
+// 中文说明（文件级）：
+// 地图栅格（Map Grid）critic 基类：基于“曼哈顿距离场”的一族评分器。
+// 核心思想：将参考目标（全局路径点或目标点）作为距离为 0 的种子，
+// 用 CostmapQueue 从种子做宽度优先扩散，为每个栅格计算到最近种子的
+// 曼哈顿距离（|dx|+|dy|），存入 cell_values_；轨迹得分即其位姿点
+// 对应的栅格距离。派生类（PathDist/GoalDist/PathAlign/GoalAlign/
+// PreferForward/Oscillation）只需在 prepare() 中决定哪些栅格做种子。
+// 支持三种聚合方式（last/sum/product）。
+
 // Customization of the CostmapQueue validCellToQueue method
+//（重写扩散队列的“可入队”判定：本基类允许所有栅格入队）
 bool MapGridCritic::MapGridQueue::validCellToQueue(const costmap_queue::CellData & /*cell*/)
 {
   return true;
 }
 
+// 初始化：创建扩散队列并读取聚合方式参数
 void MapGridCritic::onInit()
 {
   costmap_ = costmap_ros_->getCostmap();
   queue_ = std::make_shared<MapGridQueue>(*costmap_, *this);
 
   // Always set to true, but can be overriden by subclasses
+  //（默认在失败时抛异常；子类可覆盖，如 OscillationCritic 置 false）
   stop_on_failure_ = true;
 
   auto node = node_.lock();
@@ -68,6 +80,7 @@ void MapGridCritic::onInit()
     throw std::runtime_error{"Failed to lock node"};
   }
 
+  // 聚合方式：last=只取轨迹最后一点的距离；sum=各点求和；product=各点求积
   nav2_util::declare_parameter_if_not_declared(
     node,
     dwb_plugin_name_ + "." + name_ + ".aggregation_type",
@@ -91,43 +104,50 @@ void MapGridCritic::onInit()
   }
 }
 
+// 将某栅格标记为障碍（距离记为 obstacle_score_ 最大罚分）
 void MapGridCritic::setAsObstacle(unsigned int index)
 {
   cell_values_[index] = obstacle_score_;
 }
 
+// 重置：清空队列并将所有栅格距离初始化为“不可达”罚分
 void MapGridCritic::reset()
 {
   queue_->reset();
   cell_values_.resize(costmap_->getSizeInCellsX() * costmap_->getSizeInCellsY());
+  // 障碍罚分 = 栅格总数（保证大于任何可达距离）
   obstacle_score_ = static_cast<double>(cell_values_.size());
-  unreachable_score_ = obstacle_score_ + 1.0;
+  unreachable_score_ = obstacle_score_ + 1.0;  // 不可达罚分再 +1
   std::fill(cell_values_.begin(), cell_values_.end(), unreachable_score_);
 }
 
+// 曼哈顿距离扩散：从种子栅格 BFS 扩散，逐格填入到最近种子的曼哈顿距离
 void MapGridCritic::propogateManhattanDistances()
 {
   while (!queue_->isEmpty()) {
     costmap_queue::CellData cell = queue_->getNextCell();
+    // 距离 = |源格x - 当前格x| + |源格y - 当前格y|（L1 范数）
     cell_values_[cell.index_] = CellData::absolute_difference(cell.src_x_, cell.x_) +
       CellData::absolute_difference(cell.src_y_, cell.y_);
   }
 }
 
+// 轨迹评分：逐点查询栅格距离，按聚合方式合成总分
 double MapGridCritic::scoreTrajectory(const dwb_msgs::msg::Trajectory2D & traj)
 {
   double score = 0.0;
   unsigned int start_index = 0;
   if (aggregationType_ == ScoreAggregationType::Product) {
-    score = 1.0;
+    score = 1.0;  // 乘积模式初值为 1
   } else if (aggregationType_ == ScoreAggregationType::Last && !stop_on_failure_) {
-    start_index = traj.poses.size() - 1;
+    start_index = traj.poses.size() - 1;  // last 且允许失败时只看最后一个点
   }
   double grid_dist;
 
   for (unsigned int i = start_index; i < traj.poses.size(); ++i) {
     grid_dist = scorePose(traj.poses[i]);
     if (stop_on_failure_) {
+      // 命中障碍或不可达区域：直接抛非法轨迹异常剔除该轨迹
       if (grid_dist == obstacle_score_) {
         throw dwb_core::
               IllegalTrajectoryException(name_, "Trajectory Hits Obstacle.");
@@ -137,16 +157,17 @@ double MapGridCritic::scoreTrajectory(const dwb_msgs::msg::Trajectory2D & traj)
       }
     }
 
+    // 按聚合方式累加
     switch (aggregationType_) {
       case ScoreAggregationType::Last:
-        score = grid_dist;
+        score = grid_dist;  // 只保留最后一个点的距离
         break;
       case ScoreAggregationType::Sum:
-        score += grid_dist;
+        score += grid_dist;  // 各点距离求和
         break;
       case ScoreAggregationType::Product:
         if (score > 0) {
-          score *= grid_dist;
+          score *= grid_dist;  // 各点距离连乘
         }
         break;
     }
@@ -155,10 +176,12 @@ double MapGridCritic::scoreTrajectory(const dwb_msgs::msg::Trajectory2D & traj)
   return score;
 }
 
+// 单点评分：位姿转栅格后查距离表
 double MapGridCritic::scorePose(const geometry_msgs::msg::Pose2D & pose)
 {
   unsigned int cell_x, cell_y;
   // we won't allow trajectories that go off the map... shouldn't happen that often anyways
+  //（出地图的轨迹视为非法）
   if (!costmap_->worldToMap(pose.x, pose.y, cell_x, cell_y)) {
     throw dwb_core::
           IllegalTrajectoryException(name_, "Trajectory Goes Off Grid.");
@@ -166,6 +189,7 @@ double MapGridCritic::scorePose(const geometry_msgs::msg::Pose2D & pose)
   return getScore(cell_x, cell_y);
 }
 
+// 导出距离场为可视化通道（整幅栅格的得分）
 void MapGridCritic::addCriticVisualization(
   std::vector<std::pair<std::string, std::vector<float>>> & cost_channels)
 {

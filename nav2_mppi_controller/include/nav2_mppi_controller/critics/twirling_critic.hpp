@@ -24,6 +24,8 @@ namespace mppi::critics
 /**
  * @class mppi::critics::ConstraintCritic
  * @brief Critic objective function for penalizing wiggling/twirling
+ * （旋转惩罚评价器：惩罚轨迹中的角速度 wz（原地打转），
+ *  仅适用于全向（Omni）底盘。）
  */
 class TwirlingCritic : public CriticFunction
 {
@@ -31,7 +33,7 @@ public:
   /**
     * @brief Initialize critic
     */
-  void initialize() override;
+  void initialize() override;  // 读取权重与幂次参数
 
   /**
    * @brief Evaluate cost related to robot orientation at goal pose
@@ -39,11 +41,11 @@ public:
    *
    * @param costs [out] add goal angle cost values to this tensor
    */
-  void score(CriticData & data) override;
+  void score(CriticData & data) override;  // 累加全轨迹角速度的代价
 
 protected:
-  unsigned int power_{0};
-  float weight_{0};
+  unsigned int power_{0};  // 代价幂次
+  float weight_{0};        // 评价器权重
 };
 
 }  // namespace mppi::critics

@@ -37,6 +37,27 @@ namespace nav2_regulated_pure_pursuit_controller
 /**
  * @class nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
  * @brief Regulated pure pursuit controller plugin
+ * （受调节纯跟踪控制器插件）
+ *
+ * 中文说明：
+ * 本文件是 Nav2 中“受调节纯跟踪（Regulated Pure Pursuit, RPP）”控制器的头文件，
+ * 对应实现位于 src/regulated_pure_pursuit_controller.cpp。
+ *
+ * 算法概述：
+ * 1. 纯跟踪（Pure Pursuit）是一种几何跟踪算法：在全局路径上选取一个
+ *    “前瞻点（lookahead point / carrot 胡萝卜点）”，其与机器人的距离等于前瞻距离 L；
+ *    把该点转换到机器人坐标系后坐标为 (x=0, y=L_y)，则路径曲率
+ *    κ = 2 * y / L²（圆弧拟合公式），转向角速度 ω = κ * v。
+ * 2. “受调节（Regulated）”指在前向速度上叠加多种约束：
+ *    - 曲率调节：曲率越大（转弯越急）速度越低（按最小转弯半径线性缩放）；
+ *    - 代价调节：机器人附近代价值越高速度越低（利用膨胀层的代价梯度）；
+ *    - 接近目标减速（approach velocity scaling）；
+ *    - 碰撞检测（沿圆弧投影位姿，用足迹碰撞检查器验证）。
+ * 3. 支持倒车（reversing）与朝向突变（cusp 尖点）处理。
+ *
+ * 在 Nav2 中的位置：本控制器实现 nav2_core::Controller 纯虚接口，由
+ * nav2_controller（控制器服务器）通过 pluginlib 动态加载，负责将全局路径
+ * 转换为局部速度指令 cmd_vel，实现路径跟踪。
  */
 class RegulatedPurePursuitController : public nav2_core::Controller
 {
@@ -272,52 +293,57 @@ protected:
   rcl_interfaces::msg::SetParametersResult
   dynamicParametersCallback(std::vector<rclcpp::Parameter> parameters);
 
-  rclcpp_lifecycle::LifecycleNode::WeakPtr node_;
-  std::shared_ptr<tf2_ros::Buffer> tf_;
-  std::string plugin_name_;
-  std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros_;
-  nav2_costmap_2d::Costmap2D * costmap_;
-  rclcpp::Logger logger_ {rclcpp::get_logger("RegulatedPurePursuitController")};
-  rclcpp::Clock::SharedPtr clock_;
+  rclcpp_lifecycle::LifecycleNode::WeakPtr node_;        // 父生命周期节点的弱引用（controller_server）
+  std::shared_ptr<tf2_ros::Buffer> tf_;                 // TF2 缓冲区，用于坐标变换查询
+  std::string plugin_name_;                             // 本插件名称（参数命名空间）
+  std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros_;  // 局部代价地图 ROS 封装对象
+  nav2_costmap_2d::Costmap2D * costmap_;                // 局部代价地图底层指针（由 costmap_ros_ 管理）
+  rclcpp::Logger logger_ {rclcpp::get_logger("RegulatedPurePursuitController")};  // 日志器
+  rclcpp::Clock::SharedPtr clock_;                      // 节点时钟
 
-  double desired_linear_vel_, base_desired_linear_vel_;
-  double lookahead_dist_;
-  double rotate_to_heading_angular_vel_;
-  double max_lookahead_dist_;
-  double min_lookahead_dist_;
-  double lookahead_time_;
-  bool use_velocity_scaled_lookahead_dist_;
-  tf2::Duration transform_tolerance_;
-  double min_approach_linear_velocity_;
-  double approach_velocity_scaling_dist_;
-  double control_duration_;
-  double max_allowed_time_to_collision_up_to_carrot_;
-  bool use_collision_detection_;
-  bool use_regulated_linear_velocity_scaling_;
-  bool use_cost_regulated_linear_velocity_scaling_;
-  double cost_scaling_dist_;
-  double cost_scaling_gain_;
-  double inflation_cost_scaling_factor_;
-  double regulated_linear_scaling_min_radius_;
-  double regulated_linear_scaling_min_speed_;
-  bool use_rotate_to_heading_;
-  double max_angular_accel_;
-  double rotate_to_heading_min_angle_;
-  double goal_dist_tol_;
-  bool allow_reversing_;
-  double max_robot_pose_search_dist_;
-  bool use_interpolation_;
+  double desired_linear_vel_, base_desired_linear_vel_;  // 当前/基础期望线速度（速度限制会修改 desired）
+  double lookahead_dist_;                                // 固定前瞻距离（未启用速度自适应时使用）
+  double rotate_to_heading_angular_vel_;                  // 旋转到路径朝向时的角速度
+  double max_lookahead_dist_;                             // 前瞻距离上限（速度自适应模式下）
+  double min_lookahead_dist_;                            // 前瞻距离下限（速度自适应模式下）
+  double lookahead_time_;                                 // 速度自适应前瞻的时间系数：L = v * t
+  bool use_velocity_scaled_lookahead_dist_;              // 是否启用随速度缩放的前瞻距离
+  tf2::Duration transform_tolerance_;                     // TF 变换容差时间
+  double min_approach_linear_velocity_;                  // 接近目标终点时的最小线速度
+  double approach_velocity_scaling_dist_;                // 开始接近减速的距离阈值
+  double control_duration_;                              // 控制周期时长（秒）
+  double max_allowed_time_to_collision_up_to_carrot_;    // 前向碰撞检查投影的最大时长
+  bool use_collision_detection_;                          // 是否启用碰撞检测
+  bool use_regulated_linear_velocity_scaling_;           // 是否启用基于曲率的速度调节
+  bool use_cost_regulated_linear_velocity_scaling_;      // 是否启用基于代价值的速度调节
+  double cost_scaling_dist_;                             // 代价调节的起始距离阈值
+  double cost_scaling_gain_;                             // 代价调节增益
+  double inflation_cost_scaling_factor_;                 // 膨胀层代价缩放因子（用于 costAtPose）
+  double regulated_linear_scaling_min_radius_;           // 曲率调节的最小半径阈值（低于此半径速度降到最小）
+  double regulated_linear_scaling_min_speed_;            // 曲率调节下的最小速度
+  bool use_rotate_to_heading_;                           // 角度偏差过大时是否原地旋转对准路径
+  double max_angular_accel_;                             // 最大角加速度（用于平滑旋转指令）
+  double rotate_to_heading_min_angle_;                   // 触发“旋转到路径朝向”的最小角度偏差
+  double goal_dist_tol_;                                 // 到达目标的距离容差（用于旋转到目标朝向判断）
+  bool allow_reversing_;                                 // 是否允许倒车跟踪路径
+  double max_robot_pose_search_dist_;                   // 在路径上搜索机器人最近点的最大距离
+  bool use_interpolation_;                               // 是否在前瞻点搜索中使用线性插值
 
-  nav_msgs::msg::Path global_plan_;
+  nav_msgs::msg::Path global_plan_;  // 当前接收到的全局路径（在机器人坐标系下的截断版本见 transformGlobalPlan）
+  // 调试/可视化发布器：变换后的局部路径
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>> global_path_pub_;
+  // 调试/可视化发布器：前瞻点（carrot 胡萝卜点）标记
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<geometry_msgs::msg::PointStamped>>
   carrot_pub_;
+  // 调试/可视化发布器：跟踪圆弧路径
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>> carrot_arc_pub_;
+  // 足迹碰撞检查器：对给定位姿用机器人足迹在代价地图上检查碰撞
   std::unique_ptr<nav2_costmap_2d::FootprintCollisionChecker<nav2_costmap_2d::Costmap2D *>>
   collision_checker_;
 
-  // Dynamic parameters handler
-  std::mutex mutex_;
+  // Dynamic parameters handler（动态参数回调处理）
+  std::mutex mutex_;  // 保护动态参数修改的互斥锁
+  // ROS2 参数变化回调句柄（运行时动态调参）
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr dyn_params_handler_;
 };
 

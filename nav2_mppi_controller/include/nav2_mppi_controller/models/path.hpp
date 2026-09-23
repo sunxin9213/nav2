@@ -23,15 +23,17 @@ namespace mppi::models
 /**
  * @struct mppi::models::Path
  * @brief Path represented as a tensor
+ *（路径张量模型：将全局路径转换为便于向量化计算的一维张量）
  */
 struct Path
 {
-  xt::xtensor<float, 1> x;
-  xt::xtensor<float, 1> y;
-  xt::xtensor<float, 1> yaws;
+  xt::xtensor<float, 1> x;     // 路径点的 x 坐标序列
+  xt::xtensor<float, 1> y;     // 路径点的 y 坐标序列
+  xt::xtensor<float, 1> yaws;  // 路径点的朝向角序列（rad）
 
   /**
     * @brief Reset path data
+    *（重置路径数据：按路径点数量分配并清零）
     */
   void reset(unsigned int size)
   {

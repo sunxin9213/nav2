@@ -23,6 +23,9 @@
 using std::cerr;
 using namespace std::chrono_literals;
 
+// 命令行工具 lifecycle_startup 的入口：
+// 用法: lifecycle_startup <节点名1> <节点名2> ...
+// 把列出的未配置生命周期节点依次带到 CONFIGURED -> ACTIVATED 状态
 void usage()
 {
   cerr << "Invalid command line.\n\n";
@@ -36,10 +39,13 @@ void usage()
 
 int main(int argc, char * argv[])
 {
+  // 无参数时打印用法并退出
   if (argc == 1) {
     usage();
   }
+  // 初始化 rclcpp（注意不解析命令行参数：传 0/nullptr）
   rclcpp::init(0, nullptr);
+  // 把 argv[1..argc) 转成节点名列表，按顺序启动，每次服务调用限时 10s
   nav2_util::startup_lifecycle_nodes(
     std::vector<std::string>(argv + 1, argv + argc),
     10s);

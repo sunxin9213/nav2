@@ -26,6 +26,8 @@ namespace mppi::critics
  * @class mppi::critics::ConstraintCritic
  * @brief Critic objective function for aligning to path in cases of extreme misalignment
  * or turning
+ * （路径角度评价器：惩罚轨迹点朝向与"指向目标路径点方向"的夹角，
+ *  用于极端失准（如刚接到新路径、需要大转向）时快速对准路径。）
  */
 class PathAngleCritic : public CriticFunction
 {
@@ -33,7 +35,7 @@ public:
   /**
     * @brief Initialize critic
     */
-  void initialize() override;
+  void initialize() override;  // 读取权重/角度阈值/倒车与前进偏好等参数
 
   /**
    * @brief Evaluate cost related to robot orientation at goal pose
@@ -41,18 +43,18 @@ public:
    *
    * @param costs [out] add goal angle cost values to this tensor
    */
-  void score(CriticData & data) override;
+  void score(CriticData & data) override;  // 计算朝向与目标方向的最短角差代价
 
 protected:
-  float max_angle_to_furthest_{0};
-  float threshold_to_consider_{0};
+  float max_angle_to_furthest_{0};   // 与最远路径点夹角超过该值时评价器才生效
+  float threshold_to_consider_{0};   // 生效距离/角度阈值
 
-  size_t offset_from_furthest_{0};
-  bool reversing_allowed_{true};
-  bool forward_preference_{true};
+  size_t offset_from_furthest_{0};   // 相对最远可达路径点的索引偏移（选打分参考点）
+  bool reversing_allowed_{true};     // 是否允许倒车对准
+  bool forward_preference_{true};    // 是否偏向前进方向对准
 
-  unsigned int power_{0};
-  float weight_{0};
+  unsigned int power_{0};            // 代价幂次
+  float weight_{0};                  // 评价器权重
 };
 
 }  // namespace mppi::critics

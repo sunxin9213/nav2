@@ -12,6 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 文件说明（中文）：
+// NodeSpatialTree（节点空间树）类的头文件声明。
+// 模块定位：基于 nanoflann KD 树的路图节点空间索引，
+// 支持"找位姿最近的 N 个图节点"的快速近邻查询（O(log n)）。
+// GraphAdaptor 把 Graph 包装为 nanoflann 数据集接口（零拷贝）。
+// 详细中文注释的实现见 src/node_spatial_tree.cpp。
+// ============================================================================
+
 #ifndef NAV2_ROUTE__NODE_SPATIAL_TREE_HPP_
 #define NAV2_ROUTE__NODE_SPATIAL_TREE_HPP_
 

@@ -35,6 +35,20 @@
 
 #ifndef NAV2_COSTMAP_2D__RANGE_SENSOR_LAYER_HPP_
 #define NAV2_COSTMAP_2D__RANGE_SENSOR_LAYER_HPP_
+// ============================================================================
+// 中文注释：距离传感器层（RangeSensorLayer）头文件（实现见 range_sensor_layer.cpp）
+//
+// 【类功能】
+// 处理声呐/红外等"单读数 + 视场角"传感器（sensor_msgs/Range）：
+// 在锥形视场三角形内用概率模型 sensor_model() 计算每格占据概率，
+// 以贝叶斯更新累积置信度，最终按阈值量化为 FREE/LETHAL 写入主地图。
+// 关键成员：
+//   - phi_v_：delta 距离衰减函数的中心参数；
+//   - inflate_cone_：锥形视场外扩比例（<1 时严格限制在三角形内）；
+//   - range_msgs_buffer_：读数缓冲队列（回调入队，更新周期处理）；
+//   - no_readings_timeout_：无读数超时（判传感器失联）。
+// 【继承体系】Layer + Costmap2D → CostmapLayer → RangeSensorLayer
+// ============================================================================
 
 #include <list>
 #include <string>

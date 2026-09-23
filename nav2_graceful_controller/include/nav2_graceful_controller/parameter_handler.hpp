@@ -30,31 +30,43 @@
 namespace nav2_graceful_controller
 {
 
+// 中文说明：
+// Parameters 结构体：Graceful Controller 的全部参数集合。
+// 分为四组：路径变换（transform_tolerance 等）、控制律增益
+//（k_phi/k_delta/beta/lambda）、速度限制（v_linear_min/max 等，
+// *_initial 保存限速前的初值供恢复用）、行为开关与阈值
+//（起始/终点旋转、减速半径、倒车）。
 struct Parameters
 {
-  double transform_tolerance;
-  double motion_target_dist;
-  double max_robot_pose_search_dist;
-  double k_phi;
-  double k_delta;
-  double beta;
-  double lambda;
-  double v_linear_min;
-  double v_linear_max;
-  double v_linear_max_initial;
-  double v_angular_max;
-  double v_angular_max_initial;
-  double slowdown_radius;
-  bool initial_rotation;
-  double initial_rotation_min_angle;
-  bool final_rotation;
-  double rotation_scaling_factor;
-  bool allow_backward;
+  double transform_tolerance;         // TF 变换容差
+  double motion_target_dist;          // 运动目标点（前探）距离
+  double max_robot_pose_search_dist;  // 路径最近点搜索最大距离
+  double k_phi;      // 慢子系统增益（φ-r 变化率比）
+  double k_delta;    // 快子系统增益（朝向误差反馈）
+  double beta;       // 速度-曲率衰减系数
+  double lambda;     // 速度-曲率衰减指数
+  double v_linear_min;   // 最小线速度
+  double v_linear_max;   // 当前最大线速度
+  double v_linear_max_initial;  // 初始最大线速度（限速恢复基准）
+  double v_angular_max;   // 当前最大角速度
+  double v_angular_max_initial;  // 初始最大角速度
+  double slowdown_radius;  // 接近目标减速半径
+  bool initial_rotation;   // 是否启用起始原地旋转
+  double initial_rotation_min_angle;  // 触发起始旋转的最小角度
+  bool final_rotation;     // 是否启用终点朝向旋转
+  double rotation_scaling_factor;  // 旋转速度缩放系数
+  bool allow_backward;     // 是否允许倒车
 };
 
 /**
  * @class nav2_graceful_controller::ParameterHandler
  * @brief Handles parameters and dynamic parameters for GracefulMotionController
+ *（参数处理器：声明/读取参数并管理动态参数回调）
+ *
+ * 中文说明：
+ * 构造时声明并读取全部参数，注册 ROS2 动态参数回调；
+ * 计算线程通过 getParams()/getMutex() 在锁保护下访问最新参数。
+ * 实现见 src/parameter_handler.cpp。
  */
 class ParameterHandler
 {

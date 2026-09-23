@@ -26,6 +26,8 @@ namespace mppi::critics
 /**
  * @class mppi::critics::ConstraintCritic
  * @brief Critic objective function for driving towards goal
+ * （目标评价器：惩罚轨迹终点到当前局部目标点的距离，
+ *  引导采样轨迹收敛到目标。仅在距目标 threshold_to_consider_ 内生效。）
  */
 class GoalCritic : public CriticFunction
 {
@@ -33,19 +35,19 @@ public:
   /**
     * @brief Initialize critic
     */
-  void initialize() override;
+  void initialize() override;  // 读取权重/幂次/生效距离阈值参数
 
   /**
    * @brief Evaluate cost related to goal following
    *
    * @param costs [out] add reference cost values to this tensor
    */
-  void score(CriticData & data) override;
+  void score(CriticData & data) override;  // 计算轨迹终点到目标的欧氏距离平方
 
 protected:
-  unsigned int power_{0};
-  float weight_{0};
-  float threshold_to_consider_{0};
+  unsigned int power_{0};       // 代价幂次
+  float weight_{0};            // 评价器权重
+  float threshold_to_consider_{0};  // 距目标该距离内才计入此代价（远处由其他评价器主导）
 };
 
 }  // namespace mppi::critics

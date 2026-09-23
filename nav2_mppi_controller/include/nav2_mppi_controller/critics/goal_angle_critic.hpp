@@ -25,6 +25,8 @@ namespace mppi::critics
 /**
  * @class mppi::critics::ConstraintCritic
  * @brief Critic objective function for driving towards goal orientation
+ * （目标朝向评价器：惩罚轨迹末端的偏航角与目标朝向的偏差，
+ *  使机器人到位后朝向正确。仅当机器人接近目标时生效。）
  */
 class GoalAngleCritic : public CriticFunction
 {
@@ -32,7 +34,7 @@ public:
   /**
     * @brief Initialize critic
     */
-  void initialize() override;
+  void initialize() override;  // 读取权重/幂次/生效阈值/对称容差参数
 
   /**
    * @brief Evaluate cost related to robot orientation at goal pose
@@ -40,13 +42,14 @@ public:
    *
    * @param costs [out] add goal angle cost values to this tensor
    */
+  // 只在机器人接近目标（threshold_to_consider_ 内）时计算末端角度偏差代价
   void score(CriticData & data) override;
 
 protected:
-  bool symmetric_yaw_tolerance_{false};
-  float threshold_to_consider_{0};
-  unsigned int power_{0};
-  float weight_{0};
+  bool symmetric_yaw_tolerance_{false};  // 对称角度容差：允许 ±pi 内双向达标
+  float threshold_to_consider_{0};       // 距目标该距离内评价器才生效
+  unsigned int power_{0};                // 代价幂次
+  float weight_{0};                      // 评价器权重
 };
 
 }  // namespace mppi::critics

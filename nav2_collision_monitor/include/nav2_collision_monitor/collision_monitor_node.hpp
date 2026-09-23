@@ -15,6 +15,17 @@
 #ifndef NAV2_COLLISION_MONITOR__COLLISION_MONITOR_NODE_HPP_
 #define NAV2_COLLISION_MONITOR__COLLISION_MONITOR_NODE_HPP_
 
+// ============================================================================
+// 文件说明（中文）：
+// CollisionMonitor（碰撞监视器）节点的头文件声明。
+// 模块定位：Nav2 的实时安全层（非生命周期服务器，而是数据流节点）。
+// 工作方式：串接在速度命令链路上——订阅控制器输出的 cmd_vel_in，
+// 结合多传感器障碍点与多层安全区（STOP 停障 / SLOWDOWN 减速 /
+// APPROACH 预测逼近）检测碰撞风险，将修正后的速度发布到 cmd_vel_out。
+// 即使规划器/控制器失效，该层仍能独立保证安全。
+// 详细中文注释的实现见 src/collision_monitor_node.cpp。
+// ============================================================================
+
 #include <string>
 #include <vector>
 #include <memory>
@@ -189,30 +200,40 @@ protected:
   // ----- Variables -----
 
   /// @brief TF buffer
+  /// TF 缓冲（所有数据源坐标变换共用）
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   /// @brief TF listener
+  /// TF 监听器（订阅 /tf、/tf_static）
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
   /// @brief Polygons array
+  /// 多层安全区列表（Polygon 或 Circle 实例）
   std::vector<std::shared_ptr<Polygon>> polygons_;
 
   /// @brief Data sources array
+  /// 数据源列表（Scan / PointCloud / Range 实例）
   std::vector<std::shared_ptr<Source>> sources_;
 
   // Input/output speed controls
   /// @beirf Input cmd_vel subscriber
+  /// 输入速度指令订阅器（来自控制器）
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_in_sub_;
   /// @brief Output cmd_vel publisher
+  /// 输出速度指令发布器（发往底盘）
   rclcpp_lifecycle::LifecyclePublisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_out_pub_;
 
   /// @brief Whether main routine is active
+  /// 主处理流程是否激活（cmd_vel_in 回调中检查）
   bool process_active_;
 
   /// @brief Previous robot action
+  /// 上一次输出的机器人动作（用于动作变化检测）
   Action robot_action_prev_;
   /// @brief Latest timestamp when robot has 0-velocity
+  /// 最近一次速度为 0 的时刻
   rclcpp::Time stop_stamp_;
   /// @brief Timeout after which 0-velocity ceases to be published
+  /// 持续停车超过该时限后不再发布 0 速度（避免长期占用话题带宽）
   rclcpp::Duration stop_pub_timeout_;
 };  // class CollisionMonitor
 

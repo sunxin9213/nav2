@@ -49,6 +49,8 @@ namespace dwb_core
  *
  * Linearly searches through the poses. Once the poses time_offset is greater than the desired time_offset,
  * the search ends, since the poses have increasing time_offsets.
+ * （在轨迹中查找时间戳最接近 time_offset 的位姿（不插值）。
+ *  利用时间戳单调递增性质提前终止扫描。）
  */
 const geometry_msgs::msg::Pose2D & getClosestPose(
   const dwb_msgs::msg::Trajectory2D & trajectory,
@@ -60,6 +62,8 @@ const geometry_msgs::msg::Pose2D & getClosestPose(
  * @param time_offset The desired time_offset
  * @return New Pose2D with interpolated values
  * @note If the given time offset is outside the bounds of the trajectory, the return pose will be either the first or last pose.
+ * （把目标时刻线性插值到轨迹上，得到精确的预测位姿；
+ *  越界时返回轨迹首/末位姿。）
  */
 geometry_msgs::msg::Pose2D projectPose(
   const dwb_msgs::msg::Trajectory2D & trajectory,
