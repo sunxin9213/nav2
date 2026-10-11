@@ -1,4 +1,5 @@
-# Clears all layers on the costmap
+# 清除代价地图的所有图层
+# 适用场景：恢复行为中完全重置代价地图（如清除整个障碍层）
 
 std_msgs/Empty request
 ---

@@ -12,6 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 【文件概况】单层代价地图工具类（主要用于测试）
+// ----------------------------------------------------------------------------
+// 概述: 把 OccupancyGrid 静态地图转换为 nav2 代价表示的轻量实现，
+//       或直接加载 6 种预设测试地图；不含图层叠加/传感器更新等完整功能。
+// 主要内容:
+//   1. TestCostmap 枚举: open_space/bounded/两种障碍图/两种迷宫
+//   2. set_static_map():   逐格把 [-1,100] 占据值映射为 [0,255] 代价
+//   3. set_test_costmap(): 填充 10x10 预设测试数据
+//   4. get_costmap()/get_properties()/is_free(): 导出结果与查询
+//   5. 代价常量: 255 未知 / 254 致命 / 253 内切 / 128 中等 / 0 自由
+// 使用场景: 单元测试与系统测试构造已知地图；生产环境请使用
+//           nav2_costmap_2d 的 LayeredCostmap 完整实现。
+// ============================================================================
+
 #ifndef NAV2_UTIL__COSTMAP_HPP_
 #define NAV2_UTIL__COSTMAP_HPP_
 

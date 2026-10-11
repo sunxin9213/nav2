@@ -13,6 +13,22 @@
 // limitations under the License.
 
 
+// ============================================================================
+// 【文件概况】ROS 消息合法性校验函数族（header-only 重载集）
+// ----------------------------------------------------------------------------
+// 概述: 为 nav2 常用消息类型提供 validateMsg() 重载，统一拦截畸形消息:
+//   1) 数值检查: 拒绝 NaN/Inf 等损坏值
+//   2) 逻辑检查: 如 OccupancyGrid 的 data 长度必须等于 width*height
+//   3) 递归结构: 含子消息时先递归校验子消息，再校验消息自身
+// 主要内容:
+//   - 基础类型: double / double 数组(N) / Time / Header
+//   - 几何类型: Point / Quaternion(含模长=1检查) / Pose /
+//     PoseWithCovariance / PoseWithCovarianceStamped
+//   - 地图类型: MapMetaData(尺寸非 0) / OccupancyGrid(data 长度一致)
+// 使用场景: 接收外部输入（如 RViz 下发的位姿、加载的地图）时先校验再使用:
+//           if (!validateMsg(msg)) { /* 拒绝并记录日志 */ }
+// ============================================================================
+
 #ifndef  NAV2_UTIL__VALIDATE_MESSAGES_HPP_
 #define  NAV2_UTIL__VALIDATE_MESSAGES_HPP_
 

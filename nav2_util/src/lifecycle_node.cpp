@@ -12,6 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 【文件概况】nav2_util::LifecycleNode 基类的实现
+// ----------------------------------------------------------------------------
+// 概述: 见 lifecycle_node.hpp。本文件实现:
+//   1. 构造/析构: 声明"bond 不超时"参数、打印启动提示、注册预关闭回调;
+//      析构时先 runCleanups() 再注销预关闭回调句柄
+//   2. createBond()/destroyBond(): 在 "bond" 话题上建立/断开心跳
+//      （心跳周期 100ms、超时 4s，约连续丢 40 次才判失联）
+//   3. runCleanups(): ACTIVE → deactivate → cleanup 的兜底清理
+//   4. on_rcl_preshutdown()/register_rcl_preshutdown_callback():
+//      保证 rcl 关闭前先完成节点清理（防止未下线就退出）
+//   5. printLifecycleNodeNotification(): 启动提示信息
+// ============================================================================
+
 #include "nav2_util/lifecycle_node.hpp"
 
 #include <memory>
@@ -22,11 +36,6 @@
 
 namespace nav2_util
 {
-// 本文件实现 Nav2 统一封装的生命周期节点 LifecycleNode。
-// 它继承自 rclcpp_lifecycle::LifecycleNode，在标准生命周期节点之上增加了：
-// 1. Bond 心跳机制（createBond/destroyBond）：与 Lifecycle Manager 建立存活监测
-// 2. 兜底清理（runCleanups）：析构或进程退出时自动 deactivate/cleanup
-// 3. rcl 预关闭回调：保证 rclcpp 关闭前先完成节点清理
 
 LifecycleNode::LifecycleNode(
   const std::string & node_name,

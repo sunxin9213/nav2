@@ -13,11 +13,6 @@
 // limitations under the License.
 
 #include "nav2_util/node_utils.hpp"
-// 本文件实现节点相关的实用工具函数：
-// - sanitize_node_name: 清洗节点名中的非法字符
-// - add_namespaces: 拼接两级命名空间得到绝对命名空间
-// - time_to_string: 用系统时间生成伪随机数字串
-// - generate_internal_node_name / generate_internal_node: 生成内部辅助节点
 #include <chrono>
 #include <string>
 #include <algorithm>

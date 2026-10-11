@@ -1,6 +1,7 @@
-# Get the costmap
+# 获取代价地图
+# 适用场景：向 costmap 服务器请求当前的代价地图数据（用于调试、可视化或外部算法）
 
-# Specifications for the requested costmap
+# 所请求代价地图的规格参数
 nav2_msgs/CostmapMetaData specs
 ---
-nav2_msgs/Costmap map
+nav2_msgs/Costmap map # 返回的代价地图

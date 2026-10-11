@@ -54,11 +54,13 @@ public:
    * @brief A constructor for nav2_map_server::MapServer
    * @param options Additional options to control creation of the node.
    */
+  // 构造: 声明 yaml_filename/topic_name/frame_id 三个参数（不加载地图）
   explicit MapServer(const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
 
   /**
    * @brief A Destructor for nav2_map_server::MapServer
    */
+  // 析构: 默认（智能指针成员自动释放）
   ~MapServer();
 
 protected:
@@ -67,30 +69,36 @@ protected:
    * @param state Lifecycle Node's state
    * @return Success or Failure
    */
+  // 配置阶段: 读取 YAML 并加载地图（yaml_filename 为空时跳过等待 LoadMap 服务），
+  // 创建 GetMap/LoadMap 服务与 transient_local 地图发布器
   nav2_util::CallbackReturn on_configure(const rclcpp_lifecycle::State & state) override;
   /**
    * @brief Start publishing the map using the latched topic
    * @param state Lifecycle Node's state
    * @return Success or Failure
    */
+  // 激活阶段: 激活发布器并立即发布已加载的地图（latched），建立 bond 心跳
   nav2_util::CallbackReturn on_activate(const rclcpp_lifecycle::State & state) override;
   /**
    * @brief Stops publishing the latched topic
    * @param state Lifecycle Node's state
    * @return Success or Failure
    */
+  // 停用阶段: 停用发布器、销毁 bond（保留已加载的地图内存）
   nav2_util::CallbackReturn on_deactivate(const rclcpp_lifecycle::State & state) override;
   /**
    * @brief Resets the member variables
    * @param state Lifecycle Node's state
    * @return Success or Failure
    */
+  // 清理阶段: 释放服务/发布器与地图消息，允许之后重新加载新地图
   nav2_util::CallbackReturn on_cleanup(const rclcpp_lifecycle::State & state) override;
   /**
    * @brief Called when in Shutdown state
    * @param state Lifecycle Node's state
    * @return Success or Failure
    */
+  // 关闭阶段: 记录日志（无额外清理动作）
   nav2_util::CallbackReturn on_shutdown(const rclcpp_lifecycle::State & state) override;
 
   /**
@@ -101,6 +109,9 @@ protected:
    * @param response Output response with loaded OccupancyGrid map
    * @return true or false
    */
+  // 从 YAML 文件加载地图: 解析元数据 → 读图 → 转成 OccupancyGrid，
+  // 同时把结果存入成员 msg_ 并置 map_available_=true；失败返回 false
+  // （具体加载逻辑在 map_io 的 LoadMapFromFile，见 map_io.hpp 注释）
   bool loadMapResponseFromYaml(
     const std::string & yaml_file,
     std::shared_ptr<nav2_msgs::srv::LoadMap::Response> response);
@@ -108,6 +119,8 @@ protected:
   /**
    * @brief Method correcting msg_ header when it belongs to instantiated object
    */
+  // 修正地图消息头部: 把 frame_id 与当前时间戳写进 msg_.header
+  // （LoadMap 服务返回的 response 需要正确的消息头）
   void updateMsgHeader();
 
   /**
@@ -116,6 +129,7 @@ protected:
    * @param request Service request
    * @param response Service response
    */
+  // GetMap 服务回调: 直接把成员 msg_ 填入 response 返回当前地图
   void getMapCallback(
     const std::shared_ptr<rmw_request_id_t> request_header,
     const std::shared_ptr<nav_msgs::srv::GetMap::Request> request,
@@ -127,6 +141,8 @@ protected:
    * @param request Service request
    * @param response Service response
    */
+  // LoadMap 服务回调: 按 request 中的 YAML 路径重新加载地图并更新 msg_，
+  // 成功后立即发布新地图；response 携带加载结果与（成功时的）新地图
   void loadMapCallback(
     const std::shared_ptr<rmw_request_id_t> request_header,
     const std::shared_ptr<nav2_msgs::srv::LoadMap::Request> request,

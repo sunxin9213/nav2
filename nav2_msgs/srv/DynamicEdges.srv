@@ -1,5 +1,8 @@
-uint16[] closed_edges
-uint16[] opened_edges
-EdgeCost[] adjust_edges
+# 动态更新路由图中边的开闭状态与通行代价
+# 适用场景：运行时由外部节点（如交通管理、单行道管控）修改路由图，
+# 供 nav2_route 后续重规划时使用
+uint16[] closed_edges  # 要关闭（禁止通行）的边 ID 列表
+uint16[] opened_edges  # 要重新打开（恢复通行）的边 ID 列表
+EdgeCost[] adjust_edges # 要调整代价的边及新代价值
 ---
-bool success
+bool success # 更新是否成功

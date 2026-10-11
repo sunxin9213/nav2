@@ -1,7 +1,9 @@
+# 占位/示例动作：不执行实际运动，仅用于测试或作为开发新行为服务器插件的模板
+# 适用场景：nav2_behaviors 插件开发起步/单元测试
 #goal definition
-std_msgs/String command
+std_msgs/String command # 要测试的命令字符串
 ---
 #result definition
-builtin_interfaces/Duration total_elapsed_time
+builtin_interfaces/Duration total_elapsed_time # 动作执行的总时长
 ---
 #feedback definition

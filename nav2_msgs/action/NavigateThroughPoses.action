@@ -1,14 +1,16 @@
+# 多目标导航动作：依次通过一串位姿点后完成导航任务
+# 适用场景：需要一次性下发多个途经点的完整导航任务，由 bt_navigator 执行
 #goal definition
-geometry_msgs/PoseStamped[] poses
-string behavior_tree
+geometry_msgs/PoseStamped[] poses # 依次要经过的位姿点序列
+string behavior_tree # 使用的自定义行为树 XML 文件路径/名称（为空则使用默认行为树）
 ---
 #result definition
-std_msgs/Empty result
+std_msgs/Empty result # 无实际内容，动作成功即代表到达
 ---
 #feedback definition
-geometry_msgs/PoseStamped current_pose
-builtin_interfaces/Duration navigation_time
-builtin_interfaces/Duration estimated_time_remaining
-int16 number_of_recoveries
-float32 distance_remaining
-int16 number_of_poses_remaining
+geometry_msgs/PoseStamped current_pose # 机器人当前位姿
+builtin_interfaces/Duration navigation_time # 已导航消耗的时间
+builtin_interfaces/Duration estimated_time_remaining # 预计剩余时间
+int16 number_of_recoveries # 已执行恢复行为的次数
+float32 distance_remaining # 到最终目标的剩余距离
+int16 number_of_poses_remaining # 剩余未到达的位姿点数量

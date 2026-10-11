@@ -12,6 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 【文件概况】RAII 后台 spin 线程封装
+// ----------------------------------------------------------------------------
+// 概述: 为节点或执行器提供一个专属后台线程来处理回调，
+//       构造即启动、析构自动 cancel+join，规避手工管理线程生命周期的问题。
+// 主要内容:
+//   1. NodeThread(node_base): 为节点创建专属单线程执行器并后台 spin
+//   2. NodeThread(executor):  后台 spin 外部传入的执行器
+//   3. NodeThread(NodeT):     模板转发构造（Node/LifecycleNode 皆可传入）
+// 使用场景: ServiceClient（内部节点的宿主线程）、
+//           SimpleActionServer(spin_thread=true 时的独立执行器线程)。
+// ============================================================================
+
 #ifndef NAV2_UTIL__NODE_THREAD_HPP_
 #define NAV2_UTIL__NODE_THREAD_HPP_
 

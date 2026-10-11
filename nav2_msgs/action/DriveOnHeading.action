@@ -1,10 +1,12 @@
+# 定向直行动作：沿当前朝向直线前进指定距离
+# 适用场景：行为树中的恢复/脱困行为，如穿过狭窄区域、离开死胡同等
 #goal definition
-geometry_msgs/Point target
-float32 speed
-builtin_interfaces/Duration time_allowance
+geometry_msgs/Point target # 机器人坐标系下的前进目标点（通常仅使用 x 表示前进距离，y 应为 0）
+float32 speed              # 前进速度（沿 +x 方向前进）
+builtin_interfaces/Duration time_allowance # 完成动作允许的最长时间，超时则中止
 ---
 #result definition
-builtin_interfaces/Duration total_elapsed_time
+builtin_interfaces/Duration total_elapsed_time # 动作实际执行的总时长
 ---
 #feedback definition
-float32 distance_traveled
+float32 distance_traveled # 已前进的距离

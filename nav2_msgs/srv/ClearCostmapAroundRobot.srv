@@ -1,5 +1,5 @@
-# Clears the costmap within a distance
-
-float32 reset_distance
+# 清除机器人周围指定距离内的代价地图
+# 适用场景：恢复行为中清除机器人附近的障碍信息，消除虚假/过期的障碍后重新规划
+float32 reset_distance # 以机器人为中心要清除区域的半径
 ---
 std_msgs/Empty response

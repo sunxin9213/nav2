@@ -12,6 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 【文件概况】生命周期节点服务客户端
+// ----------------------------------------------------------------------------
+// 概述: 封装生命周期节点的两个标准服务 <node>/change_state 与 <node>/get_state，
+//       用于以编程方式驱动其他生命周期节点的状态迁移（configure/activate/…）。
+// 主要内容:
+//   1. 两个构造函数: 自建内部节点 / 复用外部节点承载服务客户端
+//   2. change_state(transition, timeout): 触发状态迁移（失败抛异常）
+//   3. change_state(transition):          简化版（固定 5s 服务等待）
+//   4. get_state(timeout):                查询目标节点当前状态 id
+// 使用场景: lifecycle_utils 的批量启停函数、lifecycle_manager 的核心依赖。
+// ============================================================================
+
 #ifndef NAV2_UTIL__LIFECYCLE_SERVICE_CLIENT_HPP_
 #define NAV2_UTIL__LIFECYCLE_SERVICE_CLIENT_HPP_
 

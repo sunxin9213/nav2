@@ -1,3 +1,5 @@
-string graph_filepath
+# 设置/替换路由图服务
+# 适用场景：运行时向 nav2_route 加载新的路网图文件（如更换楼层/厂区的路网）
+string graph_filepath # 路由图文件的路径
 ---
-bool success
+bool success # 是否加载成功

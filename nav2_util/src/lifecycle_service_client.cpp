@@ -12,6 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 【文件概况】LifecycleServiceClient 的实现
+// ----------------------------------------------------------------------------
+// 概述: 见 lifecycle_service_client.hpp。本文件实现:
+//   1. 两个构造函数: 自建内部节点 / 复用外部节点，均在构造时阻塞等待
+//      "<节点名>/get_state" 服务上线（每 2s 检查一次并打印等待提示）
+//   2. change_state() ×2: 组装 ChangeState 请求（只填迁移 id）并调用服务
+//      （带超时版失败抛异常; 固定 5s 版以 bool 返回结果）
+//   3. get_state(): 空请求调用，从响应取回当前状态 id
+// ============================================================================
+
 #include "nav2_util/lifecycle_service_client.hpp"
 
 #include <string>
@@ -29,9 +40,6 @@ using namespace std::chrono_literals;
 
 namespace nav2_util
 {
-// 本文件实现 LifecycleServiceClient：对生命周期节点的
-// change_state / get_state 两个标准服务的高级客户端封装。
-
 // 构造函数（自建内部节点版本）：
 // 用 generate_internal_node 生成一个带唯一名的临时节点来承载服务客户端，
 // 服务名按 ROS2 生命周期规范为 "<节点名>/change_state" 与 "<节点名>/get_state"

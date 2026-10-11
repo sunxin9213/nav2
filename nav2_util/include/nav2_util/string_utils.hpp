@@ -12,6 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 【文件概况】字符串处理小工具
+// ----------------------------------------------------------------------------
+// 概述: 提供两个基础字符串操作，供各包复用。
+// 主要内容:
+//   1. Tokens: split() 的返回类型，即 token 字符串数组（vector<string>）
+//   2. strip_leading_slash(): 去掉话题名开头的 '/'（绝对名 → 相对名）
+//   3. split(): 按单字符分隔符把字符串切分为多个 token
+// 使用场景: lifecycle_utils 解析 "node1:node2" 形式的节点列表、
+//           其他需要解析分隔符配置串的场合。
+// ============================================================================
+
 #ifndef NAV2_UTIL__STRING_UTILS_HPP_
 #define NAV2_UTIL__STRING_UTILS_HPP_
 

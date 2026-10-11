@@ -12,6 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 【文件概况】nav2_util::Costmap 类的实现
+// ----------------------------------------------------------------------------
+// 概述: 见 costmap.hpp。本文件实现:
+//   1. 常用代价常量定义（255 未知/254 致命/253 内切/128 中等/0 自由）
+//   2. set_static_map(): 元数据拷贝 + 逐格 interpret_value() 转换
+//   3. set_test_costmap()/get_test_data(): 6 种 10x10 预设测试地图
+//      （以字符画形式直观定义，n/x/i/u/o 分别代表五种代价值）
+//   4. get_costmap(): 组装 Costmap 消息输出
+//   5. interpret_value(): 占据值(-1~100) → 代价(0~255) 的映射规则
+//   6. is_free() ×2: 栅格可通过性判断（代价 < 253）
+// ============================================================================
+
 #include <vector>
 #include <algorithm>
 #include "nav2_util/costmap.hpp"

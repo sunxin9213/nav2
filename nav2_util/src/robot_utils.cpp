@@ -14,6 +14,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 【文件概况】机器人位姿与 TF 工具函数的实现
+// ----------------------------------------------------------------------------
+// 概述: 见 robot_utils.hpp。本文件实现:
+//   1. getCurrentPose(): 构造机器人系单位位姿 → 复用
+//      transformPoseInTargetFrame 原地变换得到全局位姿
+//   2. transformPoseInTargetFrame(): tf_buffer.transform + 五类 TF 异常
+//      （Lookup/Connectivity/Extrapolation/Timeout/Transform）的分类捕获
+//   3. getTransform() ×2: 最新变换查询 / 跨时刻（经 fixed_frame 桥接）查询，
+//      结果由 TransformStamped 转为 tf2::Transform 数学类型
+//   4. validateTwist(): 六个分量逐一做 NaN/Inf 检查
+// ============================================================================
+
 #include <string>
 #include <cmath>
 #include <memory>
@@ -23,11 +36,6 @@
 
 namespace nav2_util
 {
-// 本文件实现机器人位姿与 TF 变换相关的工具函数：
-// - getCurrentPose: 获取机器人当前位姿（默认 base_link -> map）
-// - transformPoseInTargetFrame: 把任意位姿变换到目标坐标系
-// - getTransform(两个重载): 获取坐标系间的 TF 变换
-// - validateTwist: 校验速度消息中无 NaN/Inf
 
 bool getCurrentPose(
   geometry_msgs::msg::PoseStamped & global_pose,

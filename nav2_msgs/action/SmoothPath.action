@@ -1,12 +1,14 @@
+# 路径平滑动作：对给定路径进行平滑处理
+# 适用场景：由 smoother server 执行，将规划出的折线路径平滑化为更适合跟踪的曲线
 #goal definition
-nav_msgs/Path path
-string smoother_id
-builtin_interfaces/Duration max_smoothing_duration
-bool check_for_collisions
+nav_msgs/Path path # 待平滑的原始路径
+string smoother_id # 使用的平滑器插件 ID（为空则使用默认平滑器）
+builtin_interfaces/Duration max_smoothing_duration # 平滑允许的最大时长，超时则返回当前结果
+bool check_for_collisions # 是否在平滑过程中进行碰撞检测
 ---
 #result definition
-nav_msgs/Path path
-builtin_interfaces/Duration smoothing_duration
-bool was_completed
+nav_msgs/Path path # 平滑后的路径
+builtin_interfaces/Duration smoothing_duration # 实际平滑耗时
+bool was_completed # 平滑是否完整完成（false 表示超时或被中断，返回的是部分结果）
 ---
 #feedback definition

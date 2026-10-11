@@ -1,32 +1,34 @@
+# 计算并跟踪路由动作：在路由图上计算路由后，持续跟踪机器人行进进度，偏航时自动重规划
+# 适用场景：使用 nav2_route 服务器基于路网图进行长距离导航，需要边走边跟踪并动态调整路由
 #goal definition
-uint16 start_id
-geometry_msgs/PoseStamped start
-uint16 goal_id
-geometry_msgs/PoseStamped goal
+uint16 start_id                 # 起点节点 ID（use_poses 为 false 时生效）
+geometry_msgs/PoseStamped start # 起点位姿（use_poses 和 use_start 均为 true 时生效）
+uint16 goal_id                  # 终点节点 ID（use_poses 为 false 时生效）
+geometry_msgs/PoseStamped goal  # 终点位姿（use_poses 为 true 时生效）
 
-bool use_start # Whether to use the start field or find the start pose in TF
-bool use_poses # Whether to use the poses or the IDs fields for request
+bool use_start # 是否使用 start 字段作为起点；为 false 时通过 TF 查找机器人当前位姿作为起点
+bool use_poses # 请求使用位姿（poses）字段还是节点 ID 字段
 ---
 #result definition
 
-# Error codes
-uint16 NONE=0
-uint16 UNKNOWN=400
-uint16 TF_ERROR=401
-uint16 NO_VALID_GRAPH=402
-uint16 INDETERMINANT_NODES_ON_GRAPH=403
-uint16 TIMEOUT=404
-uint16 NO_VALID_ROUTE=405
-uint16 OPERATION_FAILED=406
-uint16 INVALID_EDGE_SCORER_USE=407
+# 错误码
+uint16 NONE=0                          # 成功，无错误
+uint16 UNKNOWN=400                     # 未知错误
+uint16 TF_ERROR=401                    # TF 变换查找失败
+uint16 NO_VALID_GRAPH=402              # 没有可用的有效路由图
+uint16 INDETERMINANT_NODES_ON_GRAPH=403 # 图上存在不确定（无法唯一匹配）的节点
+uint16 TIMEOUT=404                     # 路由计算或跟踪超时
+uint16 NO_VALID_ROUTE=405              # 起终点之间不存在有效路由
+uint16 OPERATION_FAILED=406            # 路由操作执行失败
+uint16 INVALID_EDGE_SCORER_USE=407     # 边代价计算器（edge scorer）使用方式无效
 
-builtin_interfaces/Duration execution_duration
+builtin_interfaces/Duration execution_duration # 动作执行的总时长
 ---
 #feedback definition
-uint16 last_node_id
-uint16 next_node_id
-uint16 current_edge_id
-Route route
-nav_msgs/Path path
-string[] operations_triggered
-bool rerouted
+uint16 last_node_id           # 最近经过的节点 ID
+uint16 next_node_id           # 下一个将要到达的节点 ID
+uint16 current_edge_id        # 当前所在的边 ID
+Route route                   # 当前使用的路由
+nav_msgs/Path path            # 当前参考路径
+string[] operations_triggered # 已触发的路由操作（如路口转弯提示）名称
+bool rerouted                 # 是否发生了重规划

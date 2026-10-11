@@ -13,6 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 【文件概况】OdomSmoother 的实现
+// ----------------------------------------------------------------------------
+// 概述: 见 odometry_utils.hpp。本文件实现:
+//   1. 两个构造函数: 订阅 odom 话题并把速度累加器清零
+//   2. odomCallback(): 加锁 → 淘汰超出窗口时长的旧消息
+//      （同步从累加器中减去其速度）→ 新消息入队
+//   3. updateState(): 累加最新速度，SMA 均值写入 vel_smooth_
+// 数据结构技巧: "累加器 + 双端队列"使均值维护为 O(1)，
+//               无需每次重新遍历窗口求和。
+// ============================================================================
+
 #include <string>
 
 #include "nav2_util/odometry_utils.hpp"
@@ -22,10 +34,6 @@ using namespace std::chrono_literals;  // NOLINT
 
 namespace nav2_util
 {
-// 本文件实现 OdomSmoother（里程计滑动窗口平滑器）：
-// 订阅 /odom 话题，维护最近 filter_duration 秒内的速度历史，
-// 用简单滑动平均（SMA）输出平滑后的速度，供控制器等模块使用。
-
 // 普通节点版本构造函数
 OdomSmoother::OdomSmoother(
   const rclcpp::Node::WeakPtr & parent,

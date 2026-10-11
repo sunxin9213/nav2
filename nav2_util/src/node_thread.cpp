@@ -12,14 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 【文件概况】NodeThread 的实现
+// ----------------------------------------------------------------------------
+// 概述: 见 node_thread.hpp。本文件实现:
+//   1. NodeThread(node_base): 创建专属单线程执行器 + 后台线程
+//      （线程内: 注册节点 → spin 阻塞 → cancel 后注销节点）
+//   2. NodeThread(executor): 复用外部执行器，仅开线程 spin 它
+//   3. 析构: executor_->cancel() 使 spin() 返回，再 join() 线程
+// ============================================================================
+
 #include <memory>
 
 #include "nav2_util/node_thread.hpp"
 
 namespace nav2_util
 {
-// 本文件实现 NodeThread：在独立后台线程中 spin 节点或执行器，
-// 用于让内部辅助节点（如 ServiceClient 的宿主节点）拥有自己的事件循环。
 
 NodeThread::NodeThread(rclcpp::node_interfaces::NodeBaseInterface::SharedPtr node_base)
 : node_(node_base)

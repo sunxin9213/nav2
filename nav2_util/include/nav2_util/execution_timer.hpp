@@ -12,6 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 【文件概况】代码执行耗时计时器（header-only，全部内联实现）
+// ----------------------------------------------------------------------------
+// 概述: 基于 std::chrono 的轻量打点计时器，用于测量任意代码段的执行耗时。
+// 主要内容:
+//   1. ExecutionTimer 类
+//      - start(): 在被测代码前记录起始时间点
+//      - end():   在被测代码后记录结束时间点
+//      - elapsed_time():            以 chrono::nanoseconds 返回耗时
+//      - elapsed_time_in_seconds(): 以 double 秒返回耗时
+// 使用场景: nav2 各服务器统计算法耗时（如 planner_server 的 planning_time、
+//           smoother 的 smoothing_duration 等）均基于该工具或同样的模式。
+// ============================================================================
+
 #ifndef NAV2_UTIL__EXECUTION_TIMER_HPP_
 #define NAV2_UTIL__EXECUTION_TIMER_HPP_
 

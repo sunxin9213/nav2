@@ -13,6 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 【文件概况】里程计平滑器 OdomSmoother
+// ----------------------------------------------------------------------------
+// 概述: 订阅 odom 话题，在最近 filter_duration 秒的时间窗口内对速度做
+//       简单滑动平均（SMA），输出平滑速度供控制器等模块作为速度反馈。
+// 主要内容:
+//   1. 构造函数 ×2: 兼容普通 rclcpp::Node 与 nav2_util::LifecycleNode 父节点
+//   2. getTwist()/getTwistStamped(): 线程安全地获取当前平滑速度
+//   3. odomCallback()/updateState(): 窗口淘汰与 O(1) 均值更新
+// 使用场景: controller_server、behavior_server 等需要"当前速度"做反馈
+//           计算的模块（原始 odom 抖动大，直接使用会引入噪声）。
+// ============================================================================
+
 #ifndef NAV2_UTIL__ODOMETRY_UTILS_HPP_
 #define NAV2_UTIL__ODOMETRY_UTILS_HPP_
 

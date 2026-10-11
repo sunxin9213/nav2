@@ -12,6 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 【文件概况】几何计算工具（header-only，全部内联/模板实现）
+// ----------------------------------------------------------------------------
+// 概述: 位姿、点、路径相关的常用几何计算集合，仅依赖消息类型与 tf2 转换。
+// 主要内容:
+//   1. orientationAroundZAxis():          偏航角 → 四元数（平面旋转）
+//   2. euclidean_distance():              4 种消息类型重载的欧氏距离
+//   3. min_by():                          按 Getter 计算值找最小元素的迭代器
+//   4. first_after_integrated_distance(): 沿序列累计弧长找首个超阈值点
+//   5. calculate_path_length():           计算（子）路径总长度
+// 使用场景: 控制器寻找 lookahead 点、规划/恢复行为计算路径长度、
+//           各种位姿比较与最近点搜索。
+// ============================================================================
+
 #ifndef NAV2_UTIL__GEOMETRY_UTILS_HPP_
 #define NAV2_UTIL__GEOMETRY_UTILS_HPP_
 

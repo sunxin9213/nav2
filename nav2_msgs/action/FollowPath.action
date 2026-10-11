@@ -1,11 +1,13 @@
+# 路径跟踪动作：使用指定控制器让机器人沿给定路径行驶
+# 适用场景：由 controller server 执行，是核心的运动控制接口（DWB、MPPI、RPP 等控制器插件）
 #goal definition
-nav_msgs/Path path
-string controller_id
-string goal_checker_id
+nav_msgs/Path path # 要跟踪的路径
+string controller_id # 使用的控制器插件 ID（为空则使用默认控制器）
+string goal_checker_id # 使用的目标到达判定器插件 ID（为空则使用默认判定器）
 ---
 #result definition
-std_msgs/Empty result
+std_msgs/Empty result # 无实际内容，动作成功即代表到达目标
 ---
 #feedback definition
-float32 distance_to_goal
-float32 speed
+float32 distance_to_goal # 距离目标点的剩余距离
+float32 speed # 机器人当前的行驶速度

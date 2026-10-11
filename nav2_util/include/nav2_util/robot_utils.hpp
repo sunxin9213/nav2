@@ -14,6 +14,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 【文件概况】机器人位姿与 TF 变换工具
+// ----------------------------------------------------------------------------
+// 概述: 封装 tf2_ros::Buffer 的常用查询操作，统一异常捕获与日志输出，
+//       全部以 bool 返回值代替抛异常，方便调用方做错误处理。
+// 主要内容:
+//   1. getCurrentPose():             取机器人当前位姿（base_link→map）
+//   2. transformPoseInTargetFrame(): 任意位姿变换到目标坐标系
+//   3. getTransform() ×2:            取坐标系间变换（最新版/跨时刻桥接版）
+//   4. validateTwist():              校验 Twist 六个分量无 NaN/Inf
+// 使用场景: 所有需要查询机器人位姿的服务器（controller/planner/behaviors）
+//           与传感器数据源坐标系转换（collision monitor 等）。
+// ============================================================================
+
 #ifndef NAV2_UTIL__ROBOT_UTILS_HPP_
 #define NAV2_UTIL__ROBOT_UTILS_HPP_
 

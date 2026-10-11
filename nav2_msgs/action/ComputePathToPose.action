@@ -1,11 +1,13 @@
+# 单目标点路径规划动作：计算从起点到单个目标点的路径
+# 适用场景：最常用的点到点路径规划接口，由 planner server 执行（如 NavFn、Smac Planner 等）
 #goal definition
-geometry_msgs/PoseStamped goal
-geometry_msgs/PoseStamped start
-string planner_id
-bool use_start # If false, use current robot pose as path start, if true, use start above instead
+geometry_msgs/PoseStamped goal # 目标点位姿
+geometry_msgs/PoseStamped start # 规划起点位姿
+string planner_id # 使用的规划器插件 ID（为空则使用默认规划器）
+bool use_start # 为 false 时使用机器人当前位姿作为路径起点，为 true 时使用上面的 start 字段
 ---
 #result definition
-nav_msgs/Path path
-builtin_interfaces/Duration planning_time
+nav_msgs/Path path # 规划得到的路径
+builtin_interfaces/Duration planning_time # 规划耗时
 ---
 #feedback definition

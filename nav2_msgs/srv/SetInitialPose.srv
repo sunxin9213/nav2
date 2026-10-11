@@ -1,3 +1,5 @@
-geometry_msgs/PoseWithCovarianceStamped pose
+# 设置初始位姿服务
+# 适用场景：程序化设置 AMCL 定位的初始位姿（代替在 RViz 中手动点击 2D Pose Estimate）
+geometry_msgs/PoseWithCovarianceStamped pose # 要设置的初始位姿（含协方差）
 ---
 

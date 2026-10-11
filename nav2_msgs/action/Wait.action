@@ -1,8 +1,10 @@
+# 等待动作：原地等待指定时间
+# 适用场景：恢复行为或任务流程中的停顿，如等待障碍物离开、让行等
 #goal definition
-builtin_interfaces/Duration time
+builtin_interfaces/Duration time # 需要等待的时长
 ---
 #result definition
-builtin_interfaces/Duration total_elapsed_time
+builtin_interfaces/Duration total_elapsed_time # 实际等待的总时长
 ---
 #feedback definition
-builtin_interfaces/Duration time_left
+builtin_interfaces/Duration time_left # 剩余等待时间

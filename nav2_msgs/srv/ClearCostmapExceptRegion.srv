@@ -1,5 +1,5 @@
-# Clears the costmap except a rectangular region specified by reset_distance
-
-float32 reset_distance
+# 清除代价地图中除指定矩形区域外的所有内容
+# 适用场景：恢复行为中保留机器人附近区域、只清除远处的障碍信息后重新规划
+float32 reset_distance # 以机器人为中心保留区域的边长，该区域内的栅格不清除
 ---
 std_msgs/Empty response

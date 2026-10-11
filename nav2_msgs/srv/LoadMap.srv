@@ -1,15 +1,17 @@
-# URL of map resource
-# Can be an absolute path to a file: file:///path/to/maps/floor1.yaml
-# Or, relative to a ROS package: package://my_ros_package/maps/floor2.yaml
+# 加载地图服务
+# 适用场景：运行时请求 map_server 从文件加载新地图（如多楼层切换）
+# 地图资源的 URL
+# 可以是文件的绝对路径：file:///path/to/maps/floor1.yaml
+# 或相对于 ROS 包的路径：package://my_ros_package/maps/floor2.yaml
 string map_url
 ---
-# Result code defintions
-uint8 RESULT_SUCCESS=0
-uint8 RESULT_MAP_DOES_NOT_EXIST=1
-uint8 RESULT_INVALID_MAP_DATA=2
-uint8 RESULT_INVALID_MAP_METADATA=3
-uint8 RESULT_UNDEFINED_FAILURE=255
+# 结果码定义
+uint8 RESULT_SUCCESS=0            # 加载成功
+uint8 RESULT_MAP_DOES_NOT_EXIST=1 # 地图文件不存在
+uint8 RESULT_INVALID_MAP_DATA=2   # 地图数据无效
+uint8 RESULT_INVALID_MAP_METADATA=3 # 地图元数据无效
+uint8 RESULT_UNDEFINED_FAILURE=255 # 未定义的失败
 
-# Returned map is only valid if result equals RESULT_SUCCESS
-nav_msgs/OccupancyGrid map
-uint8 result
+# 仅当 result 为 RESULT_SUCCESS 时，返回的地图才有效
+nav_msgs/OccupancyGrid map # 加载得到的占用栅格地图
+uint8 result # 加载结果码（取值为上述常量之一）

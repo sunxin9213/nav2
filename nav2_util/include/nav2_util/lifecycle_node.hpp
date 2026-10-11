@@ -12,6 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 【文件概况】Nav2 统一生命周期节点基类
+// ----------------------------------------------------------------------------
+// 概述: 继承 rclcpp_lifecycle::LifecycleNode，在标准生命周期节点之上
+//       补齐 nav2 需要的三块能力: bond 心跳、兜底清理、参数声明辅助。
+// 主要内容:
+//   1. add_parameter() ×3: 带描述/范围约束（浮点/整数）的参数声明
+//   2. createBond()/destroyBond(): 与 lifecycle_manager 的存活心跳
+//   3. on_rcl_preshutdown()/runCleanups(): rcl 关闭或析构时自动
+//      deactivate+cleanup，防止节点未正常下线就退出
+//   4. shared_from_this()/on_error(): 常用接口补全
+// 使用场景: nav2 中所有 lifecycle 服务器节点（costmap/planner/controller/
+//           smoother/behaviors/waypoint_follower 等）的公共基类。
+// ============================================================================
+
 #ifndef NAV2_UTIL__LIFECYCLE_NODE_HPP_
 #define NAV2_UTIL__LIFECYCLE_NODE_HPP_
 
@@ -50,18 +65,20 @@ public:
     const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
   virtual ~LifecycleNode();
 
+  // 浮点参数范围约束（供 add_parameter 使用）
   typedef struct
   {
-    double from_value;
-    double to_value;
-    double step;
+    double from_value;  // 允许的最小值
+    double to_value;    // 允许的最大值
+    double step;        // 合法步长
   } floating_point_range;
 
+  // 整型参数范围约束（含义同上）
   typedef struct
   {
-    int from_value;
-    int to_value;
-    int step;
+    int from_value;  // 允许的最小值
+    int to_value;    // 允许的最大值
+    int step;        // 合法步长
   } integer_range;
 
   /**
@@ -151,6 +168,8 @@ public:
   /**
    * @brief Get a shared pointer of this
    */
+  // 取自身的 LifecycleNode 共享指针：基类返回类型是 LifecycleNode 基类指针，
+  // 这里通过 static_pointer_cast 协变转换为本类型
   std::shared_ptr<nav2_util::LifecycleNode> shared_from_this()
   {
     return std::static_pointer_cast<nav2_util::LifecycleNode>(
@@ -176,6 +195,7 @@ public:
    * Note that this is related to our Context's shutdown sequence, not the
    * lifecycle node state machine.
    */
+  // rcl Context 即将关闭时的钩子: 先做生命周期清理再断开 bond
   virtual void on_rcl_preshutdown();
 
   /**
@@ -194,6 +214,7 @@ protected:
   /**
    * @brief Print notifications for lifecycle node
    */
+  // 打印"节点已启动、等待外部触发迁移"的提示信息
   void printLifecycleNodeNotification();
 
   /**
@@ -201,15 +222,19 @@ protected:
    * The callback fires before this Node's Context is shutdown.
    * Note this is not directly related to the lifecycle state machine.
    */
+  // 把 on_rcl_preshutdown 注册为 Context 的预关闭回调（构造函数中调用）
   void register_rcl_preshutdown_callback();
+  // 预关闭回调句柄: 必须长期持有，否则回调会被立即注销
   std::unique_ptr<rclcpp::PreShutdownCallbackHandle> rcl_preshutdown_cb_handle_{nullptr};
 
   /**
    * Run some common cleanup steps shared between rcl preshutdown and destruction.
    */
+  // 兜底清理: 若仍为 ACTIVE 先 deactivate，再 cleanup（析构/退出时调用）
   void runCleanups();
 
   // Connection to tell that server is still up
+  // 与 lifecycle_manager 的 bond 心跳连接（activate 后创建）
   std::unique_ptr<bond::Bond> bond_{nullptr};
 };
 

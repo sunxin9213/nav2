@@ -1,26 +1,28 @@
+# 路由计算动作：在路由图上计算从起点到终点的路由（一次性计算，不持续跟踪）
+# 适用场景：使用 nav2_route 基于路网图（graph）做全局路由计算
 #goal definition
-uint16 start_id
-geometry_msgs/PoseStamped start
-uint16 goal_id
-geometry_msgs/PoseStamped goal
+uint16 start_id                 # 起点节点 ID（use_poses 为 false 时生效）
+geometry_msgs/PoseStamped start # 起点位姿（use_poses 和 use_start 均为 true 时生效）
+uint16 goal_id                  # 终点节点 ID（use_poses 为 false 时生效）
+geometry_msgs/PoseStamped goal  # 终点位姿（use_poses 为 true 时生效）
 
-bool use_start # Whether to use the start field or find the start pose in TF
-bool use_poses # Whether to use the poses or the IDs fields for request
+bool use_start # 是否使用 start 字段作为起点；为 false 时通过 TF 查找机器人当前位姿作为起点
+bool use_poses # 请求使用位姿（poses）字段还是节点 ID 字段
 ---
 #result definition
 
-# Error codes
-uint16 NONE=0
-uint16 UNKNOWN=400
-uint16 TF_ERROR=401
-uint16 NO_VALID_GRAPH=402
-uint16 INDETERMINANT_NODES_ON_GRAPH=403
-uint16 TIMEOUT=404
-uint16 NO_VALID_ROUTE=405
-uint16 INVALID_EDGE_SCORER_USE=407
+# 错误码
+uint16 NONE=0                          # 成功，无错误
+uint16 UNKNOWN=400                     # 未知错误
+uint16 TF_ERROR=401                    # TF 变换查找失败
+uint16 NO_VALID_GRAPH=402              # 没有可用的有效路由图
+uint16 INDETERMINANT_NODES_ON_GRAPH=403 # 图上存在不确定（无法唯一匹配）的节点
+uint16 TIMEOUT=404                     # 路由计算超时
+uint16 NO_VALID_ROUTE=405              # 起终点之间不存在有效路由
+uint16 INVALID_EDGE_SCORER_USE=407     # 边代价计算器（edge scorer）使用方式无效
 
-builtin_interfaces/Duration planning_time
-nav_msgs/Path path
-Route route
+builtin_interfaces/Duration planning_time # 路由计算耗时
+nav_msgs/Path path # 由路由展开得到的路径
+Route route # 计算得到的路由（节点与边序列）
 ---
 #feedback definition

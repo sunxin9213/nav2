@@ -12,6 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 【文件概况】通用同步服务客户端模板
+// ----------------------------------------------------------------------------
+// 概述: 把"等待服务上线 → 异步发请求 → 阻塞等结果"的完整流程封装为
+//       同步 invoke() 调用的 ROS2 服务客户端模板。
+// 核心设计:
+//   客户端挂在独立的 MutuallyExclusive 回调组上，并配一个专属
+//   SingleThreadedExecutor 来 spin 等待 future —— 即使外层正处于其他
+//   执行器的回调中，服务响应也能被独立分发，避免死锁。
+// 主要内容:
+//   1. invoke(request, timeout):   阻塞调用，返回响应（失败抛异常）
+//   2. invoke(request, response):  无限等待版，以 bool 返回成败
+//   3. wait_for_service() / getServiceName()
+// 使用场景: LifecycleServiceClient、ClearEntirelyCostmapServiceClient
+//           的基类；任何需要在回调中同步调用服务的场合。
+// ============================================================================
+
 #ifndef NAV2_UTIL__SERVICE_CLIENT_HPP_
 #define NAV2_UTIL__SERVICE_CLIENT_HPP_
 

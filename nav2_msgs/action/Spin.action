@@ -1,9 +1,11 @@
+# 原地旋转动作：旋转指定的角度
+# 适用场景：恢复行为（脱困）或朝向调整，如原地转向目标方向后再行驶
 #goal definition
-float32 target_yaw
-builtin_interfaces/Duration time_allowance
+float32 target_yaw # 旋转角度，单位弧度
+builtin_interfaces/Duration time_allowance # 完成动作允许的最长时间，超时则中止
 ---
 #result definition
-builtin_interfaces/Duration total_elapsed_time
+builtin_interfaces/Duration total_elapsed_time # 动作实际执行的总时长
 ---
 #feedback definition
-float32 angular_distance_traveled
+float32 angular_distance_traveled # 已旋转的角位移

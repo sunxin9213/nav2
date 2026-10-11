@@ -12,6 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 【文件概况】轻量 Action 服务器模板（nav2 全部服务器的基础设施）
+// ----------------------------------------------------------------------------
+// 概述: 对 rclcpp_action::Server 的封装，约定"单活跃目标 + 单抢占槽"模型:
+//       同一时刻只执行一个 goal；新 goal 到来时放入 pending 槽，
+//       当前执行结束后自动切换（或由用户通过 accept_pending_goal 切换）。
+// 主要内容:
+//   1. 构造: 绑定 execute_callback（业务逻辑）与 completion_callback
+//            （异常终止通知）；可选 spin_thread 用独立线程驱动回调
+//   2. 生命周期: activate()/deactivate()（后者会等待执行线程退出，
+//               超过 server_timeout 则强制 terminate_all）
+//   3. goal 管理: get_current_goal/accept_pending_goal/terminate_current/
+//                succeeded_current/is_cancel_requested/publish_feedback 等
+//   4. work(): 后台循环调用 execute_callback，统一处理异常与抢占切换
+// 线程模型: handle_* 回调运行在（外部或内部）executor 线程，
+//           execute_callback 运行在 std::async 派生的工作线程，
+//           两线程间以 recursive_mutex 保护句柄状态。
+// 使用场景: planner_server、controller_server、smoother_server、
+//           behavior_server、waypoint_follower 等 nav2 全部 action 服务器。
+// ============================================================================
+
 #ifndef NAV2_UTIL__SIMPLE_ACTION_SERVER_HPP_
 #define NAV2_UTIL__SIMPLE_ACTION_SERVER_HPP_
 
@@ -260,6 +281,7 @@ public:
   /**
    * @brief Active action server
    */
+  // 激活服务器: 开始接受新 goal 并清除停止标志（对应生命周期 on_activate）
   void activate()
   {
     std::lock_guard<std::recursive_mutex> lock(update_mutex_);
@@ -308,6 +330,7 @@ public:
    * @brief Whether the action server is munching on a goal
    * @return bool If its running or not
    */
+  // 后台工作线程是否仍在执行 goal（future 尚未就绪即视为仍在运行）
   bool is_running()
   {
     return execution_future_.valid() &&
@@ -319,6 +342,7 @@ public:
    * @brief Whether the action server is active or not
    * @return bool If its active or not
    */
+  // 服务器是否处于激活状态（由 activate/deactivate 切换）
   bool is_server_active()
   {
     std::lock_guard<std::recursive_mutex> lock(update_mutex_);
@@ -329,6 +353,7 @@ public:
    * @brief Whether the action server has been asked to be preempted with a new goal
    * @return bool If there's a preemption request or not
    */
+  // 是否有新 goal 正在等待切换（pending 槽被占用）
   bool is_preempt_requested() const
   {
     std::lock_guard<std::recursive_mutex> lock(update_mutex_);
@@ -339,6 +364,7 @@ public:
    * @brief Accept pending goals
    * @return Goal Ptr to the  goal that's going to be accepted
    */
+  // 接受 pending 槽中的新 goal: 终止当前 goal、切换句柄并返回新 goal
   const std::shared_ptr<const typename ActionT::Goal> accept_pending_goal()
   {
     std::lock_guard<std::recursive_mutex> lock(update_mutex_);
@@ -365,6 +391,7 @@ public:
   /**
    * @brief Terminate pending goals
    */
+  // 终止 pending 槽中的 goal（不切换执行）
   void terminate_pending_goal()
   {
     std::lock_guard<std::recursive_mutex> lock(update_mutex_);
@@ -384,6 +411,7 @@ public:
    * @brief Get the current goal object
    * @return Goal Ptr to the  goal that's being processed currently
    */
+  // 获取当前正在执行的 goal（无活跃 goal 时返回空指针）
   const std::shared_ptr<const typename ActionT::Goal> get_current_goal() const
   {
     std::lock_guard<std::recursive_mutex> lock(update_mutex_);
@@ -396,6 +424,7 @@ public:
     return current_handle_->get_goal();
   }
 
+  // 获取当前 goal 的 UUID（无活跃 goal 时返回空 UUID）
   const rclcpp_action::GoalUUID get_current_goal_id() const
   {
     std::lock_guard<std::recursive_mutex> lock(update_mutex_);
@@ -412,6 +441,7 @@ public:
    * @brief Get the pending goal object
    * @return Goal Ptr to the goal that's pending
    */
+  // 获取 pending 槽中的 goal（无则返回空指针）
   const std::shared_ptr<const typename ActionT::Goal> get_pending_goal() const
   {
     std::lock_guard<std::recursive_mutex> lock(update_mutex_);
@@ -428,6 +458,7 @@ public:
    * @brief Whether or not a cancel command has come in
    * @return bool Whether a cancel command has been requested or not
    */
+  // 客户端是否请求了取消: 优先检查 pending 句柄，其次检查当前句柄
   bool is_cancel_requested() const
   {
     std::lock_guard<std::recursive_mutex> lock(update_mutex_);
@@ -450,6 +481,7 @@ public:
    * @brief Terminate all pending and active actions
    * @param result A result object to send to the terminated actions
    */
+  // 终止当前与 pending 的所有 goal（默认以空 Result 结束）
   void terminate_all(
     typename std::shared_ptr<typename ActionT::Result> result =
     std::make_shared<typename ActionT::Result>())
@@ -464,6 +496,7 @@ public:
    * @brief Terminate the active action
    * @param result A result object to send to the terminated action
    */
+  // 仅终止当前 goal（默认以空 Result 结束）
   void terminate_current(
     typename std::shared_ptr<typename ActionT::Result> result =
     std::make_shared<typename ActionT::Result>())
@@ -476,6 +509,7 @@ public:
    * @brief Return success of the active action
    * @param result A result object to send to the terminated actions
    */
+  // 将当前 goal 标记为成功并释放句柄（业务逻辑完成时的标准出口）
   void succeeded_current(
     typename std::shared_ptr<typename ActionT::Result> result =
     std::make_shared<typename ActionT::Result>())
@@ -493,6 +527,7 @@ public:
    * @brief Publish feedback to the action server clients
    * @param feedback A feedback object to send to the clients
    */
+  // 向客户端发布 feedback（当前句柄不活跃时拒绝发布并报错）
   void publish_feedback(typename std::shared_ptr<typename ActionT::Feedback> feedback)
   {
     if (!is_active(current_handle_)) {
@@ -505,34 +540,36 @@ public:
 
 protected:
   // The SimpleActionServer isn't itself a node, so it needs interfaces to one
+  // 本类不是节点，只借用宿主节点的四类底层接口（创建 action server/日志/时钟用）
   rclcpp::node_interfaces::NodeBaseInterface::SharedPtr node_base_interface_;
   rclcpp::node_interfaces::NodeClockInterface::SharedPtr node_clock_interface_;
   rclcpp::node_interfaces::NodeLoggingInterface::SharedPtr node_logging_interface_;
   rclcpp::node_interfaces::NodeWaitablesInterface::SharedPtr node_waitables_interface_;
-  std::string action_name_;
+  std::string action_name_;                  // action 名称（用于日志前缀）
 
-  ExecuteCallback execute_callback_;
-  CompletionCallback completion_callback_;
-  std::future<void> execution_future_;
-  bool stop_execution_{false};
+  ExecuteCallback execute_callback_;         // 业务执行回调（由使用方注入）
+  CompletionCallback completion_callback_;   // 动作被异常终止时的通知回调（可空）
+  std::future<void> execution_future_;       // 工作线程（std::async）的 future
+  bool stop_execution_{false};               // 停止标志: work() 循环的退出条件之一
 
-  mutable std::recursive_mutex update_mutex_;
-  bool server_active_{false};
-  bool preempt_requested_{false};
-  std::chrono::milliseconds server_timeout_;
+  mutable std::recursive_mutex update_mutex_;  // 保护下列句柄/状态的多线程访问
+  bool server_active_{false};                  // 是否接受新 goal
+  bool preempt_requested_{false};              // pending 槽是否被占用（有抢占请求）
+  std::chrono::milliseconds server_timeout_;   // deactivate 时等待执行线程的最长时间
 
-  std::shared_ptr<rclcpp_action::ServerGoalHandle<ActionT>> current_handle_;
-  std::shared_ptr<rclcpp_action::ServerGoalHandle<ActionT>> pending_handle_;
+  std::shared_ptr<rclcpp_action::ServerGoalHandle<ActionT>> current_handle_;   // 当前执行中的句柄
+  std::shared_ptr<rclcpp_action::ServerGoalHandle<ActionT>> pending_handle_;   // 等待切换的新句柄
 
-  typename rclcpp_action::Server<ActionT>::SharedPtr action_server_;
-  bool spin_thread_;
-  rclcpp::CallbackGroup::SharedPtr callback_group_{nullptr};
-  rclcpp::executors::SingleThreadedExecutor::SharedPtr executor_;
-  std::unique_ptr<nav2_util::NodeThread> executor_thread_;
+  typename rclcpp_action::Server<ActionT>::SharedPtr action_server_;  // 底层 action server
+  bool spin_thread_;                                                  // 是否用内部线程驱动回调
+  rclcpp::CallbackGroup::SharedPtr callback_group_{nullptr};          // 内部线程模式下的独立回调组
+  rclcpp::executors::SingleThreadedExecutor::SharedPtr executor_;     // 内部线程模式的执行器
+  std::unique_ptr<nav2_util::NodeThread> executor_thread_;            // 执行器的宿主线程（RAII）
 
   /**
    * @brief Generate an empty result object for an action type
    */
+  // 生成当前动作类型的空 Result 对象（终止 goal 时的默认结果）
   constexpr auto empty_result() const
   {
     return std::make_shared<typename ActionT::Result>();
@@ -543,6 +580,7 @@ protected:
    * @param handle Goal handle to check
    * @return Whether this goal handle is active
    */
+  // 句柄非空且仍处于活跃（未终结）状态
   constexpr bool is_active(
     const std::shared_ptr<rclcpp_action::ServerGoalHandle<ActionT>> handle) const
   {
@@ -554,6 +592,7 @@ protected:
    * @param handle goal handle to terminate
    * @param the Results object to terminate the action with
    */
+  // 终止指定句柄: 若客户端请求了取消则按 canceled 结束，否则按 abort 结束
   void terminate(
     std::shared_ptr<rclcpp_action::ServerGoalHandle<ActionT>> & handle,
     typename std::shared_ptr<typename ActionT::Result> result =

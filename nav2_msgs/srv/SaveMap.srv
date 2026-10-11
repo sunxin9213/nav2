@@ -1,14 +1,15 @@
-# URL of map resource
-# Can be an absolute path to a file: file:///path/to/maps/floor1.yaml
-# Or, relative to a ROS package: package://my_ros_package/maps/floor2.yaml
+# 保存地图服务
+# 适用场景：将当前 SLAM 建图或已有的地图保存为文件（如建图完成后保存到磁盘）
+# 地图话题名称
 string map_topic
+# 地图保存的目标 URL（文件路径）
 string map_url
-# Constants for image_format. Supported formats: pgm, png, bmp
+# 图像格式，支持格式：pgm、png、bmp
 string image_format
-# Map modes: trinary, scale or raw
+# 地图模式：trinary（三值）、scale（缩放）或 raw（原始）
 string map_mode
-# Thresholds. Values in range of [0.0 .. 1.0]
-float32 free_thresh
-float32 occupied_thresh
+# 阈值，取值范围 [0.0 .. 1.0]
+float32 free_thresh     # 判定为空闲区域的阈值
+float32 occupied_thresh # 判定为占用（障碍）区域的阈值
 ---
-bool result
+bool result # 保存是否成功

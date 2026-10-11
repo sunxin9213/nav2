@@ -75,31 +75,57 @@ Costmap2DROS::Costmap2DROS(const rclcpp::NodeOptions & options)
 
   RCLCPP_INFO(get_logger(), "Creating Costmap");
 
+  // ---- 代价地图 ROS 封装层的全部参数（逐项中文说明）----
+  // 发布全图而非增量更新的开关（仅在 always_send_full_costmap=true 时
+  // 每次更新都发布整张栅格，代价地图较大时显著增加带宽）
   declare_parameter("always_send_full_costmap", rclcpp::ParameterValue(false));
+  // 足迹外扩 padding（米）：在多边形足迹外均匀扩一圈，补偿定位误差
   declare_parameter("footprint_padding", rclcpp::ParameterValue(0.01f));
+  // 机器人足迹多边形（"[]" 表示未定义，退回用 robot_radius 圆形足迹）
   declare_parameter("footprint", rclcpp::ParameterValue(std::string("[]")));
+  // 代价地图的全局坐标系（全局地图通常 "map"，局部地图通常 "odom"）
   declare_parameter("global_frame", rclcpp::ParameterValue(std::string("map")));
+  // 局部（滚动窗口）地图的固定高度（格数）；rolling_window=false 时被
+  // static layer 的地图尺寸覆盖
   declare_parameter("height", rclcpp::ParameterValue(5));
+  // 局部（滚动窗口）地图的固定宽度（格数）
   declare_parameter("width", rclcpp::ParameterValue(5));
+  // static layer 把占据栅格映射为代价值的阈值（>100 的占据格视为致命障碍）
   declare_parameter("lethal_cost_threshold", rclcpp::ParameterValue(100));
+  // 订阅静态地图的话题名（默认父命名空间下的 /map）
   declare_parameter(
     "map_topic", rclcpp::ParameterValue(
       (parent_namespace_ == "/" ? "/" : parent_namespace_ + "/") + std::string("map")));
+  // obstacle/voxel layer 的传感器源列表（YAML 内联格式，由各 layer 解析）
   declare_parameter("observation_sources", rclcpp::ParameterValue(std::string("")));
+  // 局部滚动窗口的初始原点 x/y（米），窗口随机器人移动平移
   declare_parameter("origin_x", rclcpp::ParameterValue(0.0));
   declare_parameter("origin_y", rclcpp::ParameterValue(0.0));
+  // 图层插件名列表（按序更新）；为空时使用 default_plugins_ 三件套
   declare_parameter("plugins", rclcpp::ParameterValue(default_plugins_));
+  // 过滤器插件名列表（keepout/speed 等 costmap filter，可为空）
   declare_parameter("filters", rclcpp::ParameterValue(std::vector<std::string>()));
+  // 地图可视化发布频率（Hz）
   declare_parameter("publish_frequency", rclcpp::ParameterValue(1.0));
+  // 栅格分辨率（米/格）
   declare_parameter("resolution", rclcpp::ParameterValue(0.1));
+  // 机器人本体坐标系名（TF 查询 target frame，用于获取位姿/足迹）
   declare_parameter("robot_base_frame", rclcpp::ParameterValue(std::string("base_link")));
+  // 圆形足迹的机器人半径（米）；定义了多边形 footprint 时忽略
   declare_parameter("robot_radius", rclcpp::ParameterValue(0.1));
+  // 是否启用滚动窗口（局部代价地图随机器人平移，全局地图为 false）
   declare_parameter("rolling_window", rclcpp::ParameterValue(false));
+  // 是否把未观测区域标记为 NO_INFORMATION(255) 而非 FREE_SPACE(0)
   declare_parameter("track_unknown_space", rclcpp::ParameterValue(false));
+  // TF 变换可等待的最长时间（秒），超时视为变换不可用
   declare_parameter("transform_tolerance", rclcpp::ParameterValue(0.3));
+  // static layer 三态映射开关：true 时占据图映射为 自由/占据/未知 三值
   declare_parameter("trinary_costmap", rclcpp::ParameterValue(true));
+  // track_unknown_space 时写入未知区域的代价值（默认 0xff=NO_INFORMATION）
   declare_parameter("unknown_cost_value", rclcpp::ParameterValue(static_cast<unsigned char>(0xff)));
+  // 地图更新频率（Hz）：updateMap 定时器周期，逐层 updateBounds+updateCosts
   declare_parameter("update_frequency", rclcpp::ParameterValue(5.0));
+  // 层间合并策略：true 取最大代价值，false 取最后一层覆盖的值
   declare_parameter("use_maximum", rclcpp::ParameterValue(false));
 }
 
@@ -127,31 +153,57 @@ Costmap2DROS::Costmap2DROS(
 {
   RCLCPP_INFO(get_logger(), "Creating Costmap");
 
+  // ---- 代价地图 ROS 封装层的全部参数（逐项中文说明）----
+  // 发布全图而非增量更新的开关（仅在 always_send_full_costmap=true 时
+  // 每次更新都发布整张栅格，代价地图较大时显著增加带宽）
   declare_parameter("always_send_full_costmap", rclcpp::ParameterValue(false));
+  // 足迹外扩 padding（米）：在多边形足迹外均匀扩一圈，补偿定位误差
   declare_parameter("footprint_padding", rclcpp::ParameterValue(0.01f));
+  // 机器人足迹多边形（"[]" 表示未定义，退回用 robot_radius 圆形足迹）
   declare_parameter("footprint", rclcpp::ParameterValue(std::string("[]")));
+  // 代价地图的全局坐标系（全局地图通常 "map"，局部地图通常 "odom"）
   declare_parameter("global_frame", rclcpp::ParameterValue(std::string("map")));
+  // 局部（滚动窗口）地图的固定高度（格数）；rolling_window=false 时被
+  // static layer 的地图尺寸覆盖
   declare_parameter("height", rclcpp::ParameterValue(5));
+  // 局部（滚动窗口）地图的固定宽度（格数）
   declare_parameter("width", rclcpp::ParameterValue(5));
+  // static layer 把占据栅格映射为代价值的阈值（>100 的占据格视为致命障碍）
   declare_parameter("lethal_cost_threshold", rclcpp::ParameterValue(100));
+  // 订阅静态地图的话题名（默认父命名空间下的 /map）
   declare_parameter(
     "map_topic", rclcpp::ParameterValue(
       (parent_namespace_ == "/" ? "/" : parent_namespace_ + "/") + std::string("map")));
+  // obstacle/voxel layer 的传感器源列表（YAML 内联格式，由各 layer 解析）
   declare_parameter("observation_sources", rclcpp::ParameterValue(std::string("")));
+  // 局部滚动窗口的初始原点 x/y（米），窗口随机器人移动平移
   declare_parameter("origin_x", rclcpp::ParameterValue(0.0));
   declare_parameter("origin_y", rclcpp::ParameterValue(0.0));
+  // 图层插件名列表（按序更新）；为空时使用 default_plugins_ 三件套
   declare_parameter("plugins", rclcpp::ParameterValue(default_plugins_));
+  // 过滤器插件名列表（keepout/speed 等 costmap filter，可为空）
   declare_parameter("filters", rclcpp::ParameterValue(std::vector<std::string>()));
+  // 地图可视化发布频率（Hz）
   declare_parameter("publish_frequency", rclcpp::ParameterValue(1.0));
+  // 栅格分辨率（米/格）
   declare_parameter("resolution", rclcpp::ParameterValue(0.1));
+  // 机器人本体坐标系名（TF 查询 target frame，用于获取位姿/足迹）
   declare_parameter("robot_base_frame", rclcpp::ParameterValue(std::string("base_link")));
+  // 圆形足迹的机器人半径（米）；定义了多边形 footprint 时忽略
   declare_parameter("robot_radius", rclcpp::ParameterValue(0.1));
+  // 是否启用滚动窗口（局部代价地图随机器人平移，全局地图为 false）
   declare_parameter("rolling_window", rclcpp::ParameterValue(false));
+  // 是否把未观测区域标记为 NO_INFORMATION(255) 而非 FREE_SPACE(0)
   declare_parameter("track_unknown_space", rclcpp::ParameterValue(false));
+  // TF 变换可等待的最长时间（秒），超时视为变换不可用
   declare_parameter("transform_tolerance", rclcpp::ParameterValue(0.3));
+  // static layer 三态映射开关：true 时占据图映射为 自由/占据/未知 三值
   declare_parameter("trinary_costmap", rclcpp::ParameterValue(true));
+  // track_unknown_space 时写入未知区域的代价值（默认 0xff=NO_INFORMATION）
   declare_parameter("unknown_cost_value", rclcpp::ParameterValue(static_cast<unsigned char>(0xff)));
+  // 地图更新频率（Hz）：updateMap 定时器周期，逐层 updateBounds+updateCosts
   declare_parameter("update_frequency", rclcpp::ParameterValue(5.0));
+  // 层间合并策略：true 取最大代价值，false 取最后一层覆盖的值
   declare_parameter("use_maximum", rclcpp::ParameterValue(false));
 }
 

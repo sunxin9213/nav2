@@ -1,10 +1,12 @@
+# 倒车动作：沿直线向后倒退指定距离
+# 适用场景：行为树中的恢复行为（recovery），如路径被阻挡时倒车脱困
 #goal definition
-geometry_msgs/Point target
-float32 speed
-builtin_interfaces/Duration time_allowance
+geometry_msgs/Point target # 机器人坐标系下的倒车目标点（通常仅使用 x 表示倒退距离，y 应为 0，取负值）
+float32 speed              # 倒车速度（沿 -x 方向后退）
+builtin_interfaces/Duration time_allowance # 完成动作允许的最长时间，超时则中止（防卡死保护）
 ---
 #result definition
-builtin_interfaces/Duration total_elapsed_time
+builtin_interfaces/Duration total_elapsed_time # 动作实际执行的总时长
 ---
 #feedback definition
-float32 distance_traveled
+float32 distance_traveled # 已倒车的距离（沿 x 方向的位移）

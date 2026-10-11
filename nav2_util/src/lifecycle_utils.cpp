@@ -12,6 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 【文件概况】批量生命周期节点启停的实现
+// ----------------------------------------------------------------------------
+// 概述: 见 lifecycle_utils.hpp。本文件实现:
+//   1. RETRY 宏: 捕获 runtime_error 自动重试，超过次数后重新抛出
+//      （对抗服务调用偶发挂死的经验性补丁）
+//   2. startupLifecycleNode()/startup_lifecycle_nodes():
+//      对每个节点按序 RETRY 调用 configure → activate
+//   3. resetLifecycleNode()/reset_lifecycle_nodes():
+//      对每个节点按序 RETRY 调用 deactivate → cleanup
+// ============================================================================
+
 #include <chrono>
 #include <string>
 #include <thread>

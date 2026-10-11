@@ -12,6 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 【文件概况】字符串工具的实现
+// ----------------------------------------------------------------------------
+// 概述: 见 string_utils.hpp。本文件实现:
+//   1. strip_leading_slash(): 擦除首字符 '/'（若存在）
+//   2. split(): find+substr 循环切分; 注意最后一段（分隔符之后的部分）
+//      需要在循环结束后单独补入 tokens
+// ============================================================================
+
 #include "nav2_util/string_utils.hpp"
 #include <string>
 
@@ -19,7 +28,6 @@ using std::string;
 
 namespace nav2_util
 {
-// 本文件实现字符串工具：去除前导斜杠与按分隔符切分字符串
 
 std::string strip_leading_slash(const string & in)
 {

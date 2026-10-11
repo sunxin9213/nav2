@@ -1,9 +1,11 @@
-uint8 STARTUP = 0
-uint8 PAUSE = 1
-uint8 RESUME = 2
-uint8 RESET = 3
-uint8 SHUTDOWN = 4
+# 管理导航系统各生命周期节点（lifecycle nodes）的服务
+# 适用场景：lifecycle_manager 提供的集中管理接口，用于统一启动、暂停、重置或关闭整个导航系统
+uint8 STARTUP = 0  # 启动所有节点（按依赖关系顺序上线）
+uint8 PAUSE = 1    # 暂停所有节点（下线但保留进程）
+uint8 RESUME = 2   # 从暂停状态恢复运行
+uint8 RESET = 3    # 重置所有节点（下线后重新上线）
+uint8 SHUTDOWN = 4 # 关闭所有节点
 
-uint8 command
+uint8 command # 要执行的命令（取值为上述常量之一）
 ---
-bool success
+bool success # 命令执行是否成功

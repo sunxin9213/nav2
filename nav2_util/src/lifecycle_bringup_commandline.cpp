@@ -12,6 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 【文件概况】命令行工具 lifecycle_startup 的入口（main 函数）
+// ----------------------------------------------------------------------------
+// 概述: 用法 `lifecycle_startup <节点名1> <节点名2> ...`，
+//       按命令行列出的顺序把一批未配置的生命周期节点依次带到 ACTIVE 态。
+// 执行流程:
+//   1. 无参数 → 打印 usage 并退出
+//   2. rclcpp::init（不解析 ROS 命令行参数）
+//   3. argv 收集节点名 → startup_lifecycle_nodes(..., 10s 超时)
+//   4. rclcpp::shutdown
+// 使用场景: 没有 lifecycle_manager 的裸环境/测试脚本中手工拉起节点。
+// ============================================================================
+
 #include <vector>
 #include <string>
 #include <iostream>

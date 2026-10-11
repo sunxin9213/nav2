@@ -1,6 +1,6 @@
-#Determine if the current path is still valid
-
-nav_msgs/Path path
+# 判断给定路径在当前代价地图中是否仍然有效（无碰撞）
+# 适用场景：导航过程中周期性检查既有路径是否被新出现的障碍物阻挡，以决定是否需要重规划
+nav_msgs/Path path # 待检查的路径
 ---
-bool is_valid
-int32[] invalid_pose_indices 
+bool is_valid # 路径是否有效
+int32[] invalid_pose_indices # 路径中处于碰撞状态的位姿点索引列表

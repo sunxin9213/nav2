@@ -12,6 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 【文件概况】节点与参数操作实用工具集（模板为主，兼容各类节点）
+// ----------------------------------------------------------------------------
+// 概述: 提供 ROS2 节点命名、内部辅助节点创建、参数安全声明/拷贝等工具。
+//       所有模板以 NodeT 为参数，rclcpp::Node 与 LifecycleNode 通吃。
+// 主要内容:
+//   1. sanitize_node_name()/add_namespaces(): 节点名清洗、命名空间拼接
+//   2. generate_internal_node_name()/generate_internal_node():
+//      生成系统内唯一的内部辅助节点（关闭参数服务以节省资源）
+//   3. declare_parameter_if_not_declared() ×2: 幂等参数声明
+//   4. get_plugin_type_param(): 读取 "<插件名>.plugin" 配置（插件体系惯例）
+//   5. copy_all_parameters(): 父节点参数整体拷贝到子节点
+// 使用场景: 几乎所有服务器/插件初始化阶段都用 declare_parameter_if_not_
+//           declared; get_plugin_type_param 是插件加载的第一步。
+// ============================================================================
+
 #ifndef NAV2_UTIL__NODE_UTILS_HPP_
 #define NAV2_UTIL__NODE_UTILS_HPP_
 

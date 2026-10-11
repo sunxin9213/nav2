@@ -1,8 +1,10 @@
+# 航点跟随动作：按顺序导航到一系列航点
+# 适用场景：多点巡航、巡逻等任务，由 waypoint_follower 依次执行各航点的导航
 #goal definition
-geometry_msgs/PoseStamped[] poses
+geometry_msgs/PoseStamped[] poses # 依次要到达的航点位姿序列
 ---
 #result definition
-int32[] missed_waypoints
+int32[] missed_waypoints # 未能成功到达的航点索引列表
 ---
 #feedback definition
-uint32 current_waypoint
+uint32 current_waypoint # 当前正在前往的航点索引

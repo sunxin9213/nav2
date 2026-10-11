@@ -12,6 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ============================================================================
+// 【文件概况】批量管理生命周期节点的工具函数
+// ----------------------------------------------------------------------------
+// 概述: 按"列表顺序"对一组生命周期节点做统一的启动（configure+activate）
+//       或复位（deactivate+cleanup），并内置超时+重试机制对抗服务偶发挂起。
+// 主要内容:
+//   1. startup_lifecycle_nodes(vector 或 ":" 分隔字符串): 顺序激活一组节点
+//   2. reset_lifecycle_nodes(vector 或 ":" 分隔字符串):    顺序复位一组节点
+//   3. 参数: service_call_timeout 单次服务调用超时; retries 重试次数
+// 使用场景: 命令行工具 lifecycle_startup（见 lifecycle_bringup_commandline.cpp）
+//           及需要脚本化启停导航节点的场合。
+// ============================================================================
+
 #ifndef NAV2_UTIL__LIFECYCLE_UTILS_HPP_
 #define NAV2_UTIL__LIFECYCLE_UTILS_HPP_
 
